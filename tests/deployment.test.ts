@@ -4,8 +4,34 @@ import {projectDatabase} from '../lib/project-database';
 import {deploymentReadiness} from '../lib/deployment-readiness';
 import {vercelClientAddress,vercelProtection} from '../lib/vercel-protection';
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
+import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 
-function cloudEnv(){process.env.PROJECT_DATABASE='neondb';process.env.PROJECT_RUNTIME_ROLE='webguard_hub_prod_app';process.env.DATABASE_URL='postgresql://webguard_hub_prod_app:dummy-password@db.example/neondb?sslmode=require&channel_binding=require';}
+function cloudEnv(){process.env.DATABASE_PROVIDER='postgresql';process.env.PROJECT_DATABASE='neondb';process.env.PROJECT_RUNTIME_ROLE='webguard_hub_prod_app';process.env.DATABASE_URL='postgresql://webguard_hub_prod_app:dummy-password@db.example/neondb?sslmode=require&channel_binding=require';}
+test('Prisma managed profile accepts provider credentials only on the matching pooled/direct hosts',()=>{
+ const before={...process.env};try{
+  process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';delete process.env.PROJECT_RUNTIME_ROLE;
+  process.env.DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io:5432/?sslmode=require';
+  assert.equal(new URL(projectDatabase('runtime').connectionString).pathname,'/postgres');assert.deepEqual(projectDatabase('runtime').ssl,{rejectUnauthorized:true});
+  process.env.MIGRATION_DATABASE_URL='postgres://provider-user:provider-password@db.prisma.io:5432/postgres?sslmode=require';assert(projectDatabase('migration'));
+  process.env.DATABASE_URL=process.env.MIGRATION_DATABASE_URL;assert.throws(()=>projectDatabase('runtime'),/pooled/);
+  process.env.MIGRATION_DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io/postgres';assert.throws(()=>projectDatabase('migration'),/direct/);
+  process.env.DATABASE_URL='postgres://provider-user:provider-password@evil.example/postgres';assert.throws(()=>projectDatabase('runtime'));
+  process.env.DATABASE_PROVIDER='postgresql';process.env.DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io/postgres';assert.throws(()=>projectDatabase('runtime'),/DATABASE_PROVIDER/);
+ }finally{process.env=before;}
+});
+test('Prisma managed runtime client rejects DDL, multi-statements, direct account writes and migration archives',()=>{
+ assert.doesNotThrow(()=>assertManagedRuntimeSql('INSERT INTO scans(id) VALUES($1) ON CONFLICT(id) DO UPDATE SET result=$2'));
+ assert.throws(()=>assertManagedRuntimeSql('DO $$ BEGIN NULL; END $$'));
+ for(const sql of ['SELECT id FROM users WHERE email=$1','SELECT public.register_viewer($1,$2,$3)',"WITH changed AS (INSERT INTO events(category) VALUES('scan_success') RETURNING id) SELECT id FROM changed",'UPDATE scans SET result=$1 WHERE id=$2','DELETE FROM sessions WHERE token_hash=$1',"SELECT 'DROP' AS label"])assert.doesNotThrow(()=>assertManagedRuntimeSql(sql));
+ for(const sql of ['DROP TABLE users','SELECT 1; DROP TABLE users','CREATE TABLE bad(id int)','TRUNCATE scans','GRANT ALL ON users TO PUBLIC','SELECT * FROM schema_migrations','SELECT * FROM public.scan_duplicate_archive','UPDATE users SET role=$1','INSERT INTO public.users(id) VALUES($1)','DELETE FROM "users"','SELECT set_config($1,$2,true)','SELECT 1 -- hidden'])assert.throws(()=>assertManagedRuntimeSql(sql));
+});
+test('Prisma readiness reports provider-managed permissions without asserting separate SQL role isolation',async()=>{
+ const before={...process.env};try{
+  process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';process.env.DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io/postgres';
+  const queries:string[]=[];const ready=await deploymentReadiness(async sql=>{queries.push(sql);return {rows:[{schema_ready:true,writes_ready:true}]};});
+  assert.deepEqual(ready,{ready:true,code:'READY',permissionModel:'provider-managed'});assert(!queries.some(sql=>sql.includes('rolsuper')));
+ }finally{process.env=before;}
+});
 test('cloud PostgreSQL URL preserves project identity and enforces verified TLS',()=>{
  const before={...process.env};try{
   cloudEnv();const c=projectDatabase('runtime');assert.deepEqual(c.ssl,{rejectUnauthorized:true});assert.equal(c.enableChannelBinding,true);assert.equal(new URL(c.connectionString).search,'');

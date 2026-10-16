@@ -2,13 +2,32 @@
 
 공식 주소는 **https://webguard-security-hub.vercel.app/** 입니다. 화면·로그인·진단 API는 Vercel에서 실행하고 PostgreSQL은 외부 관리형 DB에 연결합니다. PC를 끄더라도 Vercel과 외부 DB가 가동 중이면 서비스할 수 있습니다. 임시 PC 주소로 이동하지 않습니다. 과거 `PC_APP_ORIGIN` 변수는 사용하지 않으며 남아 있어도 무시됩니다.
 
-현재 코드 준비와 실제 운영 연결은 구분합니다. **외부 PostgreSQL 생성·연결·데이터 이전 전에는 로그인 완료 상태가 아닙니다.** 로컬 `localhost:5432`를 Vercel에 넣으면 그 PC에 연결되지 않습니다. 웹 HTTPS 주소도 DB 주소가 아닙니다.
+현재 코드 준비와 실제 운영 연결은 구분합니다. **Production 환경변수 적용·재배포·로그인 확인 전에는 로그인 완료 상태가 아닙니다.** 로컬 `localhost:5432`를 Vercel에 넣으면 그 PC에 연결되지 않습니다. 웹 HTTPS 주소도 DB 주소가 아닙니다.
+
+## 현재 선택한 Prisma Postgres
+
+Prisma Postgres의 공식 TCP 연결은 기존 `pg` 라이브러리로 사용할 수 있으므로 Prisma ORM 전환은 필요하지 않습니다. 제공자가 발급한 자격증명을 사용하고 직접 연결과 풀 연결의 호스트를 구분합니다. [공식 연결 안내](https://www.prisma.io/docs/postgres/database/connecting-to-your-database).
+
+실제 확인한 서비스는 별도 역할 생성과 GRANT/REVOKE를 거절합니다. 따라서 `DATABASE_PROVIDER=prisma-postgres`를 명시한 별도 프로필과 `sql/migrations/prisma-postgres/`를 사용합니다. **일반 PostgreSQL 프로필의 독립 앱 역할 격리는 이 프로필에 적용되지 않습니다.** 앱의 SQL 보조 검사는 자격증명 탈취 후 DB 접근을 막지 못합니다. [실제 권한과 대응 정책](../SECURITY_POLICY.md)을 참고하세요.
+
+1. Git에서 제외된 `.env.migration.production.local`에 `DATABASE_PROVIDER=prisma-postgres`, `PROJECT_DATABASE=postgres`, `MIGRATION_DATABASE_URL=제공자의 직접 연결 URL`을 저장합니다. 직접 호스트는 `db.prisma.io`이며 실제 DB 이름이 다르면 그 이름을 사용합니다. `DIRECT_URL`도 직접 연결 변수의 대안으로 지원합니다.
+2. `npm run db:setup:production`은 직접 URL의 호스트를 `pooled.db.prisma.io`로 바꾼 runtime 설정을 `.env.production.local`에 생성합니다. 기존 파일은 덮어쓰지 않으며 실제 비밀값을 출력하지 않습니다. TLS 인증서를 검증합니다. 역할 생성은 시도하지 않습니다.
+3. `npm run db:migrate:production`을 실행합니다. 별도 Prisma 스키마를 적용하며 기존 일반 migration 이력과 혼합하지 않습니다. **Prisma에서는 `db:grant:production`을 실행하지 않습니다.**
+4. 아래의 기존 계정 이전 절차를 사용합니다. 대상에 계정이나 결과가 있으면 복사를 거절합니다.
+5. Vercel → 프로젝트 → Settings → Environment Variables → **Production**에 `.env.production.local`을 가져옵니다. `DATABASE_PROVIDER=prisma-postgres`, `PROJECT_DATABASE=postgres`, **풀 호스트의 `DATABASE_URL`**, 공식 `APP_ORIGIN`이 필요합니다. 이전 `PROJECT_RUNTIME_ROLE`은 이 프로필에서 사용하지 않습니다. migration 파일 자체는 올리지 않습니다.
+6. 최신 커밋을 재배포한 뒤 `/api/ready`의 HTTP 200, `code: READY`, `permissionModel: provider-managed`와 실제 로그인을 확인합니다. 환경변수 수정만으로 기존 배포가 갱신되지는 않습니다.
+
+샘플은 `deploy/prisma.vercel.env.example`입니다. 이후 1~2절은 **독립 SQL 역할을 지원하는 일반 PostgreSQL**을 선택했을 때만 적용합니다. Prisma에서는 위 순서를 사용하세요.
+
+실제 풀 연결 검증에서 시작 매개변수 `statement_timeout`을 넣으면 upstream 연결 실패가 재현됐습니다. Prisma 앱 풀은 해당 매개변수를 보내지 않고 클라이언트 대기 제한 `query_timeout=5000`을 사용합니다. 이는 서버 쿼리 취소를 보장하지 않습니다. 일반 PostgreSQL의 서버 statement timeout은 유지합니다.
 
 ## 1. 외부 PostgreSQL 만들기
 
 Vercel 프로젝트 → **Storage → Marketplace의 PostgreSQL(예: Neon)** 에서 이 프로젝트 전용 DB를 생성·연결합니다. 요금제·서비스 약관은 사용자가 확인하고 선택합니다. 기존 다른 프로젝트 DB를 재사용하거나 삭제하지 않습니다. DBeaver에도 새 연결로 추가해 관리할 수 있습니다.
 
 제공자의 Connect 화면에서 **직접 연결용 owner URL**, DB 이름, 선택적으로 **pooler 호스트**를 확인합니다. 이 정보와 비밀번호·키는 채팅에 보내지 마세요. Marketplace가 자동으로 넣은 DB URL이 owner 계정이면 아래의 최소 권한 runtime URL로 교체해야 합니다.
+
+일반 `DATABASE_PROVIDER=postgresql` 프로필은 SQL로 별도 역할과 권한을 만들 수 있는 PostgreSQL을 요구합니다. Prisma Postgres는 위의 명시적인 제공자 관리 프로필을 사용합니다. Prisma ORM·VS Code 확장과 Prisma Postgres 호스팅 서비스는 별개입니다.
 
 ## 2. PC에서 새 DB 준비
 
@@ -49,8 +68,9 @@ npm run db:copy:production
 |---|---|
 | `APP_ORIGIN` | `https://webguard-security-hub.vercel.app` |
 | `PROJECT_DATABASE` | 새 DB의 실제 이름 |
-| `PROJECT_RUNTIME_ROLE` | `webguard_hub_prod_app` |
-| `DATABASE_URL` | 생성된 출력 파일의 앱 역할 URL. 외부 호스트·비밀번호·TLS 포함 |
+| `DATABASE_PROVIDER` | Prisma는 `prisma-postgres`, 일반 PostgreSQL은 `postgresql` |
+| `PROJECT_RUNTIME_ROLE` | 일반 PostgreSQL만 `webguard_hub_prod_app`; Prisma에서는 사용하지 않음 |
+| `DATABASE_URL` | 생성 파일의 runtime URL. Prisma는 `pooled.db.prisma.io`, 일반 PostgreSQL은 별도 앱 역할 |
 | `PUBLIC_REGISTRATION_ENABLED` | `false` — 기존 조직 계정만 사용 |
 | `SCAN_TARGET_POLICY` | `public` |
 | `AI_ENABLED` | 우선 `false` |

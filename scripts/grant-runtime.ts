@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import { projectDatabase } from '../lib/project-database';
+import {databaseProvider} from '../lib/database-provider';
+if(databaseProvider()==='prisma-postgres')throw new Error('Prisma Postgres uses provider-managed credentials. SQL role grants are not part of this profile.');
 const pool=new Pool(projectDatabase('migration'));
 const role=process.env.PROJECT_RUNTIME_ROLE!;
 // Identifier is validated by projectDatabase; SQL object names below are fixed.
