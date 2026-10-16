@@ -1,0 +1,37 @@
+{
+  "name": "webguard-security-hub",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "test": "tsx --test tests/security.test.ts",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
+    "user:create": "tsx --env-file=.env.local scripts/create-user.ts",
+    "test:smoke": "tsx scripts/smoke.ts",
+    "test:integration": "tsx scripts/integration.ts"
+  },
+  "dependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@mui/material": "^7.0.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "pg": "^8.16.0",
+    "ipaddr.js": "^2.2.0",
+    "openai": "^6.0.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "tsx": "^4.20.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/pg": "^8.15.0"
+  },
+  "type": "module"
+}
