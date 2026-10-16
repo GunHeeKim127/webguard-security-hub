@@ -109,3 +109,13 @@
 - 임시 PostgreSQL 통합 검증 전체 통과. 새 운영 역할의 관리 권한 없음, 기존 파일·역할 덮어쓰기 거부, migration·grant 적용, 비밀번호 해시와 계정 ID·진단 결과 유지, 세션 미복사, 비어 있지 않은 대상에 재복사 거부 확인. 기존 실제 PC DB에 쓰기 없음.
 - 새 readiness 권한 SQL은 실제 로컬 DB에 읽기 전용으로 실행해 `READY` 확인. 운영 owner 역할·미적용 schema·미부여 권한·연결 실패는 준비 완료로 처리하지 않음.
 - 외부 PostgreSQL은 아직 사용자 계정에 생성되지 않았음. 실제 Vercel 환경변수 연결·운영 데이터 이전·최종 실계정 로그인은 미완료이며 코드 준비와 구분함. `docs/VERCEL_DEPLOYMENT.md`에 남은 절차 명시.
+
+## Prisma Postgres 실제 연동 — 위 DB 연결 대기 상태 갱신
+
+- 제공자 직접 연결에서 역할 생성 및 권한 부여·회수는 42501로 거절됨을 롤백 시험으로 확인. 일반 PostgreSQL 권한 분리 모델을 유지하면서 `DATABASE_PROVIDER=prisma-postgres` 명시 프로필과 별도 migration 이력을 추가. Prisma에 독립 앱 SQL 역할이 있다고 주장하지 않음.
+- 공식 직접/풀 호스트와 실제 DB 이름을 검증하고 인증서 검증 TLS 적용. 실제 풀은 `statement_timeout` 시작 옵션이 있으면 upstream 연결 실패, 없으면 성공함을 비교 확인. 제공자 프로필에서 클라이언트 query timeout으로 변경하며 서버 쿼리 취소와 다름을 문서화.
+- Prisma 스키마 적용 성공. 기존 로컬 계정 1개와 최신 진단 결과 2개를 ID·비밀번호 해시·역할 그대로 복사. 원본은 읽기 전용, 기존 세션 미복사. 복사 뒤 실제 데이터 수 1계정·2결과·0세션 확인.
+- 실제 풀에서 `READY / provider-managed` 확인. 회원가입 viewer 강제, 세션 쿼리, 최신 결과 upsert, AI 캐시·예산, 영속 IP 차단 SQL을 한 트랜잭션 안에서 확인한 뒤 전부 롤백. 외부 AI 호출·실제 IP 공격 테스트 없음.
+- 테스트 68개와 타입 검사 통과. 관리자 역할 격리의 대체물이 아닌 앱 SQL 보조 검사의 DDL 거절·정상 UPDATE 및 ON CONFLICT 허용을 확인.
+- 승인받은 Vercel 프로젝트 Production 변수에 Prisma 풀 URL·공식 APP_ORIGIN·제공자/DB 이름 설정 적용. URL은 Secret 표준입력으로 전달하며 터미널·Git에 출력하지 않음. 외부 AI는 우선 비활성, 기본 개선안 사용 가능.
+- 요청한 실제 권한과 방어·차단·관리자 복구·미구현 범위 문서를 루트 `SECURITY_POLICY.md`에 저장하고 README에 연결.

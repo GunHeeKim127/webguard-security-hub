@@ -16,7 +16,7 @@
 - 허브 자체의 로그인 실패·진단 거부·의심 경로·최소 디코이 접근 이벤트 확인. 외부 트래픽은 수집하지 않습니다.
 - 실제 접속 IP의 정해진 위험 URL 패턴을 감지해 5분 차단, 5차례 임시 차단 후 6번째 위반에 블랙리스트 등록. 관리자 IP 현황과 로컬 해제 도구를 제공합니다. [적용 범위·복구 방법](docs/ACCESS_DEFENSE.md)을 참고하세요.
 
-기획 대비 구현 상태와 남은 작업은 [프로젝트 현황 분석](docs/PROJECT_STATUS.md), 실제 검증 기록은 [VALIDATION.md](VALIDATION.md)를 참고하세요.
+계정·DB의 실제 권한, 진단 허용 범위, 공격 시 차단·복구와 미구현 사항은 [보안 권한·대응 정책](SECURITY_POLICY.md)에 정리했습니다. 기획 대비 구현 상태와 남은 작업은 [프로젝트 현황 분석](docs/PROJECT_STATUS.md), 실제 검증 기록은 [VALIDATION.md](VALIDATION.md)를 참고하세요.
 
 ## 로컬 시작
 
@@ -52,7 +52,7 @@ AI 키가 없어도 로그인·진단·무료 기본 개선안은 사용할 수 
 
 ## SQL과 저장 결과
 
-sql/migrations는 번호 순으로 적용하며 적용된 파일을 변경하지 않습니다. checksum 이력·트랜잭션·advisory lock으로 중복 적용을 방지합니다. 앱과 migrator 계정을 분리하며 앱 계정은 DB 구조를 변경하지 못합니다. 역할별 권한은 `npm run db:grant`로 부여합니다. 자동 down migration은 미구현입니다.
+sql/migrations는 번호 순으로 적용하며 적용된 파일을 변경하지 않습니다. checksum 이력·트랜잭션·advisory lock으로 중복 적용을 방지합니다. 일반 PostgreSQL에서는 앱과 migrator 계정을 분리하며 앱 계정은 DB 구조를 변경하지 못합니다. 역할별 권한은 `npm run db:grant`로 부여합니다. Prisma Postgres는 `DATABASE_PROVIDER=prisma-postgres`와 별도 migration 경로를 사용하며 제공자 계정의 SQL 역할 분리는 지원하지 않습니다. 앱의 SQL 보조 검사는 DB 권한 격리를 대신하지 않습니다. 자세한 제약은 [보안 정책](SECURITY_POLICY.md)을 참고하세요. 자동 down migration은 미구현입니다.
 
 같은 HTTPS 원점은 ID를 유지한 채 결과·최종 실행자·진단 시각을 갱신합니다. DB 유일성 제약으로 동시 요청도 중복을 만들지 않습니다. 003 migration은 기존 중복의 최신 결과를 남기고 이전 행은 앱이 읽을 수 없는 scan_duplicate_archive에 보관합니다. 진단 결과와 성공 감사 이벤트는 함께 저장합니다.
 

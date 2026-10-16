@@ -4,10 +4,19 @@ import {randomBytes} from 'node:crypto';
 import {open,unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {projectDatabase} from '../lib/project-database';
+import {databaseProvider} from '../lib/database-provider';
 const index=process.argv.indexOf('--output');
 const output=path.resolve(index<0?'.env.production.local':process.argv[index+1]??'');
 const relative=path.relative(process.cwd(),output);
 if(!relative||relative.startsWith('..')||path.isAbsolute(relative))throw new Error('Output must be a new file inside this project');
+if(databaseProvider()==='prisma-postgres'){
+ const config=projectDatabase('migration');
+ const runtime=new URL(config.connectionString);runtime.hostname='pooled.db.prisma.io';runtime.searchParams.set('sslmode','verify-full');
+ const file=await open(output,'wx',0o600);
+ try{await file.writeFile(`APP_ORIGIN=https://webguard-security-hub.vercel.app\nDATABASE_PROVIDER=prisma-postgres\nPROJECT_DATABASE=${process.env.PROJECT_DATABASE}\nDATABASE_URL=${runtime.toString()}\nPUBLIC_REGISTRATION_ENABLED=false\nSCAN_TARGET_POLICY=public\nAI_ENABLED=false\nDEFAULT_LOCALE=ko\n`);}finally{await file.close();}
+ console.log('Prisma provider-managed runtime settings written to the ignored production file. No role creation attempted; no secrets printed.');
+ process.exit(0);
+}
 const config=projectDatabase('migration'),role=process.env.PROJECT_RUNTIME_ROLE!;
 const pool=new Pool({...config,connectionTimeoutMillis:5000,statement_timeout:10000});
 let createdFile=false,committed=false;
@@ -35,5 +44,8 @@ try{
  console.log('Production runtime role created. Credentials written only to the ignored local output file; no secrets printed.');
 }catch(error){
  await c.query('ROLLBACK');if(createdFile&&!committed)await unlink(output);
- console.error('Production setup failed; existing roles and environment files were preserved.');process.exitCode=1;
+ const code=typeof error==='object'&&error!==null&&'code' in error?String(error.code):'SETUP_FAILED';
+ console.error(`Production setup failed (${code}); existing roles and environment files were preserved.`);
+ if(code==='42501')console.error('The database provider denied role creation. A provider supporting separate runtime roles is required; do not put the migration owner URL into Vercel.');
+ process.exitCode=1;
 }finally{c.release();await pool.end();}
