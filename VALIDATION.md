@@ -119,3 +119,7 @@
 - 테스트 68개와 타입 검사 통과. 관리자 역할 격리의 대체물이 아닌 앱 SQL 보조 검사의 DDL 거절·정상 UPDATE 및 ON CONFLICT 허용을 확인.
 - 승인받은 Vercel 프로젝트 Production 변수에 Prisma 풀 URL·공식 APP_ORIGIN·제공자/DB 이름 설정 적용. URL은 Secret 표준입력으로 전달하며 터미널·Git에 출력하지 않음. 외부 AI는 우선 비활성, 기본 개선안 사용 가능.
 - 요청한 실제 권한과 방어·차단·관리자 복구·미구현 범위 문서를 루트 `SECURITY_POLICY.md`에 저장하고 README에 연결.
+- Next.js production 빌드 성공. Git 커밋 `d78f1be`의 Vercel Production 배포가 Ready이며 공식 도메인 alias 연결을 CLI로 확인.
+- 공식 주소의 `/api/ready` HTTP 200, `READY`, `permissionModel: provider-managed`. 홈페이지 200, 비로그인 대시보드 401, 위조 Origin 로그인 403, 공개 가입 비활성 403 확인.
+- 무작위 비밀번호의 임시 admin/viewer 계정으로 실제 HTTP 로그인 200, 대시보드 200 및 기존 결과 2개 조회, Secure/HttpOnly/SameSite=Strict 쿠키, viewer의 진단·AI 403과 IP 목록 미노출, 로그아웃 뒤 대시보드 401 확인. 테스트 계정 2개와 세션·해당 로그인 한도 버킷 제거. 로그인 감사 이벤트는 보존. 실제 사용자 비밀번호는 읽지 않았으며 본인 계정 로그인은 사용자가 재확인해야 함.
+- 코드·문서 116개를 로컬 환경 파일의 실제 비밀값과 대조해 일치 0개 확인. 실제 production·migration 환경 파일과 work 검증 파일은 Git 제외 상태 유지.
