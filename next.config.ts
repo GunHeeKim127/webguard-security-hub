@@ -1,10 +1,8 @@
 import type { NextConfig } from 'next';
 import {accessOrigins} from './lib/access-origins';
-import {pcEntryRedirects} from './lib/pc-entry';
 const config: NextConfig = {
  allowedDevOrigins:accessOrigins().map(origin=>new URL(origin).hostname),
  poweredByHeader: false,
- async redirects(){return pcEntryRedirects();},
  // Keep verification builds separate from the running development server.
  distDir: process.env.WEBGUARD_VERIFY==='true'?'.next-verify':'.next',
  async headers() { return [{source:'/:path*',headers:[

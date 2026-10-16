@@ -182,5 +182,24 @@ try{
  const newAdmin=await login('admin'),newViewer=await login('viewer');
  const adminDefense=await (await call('/api/dashboard','GET',undefined,newAdmin)).json(),viewerDefense=await (await call('/api/dashboard','GET',undefined,newViewer)).json();
  assert.equal(adminDefense.overview.targetPolicy,'public');assert(adminDefense.ipBlocks.some((block:any)=>block.address==='198.51.100.99'));
- assert.equal(Object.hasOwn(viewerDefense,'ipBlocks'),false);console.log('PASS public-target metadata and administrator-only IP disclosure');await projectAdmin.end();
+ assert.equal(Object.hasOwn(viewerDefense,'ipBlocks'),false);console.log('PASS public-target metadata and administrator-only IP disclosure');
+ assert.equal((await call('/api/ready')).status,200);console.log('PASS readiness confirms migrated least-privilege runtime');
+ await pool.query('CREATE DATABASE webguard_copy_fixture');
+ const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
+ const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};
+ const output=path.join(dir,'generated-production.env');
+ await exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true});
+ const generated=await readFile(output,'utf8');assert(generated.includes('DATABASE_URL='));assert(generated.includes('PUBLIC_REGISTRATION_ENABLED=false'));assert(!generated.includes('MIGRATION_DATABASE_URL'));
+ const roleState=(await pool.query("SELECT rolsuper,rolcreatedb,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname='webguard_fixture_app'")).rows[0];assert(Object.values(roleState).every(value=>value===false));
+ await assert.rejects(exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true}));assert.equal(await readFile(output,'utf8'),generated);
+ await script('scripts/migrate.ts',cloudEnv);await script('scripts/grant-runtime.ts',cloudEnv);
+ await script('scripts/copy-production-data.ts',cloudEnv);
+ const copied=new Pool({connectionString:targetUrl});
+ assert.deepEqual((await copied.query('SELECT id,password_hash,role FROM users ORDER BY id')).rows,(await projectAdmin.query('SELECT id,password_hash,role FROM users ORDER BY id')).rows);
+ assert.equal((await copied.query('SELECT count(*) FROM scans')).rows[0].count,(await projectAdmin.query('SELECT count(*) FROM scans')).rows[0].count);
+ assert.equal((await copied.query('SELECT count(*) FROM sessions')).rows[0].count,'0');
+ await assert.rejects(script('scripts/copy-production-data.ts',cloudEnv));
+ assert.equal((await copied.query("SELECT count(*) FROM events WHERE category='production_data_imported'")).rows[0].count,'1');
+ await copied.end();console.log('PASS production role setup, existing-file protection, account hash/result copy, no copied sessions and non-empty target rejection');
+ await projectAdmin.end();
 }finally{server?.kill();await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}

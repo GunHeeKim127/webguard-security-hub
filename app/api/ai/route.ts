@@ -8,6 +8,8 @@ import {tokenHash} from '../../../lib/password';
 import {requestLocale} from '../../../lib/request-locale';
 import {db} from '../../../lib/db';
 import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../../lib/security';
+export const runtime='nodejs';
+export const maxDuration=60;
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('ai-attempt:'+user.id,10,60);
  const configs=providerConfigs();if(process.env.AI_ENABLED!=='true'||!configs.length)throw new HttpError(503,'AI disabled: configure server environment');
