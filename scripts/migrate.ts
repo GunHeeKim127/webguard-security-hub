@@ -1,7 +1,8 @@
 import { Pool } from 'pg';
 import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const pool=new Pool({connectionString:process.env.DATABASE_URL});
+import { projectDatabase } from '../lib/project-database';
+const pool=new Pool(projectDatabase('migration'));
 const c=await pool.connect();
 try {
  await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock(784293)');

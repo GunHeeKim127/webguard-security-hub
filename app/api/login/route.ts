@@ -13,4 +13,4 @@ export async function POST(req:Request){try{
  await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '8 hours')",[tokenHash(token),r.rows[0].id]);
  await event('login_success');
  return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':`wg_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${process.env.APP_ORIGIN?.startsWith('https:')?'; Secure':''}`}});
- }catch(e){return failure(e);}}
+ }catch(e){return failure(e,req);}}

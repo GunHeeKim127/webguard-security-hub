@@ -1,6 +1,8 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { db } from './db';
+import {errorCode,errorText} from './errors-i18n';
+import {requestLocale} from './request-locale';
 import { tokenHash } from './password';
 import { HttpError,roleAllowed } from './request';
 export { HttpError,sameOrigin,body } from './request';
@@ -19,4 +21,4 @@ export async function limit(bucket:string,max:number,seconds:number){
  if(r.rows[0].hits>max)throw new HttpError(429,'Rate limit exceeded');
 }
 export async function event(category:string){await db.query('INSERT INTO events(category) VALUES($1)',[category]);}
-export function failure(e:unknown){return Response.json({error:e instanceof HttpError?e.message:'Service unavailable. Check local database/configuration.'},{status:e instanceof HttpError?e.status:503,headers:{'Cache-Control':'no-store'}});}
+export function failure(e:unknown,req:Request){const status=e instanceof HttpError?e.status:503;const code=errorCode(e instanceof HttpError?e.message:'',status);const {locale}=requestLocale(req.headers);return Response.json({error:errorText(locale,code),errorCode:code,locale},{status,headers:{'Cache-Control':'no-store','Content-Language':locale,'Vary':'Cookie, Accept-Language'}});}

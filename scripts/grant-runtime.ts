@@ -1,0 +1,31 @@
+import { Pool } from 'pg';
+import { projectDatabase } from '../lib/project-database';
+const pool=new Pool(projectDatabase('migration'));
+const role=process.env.PROJECT_RUNTIME_ROLE!;
+// Identifier is validated by projectDatabase; SQL object names below are fixed.
+const quoted='"'+role+'"';
+const c=await pool.connect();
+try{
+ await c.query('BEGIN');
+ const exists=await c.query('SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=$1',[role]);
+ if(!exists.rowCount || Object.values(exists.rows[0]).some(Boolean))throw new Error('Runtime role missing or has administrative privileges');
+ const database=process.env.PROJECT_DATABASE!;
+ if(!/^[a-z][a-z0-9_]{0,62}$/.test(database))throw new Error('Invalid database identifier');
+ const owner=await c.query('SELECT pg_get_userbyid(datdba) AS owner FROM pg_database WHERE datname=current_database()');
+ if(owner.rows[0].owner===role)throw new Error('Runtime role cannot own database');
+ const membership=await c.query('SELECT pg_has_role($1,$2,\'MEMBER\') AS member',[role,owner.rows[0].owner]);
+ if(membership.rows[0].member)throw new Error('Runtime role cannot inherit database owner');
+ await c.query(`REVOKE ALL ON DATABASE "${database}" FROM PUBLIC`);
+ await c.query('REVOKE ALL ON SCHEMA public FROM PUBLIC');
+ await c.query(`GRANT CONNECT ON DATABASE "${database}" TO ${quoted}`);
+ await c.query(`GRANT USAGE ON SCHEMA public TO ${quoted}`);
+ await c.query(`GRANT SELECT ON users TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT, DELETE ON sessions TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT ON scans, events TO ${quoted}`);
+ await c.query(`GRANT UPDATE(user_id,result,created_at) ON scans TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT, UPDATE ON rate_limits TO ${quoted}`);
+ await c.query(`GRANT USAGE, SELECT ON SEQUENCE events_id_seq TO ${quoted}`);
+ await c.query(`GRANT EXECUTE ON FUNCTION public.register_viewer(uuid,text,text) TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT, UPDATE ON public.ai_advice_cache TO ${quoted}`);
+ await c.query('COMMIT');console.log('Project runtime privileges applied; migration history is not exposed to runtime.');
+}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();await pool.end();}
