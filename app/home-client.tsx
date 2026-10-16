@@ -12,6 +12,7 @@ import {assessmentText} from '../lib/assessment-copy';
 import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
 import DefensePanel from './defense-panel';
+import LoginIllustration from './login-illustration';
 import {defenseText} from '../lib/defense-copy';
 import {operationsMessages} from '../lib/operations-messages';
 import type {Dashboard,Inspection,Operation,OperationState} from '../lib/inspection';
@@ -65,23 +66,27 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   if(!r.ok){setCode('SWITCH_ERROR');return;}setLocale(value);setAdvice('');
  }catch{setCode('NETWORK_ERROR');}finally{setSwitching(false);}}
  const roleLabel=data?(['admin','analyst','viewer'].includes(data.user.role)?t[data.user.role as 'admin'|'analyst'|'viewer']:t.viewer):'';
- return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:5}}>
-  <Stack direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
+ const languageControl=<FormControl size="small" sx={{minWidth:150}} disabled={busy||switching}>
+  <InputLabel id="language-label">{t.language}</InputLabel>
+  <Select labelId="language-label" id="language-select" label={t.language} value={locale} onChange={e=>void changeLanguage(e.target.value)}>
+   {locales.map(l=><MenuItem key={l} value={l} lang={l}>{localeNames[l]}</MenuItem>)}
+  </Select>
+ </FormControl>;
+ return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:3,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
+  {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
    <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
    <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
-    <Chip label={t.local} variant="outlined"/><Button href="/signup" size="small">{registrationCopy[locale].title}</Button>
-    <FormControl size="small" sx={{minWidth:150}} disabled={busy||switching}>
-     <InputLabel id="language-label">{t.language}</InputLabel>
-     <Select labelId="language-label" id="language-select" label={t.language} value={locale} onChange={e=>void changeLanguage(e.target.value)}>
-      {locales.map(l=><MenuItem key={l} value={l} lang={l}>{localeNames[l]}</MenuItem>)}
-     </Select>
-    </FormControl>
+    <Chip label={t.local} variant="outlined"/>{languageControl}
    </Stack>
   </Stack>
-  <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{data&&inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box>
-  {message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
-  {bootLoading?<Paper sx={{p:4,maxWidth:520}}><Typography role="status" mb={2}>{ops.refresh}</Typography><LinearProgress aria-label={ops.refresh}/></Paper>:!data?<Paper sx={{p:4,maxWidth:520}}>
-   <Typography variant="h5" mb={2}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={3}>{registrationCopy[locale].help}</Typography>
+  <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
+  {data&&message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
+  {bootLoading?<Paper sx={{p:4,maxWidth:520}}><Typography role="status" mb={2}>{ops.refresh}</Typography><LinearProgress aria-label={ops.refresh}/></Paper>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
+   <Paper component="section" elevation={0} sx={{p:{xs:3,sm:4,md:5},border:'1px solid #26394b',background:'linear-gradient(145deg,#142537,#101d2d)'}}>
+   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" mb={5}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ WEBGUARD</Typography>{languageControl}</Stack>
+   <Typography variant="overline" color="primary">{t.operations}</Typography>
+   <Typography component="h1" variant="h4" fontWeight={800} sx={{mt:1,mb:2}}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={4} sx={{lineHeight:1.7}}>{registrationCopy[locale].help}</Typography>
+   {message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
    <Box component="form" noValidate onSubmit={async e=>{
     e.preventDefault();const form=e.currentTarget;const email=form.elements.namedItem('email') as HTMLInputElement;const password=form.elements.namedItem('password') as HTMLInputElement;
     if(!email.value||!password.value){setCode('REQUIRED');(!email.value?email:password).focus();return;}
@@ -92,7 +97,9 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
     <TextField name="password" label={t.password} type="password" autoComplete="current-password" required/>
     <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button>
    </Stack></Box>
-  </Paper>:<>
+   </Paper>
+   <Box sx={{minWidth:0,textAlign:'center',px:{xs:2,md:0}}}><Box sx={{maxWidth:{xs:300,md:580},mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>
+  </Box>:<>
    <Stack direction="row" gap={2} mb={3} alignItems="center" flexWrap="wrap">
     <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>
     <Button disabled={busy} onClick={async()=>{if(await post('/api/logout',{})){setData(null);setAdvice('');setInspection({state:'idle',target:''});setActivity([]);setTargetValue('');setLogs([]);generation.current++;scanRequest.current?.abort();}}}>{t.logout}</Button><Button disabled={busy||operation?.state==='running'} onClick={()=>void load()}>{t.refresh}</Button>
