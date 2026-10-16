@@ -2,17 +2,16 @@ import dns from 'node:dns/promises';
 import https from 'node:https';
 import ipaddr from 'ipaddr.js';
 import type {Stage} from './scan-run';
+import type {TLSSocket} from 'node:tls';
+import {assessWeb,corsProbeOrigin} from './web-assessment';
+import type {CheckResult} from './inspection';
+import {scanTarget} from './scan-policy';
 export function publicAddress(address:string){try{return ipaddr.parse(address).range()==='unicast';}catch{return false;}}
-export function target(raw:string,allowed:string[]) {
- const u=new URL(raw);
- if(u.protocol!=='https:' || u.username || u.password || (u.port && u.port!=='443') || u.pathname!=='/' || u.search || u.hash) throw new Error('Only HTTPS origin on port 443 is allowed');
- if(ipaddr.isValid(u.hostname.replace(/^\[|\]$/g,'')) || !allowed.includes(u.hostname) || !/^[a-z0-9.-]+$/.test(u.hostname))throw new Error('Hostname is not allowed');
- return u;
-}
+export const target=scanTarget;
 export function findings(headers:Record<string,string|string[]|undefined>){
  return ['content-security-policy','strict-transport-security','x-content-type-options','referrer-policy'].map(header=>({header,present:!!headers[header],severity:headers[header]?'info':'medium'}));
 }
-export async function scan(raw:string,allowed:string[],progress:(stage:Stage,state:'running'|'success')=>void=()=>{},signal?:AbortSignal) {
+export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,state:'running'|'success')=>void=()=>{},signal?:AbortSignal) {
  const checkAbort=()=>{if(signal?.aborted)throw new Error('Scan cancelled');};
  checkAbort();progress('target','running');
  const u=target(raw,allowed);progress('target','success');progress('network','running');
@@ -20,10 +19,17 @@ export async function scan(raw:string,allowed:string[],progress:(stage:Stage,sta
  checkAbort();
  if(!addresses.length || addresses.some(a=>!publicAddress(a.address)))throw new Error('Non-public DNS rejected');
  const pinned=addresses[0];
- return new Promise<{status:number,checks:ReturnType<typeof findings>}>((resolve,reject)=>{
- const req=https.request(u,{method:'HEAD',agent:false,family:pinned.family,lookup:((_hostname:unknown,_options:unknown,callback:Function)=>callback(null,pinned.address,pinned.family)) as never,headers:{'User-Agent':'WebGuard/0.1 authorized-header-check'}},res=>{
-  res.destroy();
-  try{checkAbort();progress('network','success');progress('headers','running');const checks=findings(res.headers);progress('headers','success');resolve({status:res.statusCode??0,checks});}catch(error){reject(error);}
+ return new Promise<CheckResult>((resolve,reject)=>{
+ const req=https.request(u,{method:'HEAD',agent:false,rejectUnauthorized:true,minVersion:'TLSv1.2',maxHeaderSize:16384,family:pinned.family,lookup:((_hostname:unknown,_options:unknown,callback:Function)=>callback(null,pinned.address,pinned.family)) as never,headers:{'User-Agent':'WebGuard/0.2 authorized-passive-check',Origin:corsProbeOrigin}},res=>{
+  try{checkAbort();progress('network','success');progress('headers','running');
+   const socket=res.socket as TLSSocket,certificate=socket?.getPeerCertificate?.();
+   const tls=socket?.getProtocol?{authorized:socket.authorized===true,protocol:socket.getProtocol(),validTo:certificate?.valid_to??null}:undefined;
+   if(tls&&!tls.authorized)throw new Error('TLS verification failed');
+   const checks=findings(res.headers),assessment=assessWeb(res.headers,tls),status=res.statusCode??0;
+   // Unsupported HEAD and error/redirect pages do not establish the target application's policy.
+   if(status<200||status>=300)for(const item of assessment)if(item.group!=='tls'){item.status='not_assessed';item.severity='info';item.issues=['response_scope'];}
+   progress('headers','success');resolve({status,checks,assessment,assessmentVersion:2});
+  }catch(error){reject(error);}finally{res.destroy();}
  });
  const abort=()=>req.destroy(new Error('Scan cancelled'));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
  const timer=setTimeout(()=>req.destroy(new Error('Scan deadline exceeded')),5000);
