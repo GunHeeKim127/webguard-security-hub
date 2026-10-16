@@ -1,6 +1,15 @@
 import type {IncomingHttpHeaders} from 'node:http';
 import {normalizeIp} from './ingress-guard';
 
+export function tunnelHttpsRedirect(input:IncomingHttpHeaders,hostname:string,target:string){
+ if(input.host!==hostname)throw new Error('Unexpected tunnel host');
+ if(input['x-forwarded-proto']==='https')return null;
+ if(input['x-forwarded-proto']!=='http')throw new Error('Missing edge protocol');
+ // Concatenation keeps even a //evil.example request target on our own hostname.
+ if(!target.startsWith('/')||/[\r\n]/.test(target))throw new Error('Invalid request target');
+ return `https://${hostname}${target}`;
+}
+
 // This gateway listens only on loopback and is reached through our cloudflared child.
 // Cloudflare overwrites CF-Connecting-IP at its edge. Ordinary XFF is never trusted.
 export function tunnelHeaders(input:IncomingHttpHeaders,hostname:string,secret:string){

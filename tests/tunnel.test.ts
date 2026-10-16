@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {tunnelHeaders} from '../lib/tunnel-gateway';
+import {tunnelHeaders,tunnelHttpsRedirect} from '../lib/tunnel-gateway';
 import {clientAddress} from '../lib/ingress-guard';
 test('tunnel gateway replaces spoofed proxy headers and authenticates to the guard',()=>{
  const secret='a'.repeat(64),host='test.trycloudflare.com';
@@ -13,4 +13,12 @@ test('tunnel gateway replaces spoofed proxy headers and authenticates to the gua
 test('tunnel gateway rejects mismatched hosts and missing or ambiguous client IP',()=>{
  const host='test.trycloudflare.com';
  for(const input of [{host:'evil.example','cf-connecting-ip':'8.8.8.8'},{host},{host,'cf-connecting-ip':'8.8.8.8,1.1.1.1'},{host,'cf-connecting-ip':['8.8.8.8','1.1.1.1']}])assert.throws(()=>tunnelHeaders(input,host,'a'.repeat(64)));
+});
+test('HTTP tunnel entry redirects to HTTPS before login and preserves the same destination host',()=>{
+ const host='test.trycloudflare.com';
+ assert.equal(tunnelHttpsRedirect({host,'x-forwarded-proto':'http'},host,'/?locale=ko'),`https://${host}/?locale=ko`);
+ assert.equal(tunnelHttpsRedirect({host,'x-forwarded-proto':'https'},host,'/'),null);
+ assert.equal(new URL(tunnelHttpsRedirect({host,'x-forwarded-proto':'http'},host,'//evil.example/')!).host,host);
+ for(const proto of [undefined,'http,https','ftp'])assert.throws(()=>tunnelHttpsRedirect({host,'x-forwarded-proto':proto},host,'/'));
+ assert.throws(()=>tunnelHttpsRedirect({host:'evil.example','x-forwarded-proto':'http'},host,'/'));
 });
