@@ -1,4 +1,4 @@
-import {approvedHosts} from '../../../lib/scan-policy';
+import {approvedHosts,targetPolicy} from '../../../lib/scan-policy';
 import {saveScan} from '../../../lib/scan-store';
 import {db} from '../../../lib/db';
 import {scan} from '../../../lib/scanner';
@@ -9,9 +9,9 @@ export const runtime='nodejs';
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('scan:'+user.id,5,60);
  const data=await body(req);if(typeof data.url!=='string'||!data.url.trim()||data.url.length>300||data.authorized!==true)throw new HttpError(400,'Owned target and authorization confirmation required');
- const url=data.url,hosts=approvedHosts();
+ const url=data.url,hosts=targetPolicy()==='approved'?approvedHosts():undefined;
  async function run(progress:(stage:Stage,state:'running'|'success')=>void,signal:AbortSignal){
-  if(!hosts.length)throw new HttpError(409,'No approved targets configured');
+  if(hosts&&!hosts.length)throw new HttpError(409,'No approved targets configured');
   let result;try{result=await scan(url,hosts,progress,signal);}catch{if(!signal.aborted)await event('scan_rejected');throw new HttpError(400,'Target rejected or unreachable. Check allowlist, public DNS and TLS.');}
   if(signal.aborted)throw new Error('Scan cancelled');
   progress('store','running');const id=await saveScan((sql,values)=>db.query(sql,values),user.id,new URL(url).hostname,result);

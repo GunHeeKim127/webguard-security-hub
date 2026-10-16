@@ -1,6 +1,8 @@
+import {accessOrigins} from './access-origins';
 export class HttpError extends Error { constructor(public status:number,message:string){super(message);} }
 export function sameOrigin(req:Request) {
- if(!process.env.APP_ORIGIN || req.headers.get('origin')!==process.env.APP_ORIGIN) throw new HttpError(403,'Origin rejected');
+ const origin=req.headers.get('origin');
+ if(!origin||!accessOrigins().includes(origin)||new URL(origin).host!==(req.headers.get('host')??new URL(req.url).host))throw new HttpError(403,'Origin rejected');
 }
 export async function body(req:Request) {
  if(!req.headers.get('content-type')?.startsWith('application/json')) throw new HttpError(415,'JSON required');

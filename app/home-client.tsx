@@ -8,7 +8,11 @@ import {appendLog,readScanStream,type ScanLog} from '../lib/scan-run';
 import {adviceCopy,localAdvice} from '../lib/local-advice';
 import {registrationCopy} from '../lib/registration-copy';
 import {scanUI} from '../lib/scan-ui';
+import {assessmentText} from '../lib/assessment-copy';
+import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
+import DefensePanel from './defense-panel';
+import {defenseText} from '../lib/defense-copy';
 import {operationsMessages} from '../lib/operations-messages';
 import type {Dashboard,Inspection,Operation,OperationState} from '../lib/inspection';
 
@@ -16,6 +20,7 @@ const theme=createTheme({palette:{mode:'dark',primary:{main:'#66e6c3'},backgroun
 const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','strict-transport-security':'hsts','x-content-type-options':'nosniff','referrer-policy':'referrer'};
 
 export default function Home({initialLocale}:{initialLocale:Locale}){
+ const [adviceExpanded,setAdviceExpanded]=useState(true);
  const [locale,setLocale]=useState(initialLocale),[data,setData]=useState<Dashboard|null>(null),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[switching,setSwitching]=useState(false),[advice,setAdvice]=useState(''),[authorized,setAuthorized]=useState(false);
  const [inspection,setInspection]=useState<Inspection>({state:'idle',target:''}),[operation,setOperation]=useState<OperationState>(null),[activity,setActivity]=useState<NonNullable<OperationState>[]>([]),[targetValue,setTargetValue]=useState('');
  const [logs,setLogs]=useState<ScanLog[]>([]);const scanRequest=useRef<AbortController|null>(null),generation=useRef(0);
@@ -23,10 +28,11 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
  const [adviceInfo,setAdviceInfo]=useState<{source:string,reasonCode?:string,provider?:string,model?:string,inputTokens?:number,outputTokens?:number}|null>(null);
  const [bootLoading,setBootLoading]=useState(true);
  const t=messages[locale],ops=operationsMessages[locale],scanCopy=scanUI[locale];
- function changeTarget(value:string){if(value===targetValue)return;generation.current++;if(scanRequest.current){scanRequest.current.abort();setBusy(false);}scanRequest.current=null;setTargetValue(value);setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setAdvice('');}
+ function changeTarget(value:string){if(value===targetValue)return;generation.current++;if(scanRequest.current){scanRequest.current.abort();setBusy(false);}scanRequest.current=null;setTargetValue(value);setAuthorized(false);setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setAdvice('');}
  const normalizedTarget=targetValue.trim().includes('://')?targetValue.trim():'https://'+targetValue.trim();
- let targetApproved=false;try{const url=new URL(normalizedTarget);targetApproved=url.protocol==='https:'&&!url.username&&!url.password&&(!url.port||url.port==='443')&&url.pathname==='/'&&!url.search&&!url.hash&&!!data?.overview.approvedHosts.includes(url.hostname);}catch{}
- const blockReason=!targetValue.trim()?scanCopy.address:!authorized?scanCopy.permission:data?.user.role==='viewer'?t.viewerHelp:data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?scanCopy.unapproved:'';
+ const publicTargets=data?.overview.targetPolicy==='public';
+ let targetApproved=false;try{scanTarget(normalizedTarget,publicTargets?undefined:data?.overview.approvedHosts??[]);targetApproved=true;}catch{}
+ const blockReason=!targetValue.trim()?scanCopy.address:!authorized?scanCopy.permission:data?.user.role==='viewer'?t.viewerHelp:!publicTargets&&data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?(publicTargets?assessmentText(locale,'targetInvalid'):scanCopy.unapproved):'';
  async function runScan(){
   const url=normalizedTarget;scanRequest.current?.abort();const request=new AbortController(),run=++generation.current;scanRequest.current=request;
   setTargetValue(url);setLogs([]);setCode('');setAdvice('');setInspection({state:'running',target:url});setBusy(true);markOperation('scan','running');
@@ -42,7 +48,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   finally{if(current()){setBusy(false);scanRequest.current=null;}}
  }
  function markOperation(kind:Operation,state:'running'|'success'|'error'){const item={kind,state,at:new Date().toISOString()};setOperation(item);if(state!=='running')setActivity(old=>[item,...old].slice(0,8));}
- const message=code==='NETWORK_ERROR'?t.networkError:code==='SWITCH_ERROR'?t.switchError:code==='INVALID_EMAIL'?t.invalidEmail:code==='REQUIRED'?t.required:code?errorText(locale,code):'';
+ const message=code==='THREAT_BLOCKED'?defenseText(locale,'temporary'):code==='IP_BLACKLISTED'?defenseText(locale,'permanent'):code==='PROTECTION_UNAVAILABLE'?defenseText(locale,'unavailable'):code==='NETWORK_ERROR'?t.networkError:code==='SWITCH_ERROR'?t.switchError:code==='INVALID_EMAIL'?t.invalidEmail:code==='REQUIRED'?t.required:code?errorText(locale,code):'';
  useEffect(()=>{document.documentElement.lang=locale;document.title=`WebGuard · ${messages[locale].title}`;},[locale]);
  async function load(record=true){if(record)markOperation('refresh','running');try{
   const r=await fetch('/api/dashboard',{cache:'no-store'});const json=await r.json();
@@ -93,11 +99,12 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
    </Stack>
    {data.user.role==='viewer'&&<Alert severity="info" sx={{mb:3}}>{t.viewerHelp}</Alert>}
    <Box>
-    <Paper sx={{p:3}}><Typography variant="h6">{t.scanTitle}</Typography><Typography color="text.secondary" my={2}>{t.scanHelp}</Typography>
+    <Paper sx={{p:3}}><Typography variant="h6">{assessmentText(locale,'title')}</Typography><Typography color="text.secondary" my={2}>{assessmentText(locale,'scope')}</Typography>
      <Box component="form" noValidate onSubmit={e=>{e.preventDefault();if(blockReason||busy||switching)return;void runScan();}}><Stack spacing={2}>
       <TextField name="url" type="url" disabled={busy&&!scanRequest.current} value={targetValue} onChange={e=>changeTarget(e.target.value)} label={t.url} placeholder="https://example.com" required/>
-      <FormControlLabel control={<Checkbox checked={authorized} onChange={e=>setAuthorized(e.target.checked)}/>} label={t.authorized}/>
-      <Button type="submit" variant="contained" disabled={busy||switching||!!blockReason} aria-describedby={blockReason?'scan-block-reason':undefined}>{busy?t.loading:t.scan}</Button>
+      <FormControlLabel control={<Checkbox checked={authorized} onChange={e=>setAuthorized(e.target.checked)}/>} label={assessmentText(locale,'ownership')}/>
+      {publicTargets&&<Alert severity="info">{assessmentText(locale,'publicNotice')}</Alert>}
+      <Button type="submit" variant="contained" disabled={busy||switching||!!blockReason} aria-describedby={blockReason?'scan-block-reason':undefined}>{busy?t.loading:assessmentText(locale,'title')}</Button>
       {blockReason&&<Alert id="scan-block-reason" severity="info">{blockReason}</Alert>}
       <Typography variant="caption" color="text.secondary">{scanCopy.reset}</Typography>
      </Stack></Box>
@@ -105,8 +112,9 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
     {inspection.state!=='idle'&&<Box sx={{mt:3}}><OperationsPanel locale={locale} data={data} inspection={inspection} operation={operation} activity={activity} logs={logs}/></Box>}
     <Paper sx={{p:3,mt:3}}><Typography variant="h6">{t.eventsTitle}</Typography><Typography color="text.secondary" my={2}>{t.eventsHelp}</Typography>
      {data.events.length?data.events.map(e=><Stack key={e.category} direction="row" justifyContent="space-between" gap={1} py={1}><Typography>{eventLabel(locale,e.category)}</Typography><Chip label={new Intl.NumberFormat(locale).format(e.count)}/></Stack>):<Typography>{t.noEvents}</Typography>}
-     <Alert severity="info" sx={{mt:2}}>{t.trafficLimit}</Alert>
+     <Alert severity="info" sx={{mt:2}}>{defenseText(locale,'scope')}</Alert>
     </Paper>
+    {data.user.role==='admin'&&data.ipBlocks&&<DefensePanel locale={locale} blocks={data.ipBlocks}/>}
    </Box>
    <Paper sx={{p:3,mt:3}}><Typography variant="h6" mb={2}>{t.history}</Typography>
     {data.scans.length===0&&<Typography color="text.secondary">{t.noScans}</Typography>}
@@ -114,17 +122,19 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
      <Typography fontWeight={700} sx={{overflowWrap:'anywhere'}}>{s.hostname} · HTTP {s.result.status}</Typography>
      <Button size="small" onClick={()=>{changeTarget('https://'+s.hostname);setTargetValue('https://'+s.hostname);setLogs([]);setInspection({state:'success',target:'https://'+s.hostname,result:s.result,recordId:s.id});requestAnimationFrame(()=>document.getElementById('inspection-console')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));}}>{ops.choose}</Button>
      <Typography variant="caption" color="text.secondary">{new Date(s.created_at).toLocaleString(locale)}</Typography>
-     <Stack direction="row" flexWrap="wrap" gap={1} my={2}>{s.result.checks.map(c=><Chip key={c.header} title={c.header} color={c.present?'success':'warning'} variant="outlined" label={`${t[headerKeys[c.header]??'scanTitle']}: ${c.present?t.present:t.missing}`}/>)}</Stack>
-     <Stack direction="row" gap={1} flexWrap="wrap"><Button variant="outlined" onClick={()=>{setAdvice(localAdvice(locale,s.result.checks));setAdviceInfo({source:'local'});}}>{adviceCopy[locale].button}</Button>
-     <Button disabled={busy||switching||!data.aiEnabled||data.user.role==='viewer'} onClick={async()=>{setAdvice('');setAdviceInfo(null);const r=await post('/api/ai',{scanId:s.id});if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
+     <Stack direction="row" flexWrap="wrap" gap={1} my={2}>{s.result.checks.map(c=>{const detail=s.result.assessment?.find(item=>item.id===headerKeys[c.header]);return <Chip key={c.header} title={c.header} color={detail?(detail.status==='pass'?'success':detail.status==='warning'?'warning':'default'):c.present?'default':'warning'} variant="outlined" label={`${t[headerKeys[c.header]??'scanTitle']}: ${detail?assessmentText(locale,detail.status):c.present?t.present:t.missing}`}/>;})}</Stack>
+     <Stack direction="row" gap={1} flexWrap="wrap"><Button variant="outlined" onClick={()=>{const next=localAdvice(locale,s.result.checks);setAdviceExpanded(advice===next&&adviceInfo?.source==='local'?!adviceExpanded:true);setAdvice(next);setAdviceInfo({source:'local'});}}>{adviceCopy[locale].button}</Button>
+     <Button disabled={busy||switching||!data.aiEnabled||data.user.role==='viewer'} onClick={async()=>{setAdvice('');setAdviceInfo(null);setAdviceExpanded(true);const r=await post('/api/ai',{scanId:s.id});if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
      <Typography variant="caption" color="text.secondary" display="block" mt={1}>{adviceCopy[locale].note}</Typography>
     </Box>)}
     {!data.aiEnabled&&<Typography color="text.secondary" variant="body2" sx={{mt:2}}>{t.aiDisabled}</Typography>}
     {advice&&<Alert severity={adviceInfo?.reasonCode?'warning':'info'} sx={{mt:2}}><Typography fontWeight={700}>{adviceInfo?.source==='local'?adviceCopy[locale].local:adviceInfo?.source==='cache'?adviceCopy[locale].cache:adviceCopy[locale].ai}</Typography>
+     <Button size="small" aria-expanded={adviceExpanded} aria-controls="saved-advice-content" onClick={()=>setAdviceExpanded(value=>!value)}>{assessmentText(locale,adviceExpanded?'hide':'show')}</Button>
+     <Box id="saved-advice-content" hidden={!adviceExpanded}>
      {adviceInfo?.reasonCode&&<Typography variant="body2" mb={2}>{adviceInfo.reasonCode==='AI_IN_PROGRESS'?adviceCopy[locale].pending:errorText(locale,adviceInfo.reasonCode)}</Typography>}
      {adviceInfo?.provider&&<Typography variant="caption" display="block">{adviceInfo.provider==='groq'?'Groq':adviceInfo.provider==='gemini'?'Gemini':'OpenAI'} · {adviceInfo.model}</Typography>}
      {adviceInfo?.source==='ai'&&<Typography variant="caption" display="block">{adviceCopy[locale].usage}: {(adviceInfo.inputTokens??0)+(adviceInfo.outputTokens??0)}</Typography>}
-     <Typography sx={{whiteSpace:'pre-wrap'}}>{advice}</Typography></Alert>}
+     <Typography sx={{whiteSpace:'pre-wrap'}}>{advice}</Typography></Box></Alert>}
    </Paper>
   </>}
   <Typography color="text.secondary" variant="body2" sx={{mt:4}}>{t.disclaimer}</Typography>

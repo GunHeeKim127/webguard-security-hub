@@ -3,17 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "dev": "tsx scripts/serve.ts --dev",
     "build": "next build --webpack",
-    "start": "next start --hostname 127.0.0.1",
-    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts",
+    "start": "tsx scripts/serve.ts",
+    "security:unblock": "tsx --env-file=.env.migration.local scripts/unblock-ip.ts",
+    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=.env.migration.local scripts/migrate.ts",
     "user:create": "tsx --env-file=.env.migration.local scripts/create-user.ts",
     "test:smoke": "tsx scripts/smoke.ts",
     "test:integration": "tsx scripts/integration.ts",
     "db:grant": "tsx --env-file=.env.migration.local scripts/grant-runtime.ts",
-    "test:locale": "tsx scripts/locale-smoke.ts"
+    "test:locale": "tsx scripts/locale-smoke.ts",
+    "share": "tsx scripts/share.ts"
   },
   "dependencies": {
     "@emotion/cache": "11.14",
@@ -21,20 +23,21 @@
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^7.0.0",
     "@mui/material-nextjs": "^7.3.10",
+    "@next/env": "16.4.2",
     "ipaddr.js": "^2.2.0",
     "next": "^16.0.0",
     "openai": "^6.0.0",
     "pg": "^8.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "tsx": "^4.20.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/pg": "^8.15.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   },
   "type": "module"

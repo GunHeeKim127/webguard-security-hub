@@ -14,7 +14,7 @@ const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/Postgre
 await mkdir('work',{recursive:true});const dir=await mkdtemp(path.resolve('work/isolated-pg-'));
 const pgPort=45000+Math.floor(Math.random()*5000),webPort=50000+Math.floor(Math.random()*5000),base=`http://127.0.0.1:${webPort}`;
 const database=`postgresql://postgres@127.0.0.1:${pgPort}/postgres`;
-const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_ROLE:'webguard_hub_dev_app',DATABASE_URL:`postgresql://webguard_hub_dev_app@127.0.0.1:${pgPort}/webguard_hub_dev`,MIGRATION_DATABASE_URL:`postgresql://webguard_hub_dev_migrator@127.0.0.1:${pgPort}/webguard_hub_dev`,APP_ORIGIN:base,AI_ENABLED:'false',AI_PROVIDER:'openai',OPENAI_API_KEY:'',ALLOWED_SCAN_HOSTS:'owned.example'};
+const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_ROLE:'webguard_hub_dev_app',DATABASE_URL:`postgresql://webguard_hub_dev_app@127.0.0.1:${pgPort}/webguard_hub_dev`,MIGRATION_DATABASE_URL:`postgresql://webguard_hub_dev_migrator@127.0.0.1:${pgPort}/webguard_hub_dev`,APP_ORIGIN:base,APP_ADDITIONAL_ORIGINS:`http://localhost:${webPort}`,AI_ENABLED:'false',AI_PROVIDER:'openai',OPENAI_API_KEY:'',ALLOWED_SCAN_HOSTS:'owned.example',SCAN_TARGET_POLICY:'public',TRUSTED_PROXY_IPS:'',WEBGUARD_PROXY_SECRET:''};
 const pool=new Pool({connectionString:database,connectionTimeoutMillis:1000});let pgStarted=false;let server:ReturnType<typeof spawn>|undefined;
 async function control(args:string[]){await new Promise<void>((resolve,reject)=>{const p=spawn(path.join(bin,'pg_ctl.exe'),args,{windowsHide:true,stdio:'ignore'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error('pg_ctl failed: '+code)));});}
 async function script(name:string,extra:Partial<NodeJS.ProcessEnv>={}){return exec(process.execPath,['node_modules/tsx/dist/cli.mjs',name],{env:{...env,...extra},windowsHide:true});}
@@ -27,7 +27,7 @@ try{
  for(const file of ['00_create_roles.sql','01_create_database.sql','02_restrict_database.sql'])await pool.query(await readFile('sql/setup/'+file,'utf8'));
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'4');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'5');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  await assert.rejects(runtime.query('CREATE TABLE should_not_exist(id int)'),{code:'42501'});
  await assert.rejects(runtime.query('SELECT * FROM schema_migrations'),{code:'42501'});
@@ -39,10 +39,18 @@ try{
  await assert.rejects(projectAdmin.query("SET ROLE other_project_app; SELECT public.register_viewer(gen_random_uuid(),'blocked@example.test',repeat('a',32)||':'||repeat('b',128))"),{code:'42501'});await projectAdmin.query('RESET ROLE');
  const password=randomBytes(24).toString('hex');
  for(const role of ['admin','viewer'])await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:role+'@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:role});
- let log='';server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(webPort)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout?.on('data',d=>log+=d);server.stderr?.on('data',d=>log+=d);
+ let log='';server=spawn(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/serve.ts','--hostname','127.0.0.1','--port',String(webPort)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout?.on('data',d=>log+=d);server.stderr?.on('data',d=>log+=d);
  let ready=false;for(let i=0;i<60;i++){if(server.exitCode!==null)throw new Error(log);try{if((await call('/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}assert(ready,log);
  async function login(role:string){const r=await call('/api/login','POST',{email:role+'@example.test',password});assert.equal(r.status,200,await r.clone().text());const cookie=r.headers.get('set-cookie')!;assert(cookie.includes('HttpOnly'));assert(cookie.includes('SameSite=Strict'));return cookie.split(';')[0];}
  const admin=await login('admin'),viewer=await login('viewer');
+ const deviceBase=`http://localhost:${webPort}`;
+ const deviceLogin=await fetch(deviceBase+'/api/login',{method:'POST',headers:{origin:deviceBase,'Content-Type':'application/json','User-Agent':'WebGuard-Test-Device-B'},body:JSON.stringify({email:'admin@example.test',password})});
+ assert.equal(deviceLogin.status,200);const deviceCookie=deviceLogin.headers.get('set-cookie')!.split(';')[0];assert.notEqual(deviceCookie,admin);
+ assert.equal((await fetch(deviceBase+'/api/dashboard',{headers:{cookie:deviceCookie,'User-Agent':'WebGuard-Test-Device-B'}})).status,200);
+ assert.equal((await call('/api/dashboard','GET',undefined,admin)).status,200);
+ assert.equal((await fetch(deviceBase+'/api/logout',{method:'POST',headers:{origin:deviceBase,cookie:deviceCookie,'Content-Type':'application/json'},body:'{}'})).status,200);
+ assert.equal((await fetch(deviceBase+'/api/dashboard',{headers:{cookie:deviceCookie}})).status,401);assert.equal((await call('/api/dashboard','GET',undefined,admin)).status,200);
+ console.log('PASS independent same-account device sessions, alternate entry address, and logout isolation');
  const signupPassword=randomBytes(24).toString('hex');
  assert.equal((await fetch(base+'/api/register',{method:'POST',headers:{origin:'https://evil.example','Content-Type':'application/json'},body:JSON.stringify({email:'new@example.test',password:signupPassword})})).status,403);
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:'short'})).status,400);
@@ -130,9 +138,12 @@ try{
  });
  await new Promise<void>(resolve=>provider.listen(0,'127.0.0.1',resolve));
  const providerPort=(provider.address() as {port:number}).port,adviceBase=`http://127.0.0.1:${webPort+1}`;
- const adviceServer=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(webPort+1)],{env:{...env,APP_ORIGIN:adviceBase,AI_ENABLED:'true',OPENAI_API_KEY:'fake-key-for-local-test-only',OPENAI_MODEL:'mock-advice-model',OPENAI_BASE_URL:`http://127.0.0.1:${providerPort}/v1`},windowsHide:true,stdio:'ignore'});
+ const adviceServer=spawn(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/serve.ts','--hostname','127.0.0.1','--port',String(webPort+1)],{env:{...env,APP_ORIGIN:adviceBase,PUBLIC_REGISTRATION_ENABLED:'false',AI_ENABLED:'true',OPENAI_API_KEY:'fake-key-for-local-test-only',OPENAI_MODEL:'mock-advice-model',OPENAI_BASE_URL:`http://127.0.0.1:${providerPort}/v1`},windowsHide:true,stdio:'ignore'});
  try{
   let adviceReady=false;for(let i=0;i<60;i++){if(adviceServer.exitCode!==null)throw new Error('Advice test server exited');try{if((await fetch(adviceBase+'/api/health')).ok){adviceReady=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,250));}assert(adviceReady);
+  assert.equal((await fetch(adviceBase+'/api/register',{method:'POST',headers:{origin:adviceBase,'Content-Type':'application/json'},body:JSON.stringify({email:'public-blocked@example.test',password})})).status,403);
+  assert.equal((await projectAdmin.query("SELECT count(*) FROM users WHERE email='public-blocked@example.test'")).rows[0].count,'0');
+  console.log('PASS public-sharing profile blocks self-registration before account creation');
   const scanId=(await projectAdmin.query("SELECT id FROM scans WHERE hostname='owned.example'")).rows[0].id;
   const requestAdvice=(locale:string)=>fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:admin+`; wg_locale=${locale}`,'Content-Type':'application/json'},body:JSON.stringify({scanId})});
   const live=await requestAdvice('ko');assert.equal(live.status,200);const generated=await live.json();assert.equal(generated.source,'ai');assert.equal(generated.inputTokens,20);assert.equal(generated.outputTokens,30);
@@ -142,9 +153,34 @@ try{
   console.log('PASS complete AI route with local-only provider: token usage, cache avoids calls, quota fallback and cross-language cooldown');
  }finally{adviceServer.kill();provider.closeAllConnections();await new Promise<void>(resolve=>provider.close(()=>resolve()));}
 
- assert.equal((await call('/decoy')).status,404);assert.equal((await call('/wp-admin')).status,404);
- assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category IN ('decoy_visit','suspicious_path')")).rows[0].count,'2');console.log('PASS bounded honeypot and probe events persisted');
+ assert.equal((await call('/decoy')).status,404);
+ assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category='decoy_visit'")).rows[0].count,'1');console.log('PASS bounded decoy event persisted');
  for(let i=0;i<6;i++){const r=await call('/api/login','POST',{email:'absent@example.test',password:'incorrect'});assert.equal(r.status,i===5?429:401);}console.log('PASS account login rate limit');
  await projectAdmin.query("UPDATE sessions SET expires_at=now()-interval '1 second' WHERE token_hash<>$1",['none']);assert.equal((await call('/api/dashboard','GET',undefined,viewer)).status,401);console.log('PASS session expiry enforced');
- const fresh=await login('admin');assert.equal((await call('/api/logout','POST',{},fresh)).status,200);assert.equal((await call('/api/dashboard','GET',undefined,fresh)).status,401);console.log('PASS logout revokes session');await projectAdmin.end();
+ const fresh=await login('admin');assert.equal((await call('/api/logout','POST',{},fresh)).status,200);assert.equal((await call('/api/dashboard','GET',undefined,fresh)).status,401);console.log('PASS logout revokes session');
+ const attacked=await fetch(base+'/.env',{headers:{'x-forwarded-for':'8.8.8.8','x-webguard-client-ip':'8.8.8.8','Accept-Language':'ko'}});
+ assert.equal(attacked.status,429);assert.equal((await attacked.json()).errorCode,'THREAT_BLOCKED');assert(Number(attacked.headers.get('retry-after'))>=295&&Number(attacked.headers.get('retry-after'))<=300);
+ assert.equal((await projectAdmin.query("SELECT strikes FROM ip_blocks WHERE address='127.0.0.1'")).rows[0].strikes,1);
+ assert.equal((await projectAdmin.query("SELECT count(*) FROM ip_blocks WHERE address='8.8.8.8'")).rows[0].count,'0');
+ await Promise.all(Array.from({length:8},async()=>assert.equal((await call('/.git/config')).status,429)));
+ assert.equal((await projectAdmin.query("SELECT strikes FROM ip_blocks WHERE address='127.0.0.1'")).rows[0].strikes,1);
+ assert.equal((await call('/api/dashboard')).status,429);assert.equal((await call('/api/health')).status,200);
+ console.log('PASS actual peer IP blocks, forged IP headers ignored, Retry-After and no strike inflation during block');
+ for(let strike=2;strike<=6;strike++){
+  await projectAdmin.query("UPDATE ip_blocks SET blocked_until=now()-interval '1 second' WHERE address='127.0.0.1'");
+  assert.equal((await call('/')).status,200);
+  const responses=await Promise.all(Array.from({length:4},()=>call('/wp-admin')));assert(responses.every(r=>r.status===(strike===6?403:429)));
+  const state=(await projectAdmin.query("SELECT strikes,blacklisted FROM ip_blocks WHERE address='127.0.0.1'")).rows[0];assert.equal(state.strikes,strike);assert.equal(state.blacklisted,strike===6);
+ }
+ assert.equal((await call('/')).status,403);assert.equal((await (await call('/api/dashboard')).json()).errorCode,'IP_BLACKLISTED');
+ console.log('PASS expiry unlock, concurrent violations count once per cycle, five temporary blocks and sixth-offense persistent blacklist');
+ await exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/unblock-ip.ts','127.0.0.1'],{env,windowsHide:true});
+ assert.equal((await call('/')).status,200);assert.equal((await projectAdmin.query("SELECT strikes FROM ip_blocks WHERE address='127.0.0.1'")).rows[0].strikes,0);
+ assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category='ip_unblocked'")).rows[0].count,'1');
+ console.log('PASS local administrator recovery and audited unblock');
+ await projectAdmin.query("INSERT INTO ip_blocks(address,strikes,blacklisted,blocked_until,last_reason) VALUES('198.51.100.99',1,false,now()+interval '5 minutes','probe')");
+ const newAdmin=await login('admin'),newViewer=await login('viewer');
+ const adminDefense=await (await call('/api/dashboard','GET',undefined,newAdmin)).json(),viewerDefense=await (await call('/api/dashboard','GET',undefined,newViewer)).json();
+ assert.equal(adminDefense.overview.targetPolicy,'public');assert(adminDefense.ipBlocks.some((block:any)=>block.address==='198.51.100.99'));
+ assert.equal(Object.hasOwn(viewerDefense,'ipBlocks'),false);console.log('PASS public-target metadata and administrator-only IP disclosure');await projectAdmin.end();
 }finally{server?.kill();await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}

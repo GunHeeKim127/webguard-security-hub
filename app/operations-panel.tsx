@@ -7,16 +7,17 @@ import {stages,scanReport,type ScanLog} from '../lib/scan-run';
 import {scanUI} from '../lib/scan-ui';
 import {errorText} from '../lib/errors-i18n';
 import {inspectionSummary,type Dashboard,type Inspection,type OperationState} from '../lib/inspection';
+import AssessmentPanel from './assessment-panel';
+import {assessmentText} from '../lib/assessment-copy';
 export default function OperationsPanel({locale,data,inspection,operation,activity,logs}:{locale:Locale,data:Dashboard,inspection:Inspection,operation:OperationState,activity:NonNullable<OperationState>[],logs:ScanLog[]}){
  const copy=scanUI[locale];
  const pulse={animation:"scanPulse 1.2s ease-in-out infinite",'@keyframes scanPulse':{'0%,100%':{boxShadow:'0 0 0 0 #66e6c322'},'50%':{boxShadow:'0 0 0 4px #66e6c366'}},'@media (prefers-reduced-motion: reduce)':{animation:'none'}};
- const stepLabels=[operationsMessages[locale].targetStep,operationsMessages[locale].networkStep,operationsMessages[locale].headersStep,operationsMessages[locale].storeStep];
+ const stepLabels=[data.overview.targetPolicy==='public'?assessmentText(locale,'targetStep'):operationsMessages[locale].targetStep,operationsMessages[locale].networkStep,operationsMessages[locale].headersStep,operationsMessages[locale].storeStep];
  const t=operationsMessages[locale],ui=messages[locale],summary=inspectionSummary(inspection);
  const stateLabel=(state:string)=>state==='running'?t.running:state==='success'?t.success:state==='error'?t.failed:t.idle;
  const current=operation?.state==='running'?t[operation.kind]:inspection.state==='success'?t.record:operation?t[operation.kind]:t.idle;
  const totalEvents=data.events.reduce((sum,event)=>sum+event.count,0);
- const stats=[{label:t.registered,value:data.overview.approvedCount},{label:t.saved,value:data.overview.savedCount},{label:t.events,value:totalEvents},{label:t.http,value:summary.httpStatus??'—'}];
- const checkItems=[['csp','cspHelp','content-security-policy'],['hsts','hstsHelp','strict-transport-security'],['nosniff','nosniffHelp','x-content-type-options'],['referrer','referrerHelp','referrer-policy']] as const;
+ const stats=[{label:t.scope,value:data.overview.targetPolicy==='public'?assessmentText(locale,'publicMode'):data.overview.approvedCount},{label:t.saved,value:data.overview.savedCount},{label:t.events,value:totalEvents},{label:t.http,value:summary.httpStatus??'—'}];
  return <Box id="inspection-console" sx={{mb:4,scrollMarginTop:24}}>
   <Stack direction="row" gap={2} justifyContent="space-between" flexWrap="wrap" alignItems="center" mb={2}>
    <Box><Typography variant="h5" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" variant="body2" mt={1}>{t.help}</Typography></Box>
@@ -30,7 +31,7 @@ export default function OperationsPanel({locale,data,inspection,operation,activi
      <Typography variant="caption" color="text.secondary">{t.updated}: {new Date(data.overview.updatedAt).toLocaleString(locale)}</Typography>
      <Box sx={{my:2,p:2,bgcolor:'#08151f',border:'1px solid #31535a',borderRadius:2}}>
       <Typography variant="caption" color="text.secondary">{t.target}</Typography><Typography fontWeight={700} sx={{overflowWrap:'anywhere',mt:.5}}>{inspection.target||t.noTarget}</Typography>
-      <Typography variant="body2" color="text.secondary" mt={1}>{t.scope}: {t.scopeValue}</Typography>
+      <Typography variant="body2" color="text.secondary" mt={1}>{t.scope}: {assessmentText(locale,'scope')}</Typography>
      </Box>
      <Box role="list" sx={{display:'grid',gridTemplateColumns:{xs:'1fr 1fr',sm:'repeat(4,1fr)'},gap:1}}>{stages.map((stage,index)=>{
       const latest=logs.filter(log=>log.stage===stage).at(-1),state=latest?.state??(summary.complete?'success':'idle'),active=state==='running'&&inspection.state==='running';
@@ -64,12 +65,8 @@ export default function OperationsPanel({locale,data,inspection,operation,activi
     </Box>
    </Box>
   </Paper>
-  {data.overview.approvedCount===0&&<Alert severity="info" sx={{mt:2}}>{t.notConfigured}</Alert>}
-  <Typography variant="h6" sx={{mt:3,mb:2}}>{t.checks}</Typography>
-  <Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr',sm:'1fr 1fr',lg:'repeat(4,1fr)'},gap:1.5}}>{checkItems.map(([label,help,header])=>{
-   const check=summary.complete?inspection.result?.checks.find(c=>c.header===header):undefined;
-   return <Paper key={header} variant="outlined" sx={{p:2,borderColor:'#294451',...(inspection.state==='running'&&logs.at(-1)?.stage==='headers'?pulse:{})}}><Stack direction="row" gap={1} justifyContent="space-between"><Typography fontWeight={700} variant="body2">{ui[label]}</Typography><Chip size="small" variant="outlined" color={check?(check.present?'success':'warning'):'default'} label={check?(check.present?ui.present:ui.missing):t.noResult}/></Stack><Typography variant="body2" color="text.secondary" mt={1.5}>{t[help]}</Typography><Typography variant="caption" color="text.secondary" display="block" mt={1} sx={{overflowWrap:'anywhere'}}>{header}</Typography></Paper>;
-  })}</Box>
+  {data.overview.targetPolicy!=='public'&&data.overview.approvedCount===0&&<Alert severity="info" sx={{mt:2}}>{t.notConfigured}</Alert>}
+  {summary.complete&&inspection.result&&<AssessmentPanel locale={locale} result={inspection.result}/>}
   <Typography variant="caption" color="text.secondary" display="block" mt={2}>{t.limited}</Typography>
  </Box>;
 }

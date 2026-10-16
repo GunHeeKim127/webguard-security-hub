@@ -42,7 +42,7 @@ test('scanner pins validated DNS, preserves hostname and does not follow redirec
   const request=new EventEmitter() as EventEmitter&{end:Function,destroy:Function};
   request.end=()=>{callback({statusCode:302,headers:{location:'http://127.0.0.1'},destroy(){destroyed=true;}});request.emit('close');};request.destroy=()=>request.emit('close');return request;
  });
- const steps:string[]=[];const result=await scan('https://owned.example',['owned.example'],(stage,state)=>steps.push(stage+':'+state));assert.deepEqual(steps,['target:running','target:success','network:running','network:success','headers:running','headers:success']);assert.equal(result.status,302);assert.equal(transport.mock.callCount(),1);assert.equal(destroyed,true);
+ const steps:string[]=[];const result=await scan('https://owned.example',['owned.example'],(stage,state)=>steps.push(stage+':'+state));assert.deepEqual(steps,['target:running','target:success','network:running','network:success','headers:running','headers:success']);assert.equal(result.status,302);assert.equal(transport.mock.callCount(),1);assert.equal(destroyed,true);assert(result.assessment?.filter(f=>f.group!=='tls').every(f=>f.status==='not_assessed'&&f.issues.includes('response_scope')));
 });
 
 test('cancelled scan never opens a connection or reports completed stages',async t=>{

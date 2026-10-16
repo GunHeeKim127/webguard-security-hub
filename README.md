@@ -1,16 +1,18 @@
 # WebGuard Security Hub
 
-승인된 웹사이트의 보안 헤더, 허브 접근 이벤트와 AI 개선안을 한 화면에서 확인하는 **단일 조직용 로컬 MVP**입니다. Next.js / TypeScript / MUI / PostgreSQL을 사용합니다. 전체 취약점 진단기나 외부 사이트의 WAF는 아직 아닙니다.
+소유·진단 허가를 확인한 공개 웹사이트의 기본 진단, 허브 접근 이벤트와 AI 개선안을 한 화면에서 확인하는 **단일 조직용 로컬 MVP**입니다. Next.js / TypeScript / MUI / PostgreSQL을 사용합니다. 전체 취약점 진단기나 외부 사이트의 WAF는 아직 아닙니다.
 
 ## 현재 가능한 일
 
 - 이메일 회원가입·로그인·로그아웃, admin/analyst/viewer 권한 구분. 신규 가입자는 viewer입니다.
-- 승인된 공개 HTTPS 원점의 헤더 4종(CSP, HSTS, X-Content-Type-Options, Referrer-Policy) 존재 여부 확인. 헤더 값의 적절성을 평가하지 않습니다.
+- 사전 등록 없는 공개 HTTPS 원점에서 CSP·HSTS·nosniff·Referrer-Policy의 기본 정책값, 실제 TLS 연결의 신뢰·협상 버전·인증서 만료일, 관찰된 쿠키 속성, CORS 및 서버 식별 헤더를 검사합니다. 상세 범위는 [1단계 진단 명세](docs/PHASE1.md)를 참고하세요.
+- 결과별 판정·심각도·근거와 접고 펼칠 수 있는 개선안. 기존 기본·AI 개선안도 추가 API 호출 없이 접고 펼칠 수 있습니다.
 - 실제 서버 단계가 전달되는 진단 작전실, 진행 단계 점멸, 주소 변경 시 현재 요청·화면 로그 초기화, JSON 로그 다운로드.
 - 같은 도메인의 성공 결과를 최신 결과로 갱신. 실패하면 이전 저장 결과를 유지합니다. 상세 진행 로그는 브라우저에서만 보관합니다.
 - API 호출 없는 기본 개선안. 선택한 경우에만 외부 AI를 요청하며 Groq → Gemini → 기본 안내로 전환합니다.
 - 한국어·영어·일본어·중국어 간체·스페인어·프랑스어 UI와 오류 안내.
 - 허브 자체의 로그인 실패·진단 거부·의심 경로·최소 디코이 접근 이벤트 확인. 외부 트래픽은 수집하지 않습니다.
+- 실제 접속 IP의 정해진 위험 URL 패턴을 감지해 5분 차단, 5차례 임시 차단 후 6번째 위반에 블랙리스트 등록. 관리자 IP 현황과 로컬 해제 도구를 제공합니다. [적용 범위·복구 방법](docs/ACCESS_DEFENSE.md)을 참고하세요.
 
 기획 대비 구현 상태와 남은 작업은 [프로젝트 현황 분석](docs/PROJECT_STATUS.md), 실제 검증 기록은 [VALIDATION.md](VALIDATION.md)를 참고하세요.
 
@@ -26,7 +28,9 @@ Node.js 20.9 이상과 PostgreSQL 15 이상이 필요합니다. DBeaver는 DB �
 6. 최초 관리자는 migration 환경 파일의 BOOTSTRAP_EMAIL/PASSWORD/ROLE을 로컬에서 설정한 뒤 `npm run user:create`로 생성합니다. 비밀번호는 14~128자이며 생성 후 BOOTSTRAP_PASSWORD를 비웁니다.
 7. `npm run dev` 후 http://localhost:3000 에서 로그인합니다. 이후 일반 사용자는 `/signup`에서 가입할 수 있습니다.
 
-AI 키가 없어도 로그인·진단·무료 기본 개선안은 사용할 수 있습니다. ALLOWED_SCAN_HOSTS에는 소유하거나 진단 허가를 받은 도메인만 쉼표로 등록합니다. 기본 빈 목록은 모든 진단을 차단합니다. 입력창에 주소를 쓴 것만으로 승인되지는 않습니다.
+AI 키가 없어도 로그인·진단·무료 기본 개선안은 사용할 수 있습니다. 기본 `SCAN_TARGET_POLICY=public`은 공개 도메인 주소와 사용자 권한 확인 체크를 받으며 사전 등록을 요구하지 않습니다. 체크는 소유권 증명이 아닙니다. 주소 변경 시 체크를 초기화하며 내부망·SSRF 제한은 유지합니다. `SCAN_TARGET_POLICY=approved`로 바꾸면 `ALLOWED_SCAN_HOSTS`의 정확한 목록을 적용하고 빈 목록은 진단을 차단합니다.
+
+`npm run dev`/`npm start`는 IP 보호 서버를 포함합니다. 보호 상태 확인에 DB가 필요하므로 migration과 권한을 먼저 적용하세요. 새 보호 기능은 005 migration을 사용합니다. 기본 직접 접속에는 추가 IP 비밀 설정이 필요 없습니다.
 
 ## AI 설정과 비용 제어
 
@@ -54,17 +58,19 @@ sql/migrations는 번호 순으로 적용하며 적용된 파일을 변경하지
 
 - 비밀번호 scrypt+salt, 256-bit 세션, DB의 세션 해시, 8시간 만료, HttpOnly/SameSite=Strict 쿠키. HTTPS APP_ORIGIN에서는 Secure를 사용합니다. 로그아웃은 세션을 폐기합니다.
 - 변경 API의 정확한 Origin 검사, 4KiB JSON 본문 제한, 파라미터 DB 쿼리, 역할별 접근 제한을 적용합니다.
-- SSRF는 정확한 도메인 allowlist, HTTPS/443/원점 제한, 전체 DNS 응답의 공개 unicast 검사, 검증 IP로 연결 고정, 원래 호스트의 TLS 인증서 확인, 리디렉션 미추적, DNS/요청 timeout으로 방어합니다. 운영에서는 egress 방화벽도 필요합니다.
+- SSRF는 HTTPS/443/원점 제한, 전체 DNS 응답의 공개 unicast 검사, 검증 IP로 연결 고정, 원래 호스트의 TLS 인증서 확인, 리디렉션 미추적, DNS/요청 timeout으로 방어합니다. 승인 전용 모드에서는 정확한 도메인 allowlist도 적용합니다. 운영에서는 egress 방화벽도 필요합니다.
 - **현재는 단일 조직용입니다. 회원가입한 viewer도 허브 전체의 진단 기록을 조회할 수 있습니다.** 외부 고객에게 공개하기 전 가입 승인·사용자/조직별 데이터 분리·자산 소유 확인이 필요합니다.
 - 이메일 인증·비밀번호 찾기·MFA/SSO·관리자 권한 변경 UI는 미구현입니다.
-- SQLi/XSS 공격 검증, 포트 스캔, TLS 등급, CSP 정책 내용 검증은 미구현입니다.
-- 외부 사이트 트래픽 수집, WAF, 봇/AI 판정, 자동 차단·더미 사이트 이동, 알림·자동 보안 조치는 미구현입니다. 의심 경로와 `/decoy`는 제한된 이벤트 기록 후 고정 404로 종료합니다. 방문자의 자원을 소모시키지 않습니다.
+- SQLi/XSS 공격 검증, 포트 스캔, TLS 전체 프로토콜·암호군 등급, 인증서 폐기 조회, 브라우저 CSP 실행 검증은 미구현입니다. 현재는 공개 루트 HEAD 응답 한 번에 대한 정적 기본 검사입니다. 로그인 후·다른 경로·GET·모바일 비교 진단은 하지 않습니다.
+- 외부 사이트 트래픽 수집, WAF, 봇/AI 판정, 더미 사이트 이동·실시간 알림은 미구현입니다. 이 허브의 정해진 URL 공격 패턴만 IP 차단합니다. `/decoy`는 제한된 이벤트 기록 후 404로 종료합니다. 공격자 신원 역추적이나 역공격은 하지 않습니다.
 - 언어는 수동 선택 → 브라우저 언어 → 인증된 게이트웨이의 국가 힌트 → 기본 언어 순서입니다. 로컬에서 실제 IP 국가를 조회하지 않습니다.
 - CSP는 Next.js/MUI 호환을 위해 inline을 허용합니다. 운영 nonce CSP, HTTPS/HSTS 프록시, 백업·복원 검증, 이벤트 보존·정리 스케줄러는 추가 작업입니다.
 
 실제 .env 파일은 Git에서 제외됩니다. **.gitignore는 OneDrive 동기화를 막지 않습니다.** 공개 운영 시 비밀은 동기화 밖의 비밀 저장소나 프로세스 환경변수로 주입하세요. work/의 테스트 DB, 로그와 빌드 결과도 업로드하지 않습니다. 선택적 compose.yaml은 별도 로컬 DB용이며 기존 DB를 사용한다면 실행하지 않아도 됩니다.
 
 ## 검증
+
+PC를 켠 동안 다른 기기에서 인터넷으로 접속하려면 `npm run share`를 실행하세요. 출력된 임시 HTTPS 주소에서 기존 계정으로 로그인합니다. PC 종료·절전·프로그램 종료 시 접속이 끊기며, 다시 실행하면 주소가 바뀝니다. 외부 공유에서는 신규 가입을 막고 기존 계정·권한을 유지합니다. [외부 접속 안내](docs/PC_SHARING.md)를 참고하세요.
 
 `npm test`, `npm run typecheck`, `npm run build`를 사용합니다. 실제 HTTP 서버 검증은 `npm run test:smoke`, `npm run test:locale`입니다. `npm run test:integration`은 PostgreSQL native 도구로 임시 loopback DB를 생성해 검사합니다. 기본 PG_BIN은 `C:/Program Files/PostgreSQL/15/bin`이며 기존 운영 DB는 사용하지 않습니다. 테스트용 API는 로컬 모형으로 대체합니다.
 
