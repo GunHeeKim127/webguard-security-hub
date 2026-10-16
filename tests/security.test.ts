@@ -7,6 +7,18 @@ import { EventEmitter } from 'node:events';
 import { hashPassword,verifyPassword,tokenHash,canScan } from '../lib/password';
 import { sameOrigin,body,roleAllowed } from '../lib/request';
 import { suspiciousPath } from '../lib/traffic';
+import { projectDatabase } from '../lib/project-database';
+test('project database and runtime identity guard rejects cross-project URLs',()=>{
+ const original={...process.env};try{
+ process.env.PROJECT_DATABASE='webguard_hub_dev';process.env.PROJECT_RUNTIME_ROLE='webguard_hub_dev_app';
+ process.env.DATABASE_URL='postgresql://webguard_hub_dev_app@localhost/webguard_hub_dev';assert(projectDatabase('runtime'));
+ process.env.DATABASE_URL='postgresql://webguard_hub_dev_app@localhost/webguard_hub_dev?database=another_project';assert.throws(()=>projectDatabase('runtime'),/query/);
+ process.env.DATABASE_URL='postgresql://webguard_hub_dev_app@localhost/another_project';assert.throws(()=>projectDatabase('runtime'),/mismatch/);
+ process.env.DATABASE_URL='postgresql://postgres@localhost/webguard_hub_dev';assert.throws(()=>projectDatabase('runtime'),/dedicated/);
+ process.env.MIGRATION_DATABASE_URL='postgresql://webguard_hub_dev_app@localhost/webguard_hub_dev';assert.throws(()=>projectDatabase('migration'),/separate/);
+ delete process.env.DATABASE_URL;assert.throws(()=>projectDatabase('runtime'),/Set/);
+ }finally{process.env=original;}
+});
 test('SSRF blocks private, loopback, mapped, link-local, reserved ranges',()=>{for(const ip of ['127.0.0.1','10.0.0.1','172.16.1.1','192.168.1.1','169.254.169.254','0.0.0.0','100.64.0.1','224.0.0.1','::1','::','fe80::1','fc00::1','::ffff:127.0.0.1','2001:db8::1'])assert.equal(publicAddress(ip),false,ip);assert.equal(publicAddress('8.8.8.8'),true);});
 test('URL policy rejects bypasses and unapproved targets',()=>{for(const u of ['http://owned.example','https://owned.example:444','https://owned.example/path','https://owned.example?x=1','https://u:p@owned.example','https://owned.example.evil.com','https://127.1','https://2130706433','file:///etc/passwd','https://[::1]','https://owned.example#x'])assert.throws(()=>target(u,['owned.example']));assert.equal(target('https://owned.example',['owned.example']).hostname,'owned.example');});
 test('password hashing uses unique salts and rejects incorrect passwords',()=>{const p='a-long-local-password';const a=hashPassword(p),b=hashPassword(p);assert.notEqual(a,b);assert.equal(verifyPassword(p,a),true);assert.equal(verifyPassword('incorrect',a),false);assert.throws(()=>hashPassword('short'));assert.notEqual(tokenHash('token'),'token');});
@@ -30,5 +42,19 @@ test('scanner pins validated DNS, preserves hostname and does not follow redirec
   const request=new EventEmitter() as EventEmitter&{end:Function,destroy:Function};
   request.end=()=>{callback({statusCode:302,headers:{location:'http://127.0.0.1'},destroy(){destroyed=true;}});request.emit('close');};request.destroy=()=>request.emit('close');return request;
  });
- const result=await scan('https://owned.example',['owned.example']);assert.equal(result.status,302);assert.equal(transport.mock.callCount(),1);assert.equal(destroyed,true);
+ const steps:string[]=[];const result=await scan('https://owned.example',['owned.example'],(stage,state)=>steps.push(stage+':'+state));assert.deepEqual(steps,['target:running','target:success','network:running','network:success','headers:running','headers:success']);assert.equal(result.status,302);assert.equal(transport.mock.callCount(),1);assert.equal(destroyed,true);
+});
+
+test('cancelled scan never opens a connection or reports completed stages',async t=>{
+ const transport=t.mock.method(https,'request',()=>{throw new Error('Unexpected connection');});
+ const steps:string[]=[];await assert.rejects(scan('https://owned.example',['owned.example'],stage=>steps.push(stage),AbortSignal.abort()),/cancelled/);assert.equal(transport.mock.callCount(),0);assert.deepEqual(steps,[]);
+});
+
+test('cancelling an in-flight HEAD destroys transport and cannot complete header checks',async t=>{
+ t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4}]);
+ let opened!:()=>void;const ready=new Promise<void>(resolve=>{opened=resolve;});let destroyed=false;const steps:string[]=[];
+ t.mock.method(https,'request',()=>{
+  const request=new EventEmitter() as EventEmitter&{end:Function,destroy:Function};request.end=()=>opened();request.destroy=(error:Error)=>{destroyed=true;request.emit('error',error);request.emit('close');return request;};return request;
+ });
+ const abort=new AbortController();const pending=scan('https://owned.example',['owned.example'],(stage,state)=>steps.push(stage+':'+state),abort.signal);await ready;abort.abort();await assert.rejects(pending,/cancelled/);assert(destroyed);assert.deepEqual(steps,['target:running','target:success','network:running']);
 });

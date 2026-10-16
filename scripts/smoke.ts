@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 const port=33000+Math.floor(Math.random()*10000),base=`http://127.0.0.1:${port}`;
-const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{env:{...process.env,APP_ORIGIN:base,DATABASE_URL:'postgresql://unconfigured@127.0.0.1:1/unconfigured'},stdio:['ignore','pipe','pipe'],windowsHide:true});
+const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{env:{...process.env,PROJECT_DATABASE:'unconfigured',PROJECT_RUNTIME_ROLE:'unconfigured',APP_ORIGIN:base,DATABASE_URL:'postgresql://unconfigured@127.0.0.1:1/unconfigured'},stdio:['ignore','pipe','pipe'],windowsHide:true});
 let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>output+=d);
 try{
  let ready=false;for(let i=0;i<60;i++){if(child.exitCode!==null)throw new Error(output);try{if((await fetch(base+'/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}assert(ready,'Server startup timeout: '+output);
