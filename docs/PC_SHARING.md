@@ -1,18 +1,6 @@
-# PC를 켠 동안 외부 접속
+# 선택적 PC 개발용 공유
 
-## Vercel 고정 주소를 입구로 사용
-
-Vercel 프로젝트의 **Settings → Environment Variables**에 아래 변수를 **Production** 범위로 추가하고 **Redeploy**합니다.
-
-```dotenv
-PC_APP_ORIGIN=https://현재-공유-주소.trycloudflare.com
-```
-
-실제 값은 `npm run share` 출력 또는 로컬 `work/share-url.txt`의 전체 HTTPS 주소입니다. Vercel `/`와 `/signup`에서 해당 PC 주소로 임시 이동합니다. **주소창은 PC 공유 주소로 바뀌며 실제 로그인과 DB 처리는 PC에서 수행합니다.** Vercel 주소를 유지하는 역방향 프록시는 아닙니다. API·쿠키·비밀번호를 Vercel에서 PC로 전달하지 않습니다. 기존 Vercel 로그인 화면은 새로고침해야 이동합니다.
-
-PC의 `.env.local`에 있는 `DATABASE_URL`은 기존 localhost PostgreSQL 그대로 유지합니다. Vercel의 `DATABASE_URL`에 PC의 localhost를 넣어도 PC에 연결되지 않으며, 이 이동 방식은 Vercel DB 연결을 사용하지 않습니다. 기존 Vercel 변수를 삭제하거나 비밀번호를 바꿀 필요는 없습니다. `APP_ORIGIN`은 Vercel에서는 Vercel HTTPS 주소, 로컬에서는 localhost 주소로 유지합니다.
-
-PC 공유를 다시 실행해 주소가 바뀌면 `PC_APP_ORIGIN`도 새 주소로 수정하고 Redeploy해야 합니다. PC 종료·절전 또는 공유 종료 시 도착한 사이트에 접속할 수 없습니다. `PC_APP_ORIGIN`을 비우고 재배포하면 일반 Vercel 앱 모드로 돌아가며 그 모드에는 별도의 접근 가능한 DB가 필요합니다.
+공식 배포는 https://webguard-security-hub.vercel.app/ 입니다. 정식 배포는 [Vercel 배포 안내](VERCEL_DEPLOYMENT.md)를 따르세요. 아래 임시 연결은 별도 개발 도구이며 공식 사이트의 로그인 경로로 사용하지 않습니다. 과거 PC_APP_ORIGIN 이동 설정은 제거되었습니다.
 
 상시 호스팅 대신 현재 Windows PC의 PostgreSQL·계정을 그대로 사용합니다. PC 종료·절전·인터넷 끊김·공유 프로그램 종료 시 외부 접속이 중단됩니다. DBeaver를 열어 둘 필요는 없지만 PostgreSQL 서비스는 실행되어야 합니다.
 

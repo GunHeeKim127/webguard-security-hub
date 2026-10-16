@@ -33,7 +33,9 @@
 
 ## IP 신뢰 경계와 실행
 
-보호 기능은 `scripts/serve.ts`에서 실제 TCP 소켓 `remoteAddress`로 동작합니다. `npm run dev`와 `npm start`는 이 서버를 사용합니다. **`next start`만 직접 실행하거나 서버리스 배포로 바꾸면 이 앞단 보호가 적용되지 않습니다.** 현재 별도 서버리스/WAF 배포 연동은 미구현입니다. 기본 바인딩은 127.0.0.1이며 외부에 자동 공개하지 않습니다.
+로컬 보호는 `scripts/serve.ts`에서 실제 TCP 소켓 `remoteAddress`로 동작합니다. `npm run dev`와 `npm start`는 이 서버를 사용합니다. 기본 바인딩은 127.0.0.1이며 외부에 자동 공개하지 않습니다.
+
+Vercel 정식 배포에서는 `proxy.ts`가 Node.js Proxy에서 같은 영속 차단 규칙을 실행합니다. Vercel 공식 SDK의 클라이언트 IP 헤더는 플랫폼 안에서만 신뢰하며 로컬 서버에는 적용하지 않습니다. 정적 Next 자원과 `/api/health`, `/api/ready`는 제외합니다. 보호 상태·IP 확인 실패는 503으로 거절합니다. PC 전용 HTTP 서버를 Vercel에서 실행할 필요가 없습니다. 일반 Node에서 `next start`만 직접 실행하면 소켓 보호는 적용되지 않으므로 로컬은 기존 명령을 사용하세요. 외부 WAF 연동은 미구현입니다.
 
 직접 접속에서는 `X-Forwarded-For`, `X-Real-IP`, 사용자가 보낸 IP 헤더를 믿지 않습니다. IPv4-mapped IPv6를 정규화합니다. 역방향 프록시를 실제로 운영할 때만 다음 항목을 설정합니다.
 

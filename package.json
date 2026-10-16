@@ -7,7 +7,7 @@
     "build": "next build --webpack",
     "start": "tsx scripts/serve.ts",
     "security:unblock": "tsx --env-file=.env.migration.local scripts/unblock-ip.ts",
-    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts",
+    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts tests/deployment.test.ts",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=.env.migration.local scripts/migrate.ts",
     "user:create": "tsx --env-file=.env.migration.local scripts/create-user.ts",
@@ -15,7 +15,12 @@
     "test:integration": "tsx scripts/integration.ts",
     "db:grant": "tsx --env-file=.env.migration.local scripts/grant-runtime.ts",
     "test:locale": "tsx scripts/locale-smoke.ts",
-    "share": "tsx scripts/share.ts"
+    "share": "tsx scripts/share.ts",
+    "user:create:production": "tsx --env-file=.env.migration.production.local scripts/create-user.ts",
+    "db:grant:production": "tsx --env-file=.env.migration.production.local scripts/grant-runtime.ts",
+    "db:copy:production": "tsx --env-file=.env.local --env-file=.env.migration.production.local scripts/copy-production-data.ts",
+    "db:setup:production": "tsx --env-file=.env.migration.production.local scripts/setup-production.ts",
+    "db:migrate:production": "tsx --env-file=.env.migration.production.local scripts/migrate.ts"
   },
   "dependencies": {
     "@emotion/cache": "11.14",
@@ -24,6 +29,7 @@
     "@mui/material": "^7.0.0",
     "@mui/material-nextjs": "^7.3.10",
     "@next/env": "16.4.2",
+    "@vercel/functions": "3.10.1",
     "ipaddr.js": "^2.2.0",
     "next": "^16.0.0",
     "openai": "^6.0.0",

@@ -99,3 +99,13 @@
 - `PC_APP_ORIGIN`이 설정된 Vercel 환경에서만 `/`, `/signup`을 PC HTTPS Quick Tunnel로 임시 이동. API 프록시나 원격 PostgreSQL 공개는 구현하지 않음.
 - 자동 테스트 60개·타입 검사 통과. 실제 Next.js production 설정 로더에서 두 임시 이동 규칙 검증. 현재 PC 공유 `/api/health` HTTP 200 확인.
 - Vercel 환경변수 저장·재배포 및 배포된 주소의 최종 이동은 사용자 설정 후 확인해야 함. 로컬 DB 환경과 계정은 변경하지 않음.
+
+## Vercel 정식 배포 전환 — 기존 PC 이동 방식 대체
+
+- 공식 주소 `https://webguard-security-hub.vercel.app/` 유지. `PC_APP_ORIGIN` 처리·`pc-entry.ts`·이동 규칙을 제거하고 빌드 manifest에 임시 PC 이동이 0개임을 확인.
+- 외부 PostgreSQL URL의 TLS 옵션만 명시적으로 처리하고 인증서 검증 강제. 사용자/DB/host 우회·중복 옵션·비검증 SSL을 거절하며 Vercel의 localhost DB는 고정 진단 코드로 거절.
+- Vercel 공식 풀 관리 도구와 인스턴스당 최대 2 연결. Node.js Proxy에서 플랫폼 IP를 이용한 영속 차단·조회 실패 차단 적용. 로컬 소켓 보호 유지.
+- 자동 테스트 65개와 타입 검사 통과. Vercel 운영 환경 조건의 Next.js 프로덕션 빌드에서 Node Proxy 포함 확인.
+- 임시 PostgreSQL 통합 검증 전체 통과. 새 운영 역할의 관리 권한 없음, 기존 파일·역할 덮어쓰기 거부, migration·grant 적용, 비밀번호 해시와 계정 ID·진단 결과 유지, 세션 미복사, 비어 있지 않은 대상에 재복사 거부 확인. 기존 실제 PC DB에 쓰기 없음.
+- 새 readiness 권한 SQL은 실제 로컬 DB에 읽기 전용으로 실행해 `READY` 확인. 운영 owner 역할·미적용 schema·미부여 권한·연결 실패는 준비 완료로 처리하지 않음.
+- 외부 PostgreSQL은 아직 사용자 계정에 생성되지 않았음. 실제 Vercel 환경변수 연결·운영 데이터 이전·최종 실계정 로그인은 미완료이며 코드 준비와 구분함. `docs/VERCEL_DEPLOYMENT.md`에 남은 절차 명시.

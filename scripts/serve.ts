@@ -34,7 +34,7 @@ function deny(req:IncomingMessage,res:ServerResponse,block:IpBlock|null){
 const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
  try{
   // A liveness endpoint carries no application data and remains available for operations.
-  if(req.url!=='/api/health'){const block=await inspect(req);if(block){deny(req,res,block);return;}}
+  if(req.url!=='/api/health'&&req.url!=='/api/ready'){const block=await inspect(req);if(block){deny(req,res,block);return;}}
   // Never forward a gateway credential into the application or its logs.
   delete req.headers['x-webguard-proxy-token'];delete req.headers['x-webguard-client-ip'];
   await handle(req,res);

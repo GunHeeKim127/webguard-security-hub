@@ -6,6 +6,7 @@ import type {ScanEvent,Stage} from '../../../lib/scan-run';
 import {errorCode} from '../../../lib/errors-i18n';
 import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../../lib/security';
 export const runtime='nodejs';
+export const maxDuration=30;
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('scan:'+user.id,5,60);
  const data=await body(req);if(typeof data.url!=='string'||!data.url.trim()||data.url.length>300||data.authorized!==true)throw new HttpError(400,'Owned target and authorization confirmation required');

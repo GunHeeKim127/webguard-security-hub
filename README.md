@@ -1,6 +1,8 @@
 # WebGuard Security Hub
 
-소유·진단 허가를 확인한 공개 웹사이트의 기본 진단, 허브 접근 이벤트와 AI 개선안을 한 화면에서 확인하는 **단일 조직용 로컬 MVP**입니다. Next.js / TypeScript / MUI / PostgreSQL을 사용합니다. 전체 취약점 진단기나 외부 사이트의 WAF는 아직 아닙니다.
+소유·진단 허가를 확인한 공개 웹사이트의 기본 진단, 허브 접근 이벤트와 AI 개선안을 한 화면에서 확인하는 **단일 조직용 MVP**입니다. Next.js / TypeScript / MUI / PostgreSQL을 사용합니다. 전체 취약점 진단기나 외부 사이트의 WAF는 아직 아닙니다.
+
+**정식 배포 주소: https://webguard-security-hub.vercel.app/**. Vercel에서 화면과 API를 실행하고 별도 외부 PostgreSQL에 연결합니다. 임시 PC 사이트로 이동하지 않습니다. [Vercel 배포 안내](docs/VERCEL_DEPLOYMENT.md)의 DB 생성·최소 권한 설정·기존 계정 이전·Production 변수·재배포 순서를 따르세요. 외부 DB가 준비되기 전에는 로그인할 수 없습니다. `/api/ready`로 준비 상태를 확인할 수 있습니다.
 
 ## 현재 가능한 일
 
@@ -70,7 +72,7 @@ sql/migrations는 번호 순으로 적용하며 적용된 파일을 변경하지
 
 ## 검증
 
-PC를 켠 동안 다른 기기에서 인터넷으로 접속하려면 `npm run share`를 실행하세요. 출력된 임시 HTTPS 주소에서 기존 계정으로 로그인합니다. PC 종료·절전·프로그램 종료 시 접속이 끊기며, 다시 실행하면 주소가 바뀝니다. 외부 공유에서는 신규 가입을 막고 기존 계정·권한을 유지합니다. [외부 접속 안내](docs/PC_SHARING.md)를 참고하세요.
+`npm run share`는 선택적 PC 개발용 도구입니다. 정식 Vercel 배포·로그인에는 사용하지 않습니다. 과거 `PC_APP_ORIGIN` 이동 설정은 제거했습니다.
 
 `npm test`, `npm run typecheck`, `npm run build`를 사용합니다. 실제 HTTP 서버 검증은 `npm run test:smoke`, `npm run test:locale`입니다. `npm run test:integration`은 PostgreSQL native 도구로 임시 loopback DB를 생성해 검사합니다. 기본 PG_BIN은 `C:/Program Files/PostgreSQL/15/bin`이며 기존 운영 DB는 사용하지 않습니다. 테스트용 API는 로컬 모형으로 대체합니다.
 
