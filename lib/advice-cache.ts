@@ -3,7 +3,7 @@ import {adviceHeaders} from './local-advice';
 import type {CheckResult} from './inspection';
 export type AdviceQuery=(sql:string,values:unknown[])=>Promise<{rows:any[]}>;
 export type GeneratedAdvice={advice:string,inputTokens:number,outputTokens:number};
-export function adviceKey(model:string,locale:string,checks:CheckResult['checks']){return createHash('sha256').update(JSON.stringify({version:1,model,locale,output:400,checks:adviceHeaders.map(header=>!!checks.find(check=>check.header===header)?.present)})).digest('hex');}
+export function adviceKey(model:string,locale:string,checks:CheckResult['checks'],accountId?:string){return createHash('sha256').update(JSON.stringify({version:2,accountId:accountId??null,model,locale,output:400,checks:adviceHeaders.map(header=>!!checks.find(check=>check.header===header)?.present)})).digest('hex');}
 export async function cachedAdvice(query:AdviceQuery,key:string,generate:()=>Promise<GeneratedAdvice>):Promise<GeneratedAdvice&{source:'ai'|'cache'}|{source:'busy'}>{
  const read=async()=>{const row=(await query('SELECT advice,input_tokens,output_tokens FROM ai_advice_cache WHERE cache_key=$1 AND expires_at>now() AND advice IS NOT NULL',[key])).rows[0];return row?{source:'cache' as const,advice:row.advice,inputTokens:row.input_tokens,outputTokens:row.output_tokens}:null;};
  const existing=await read();if(existing)return existing;

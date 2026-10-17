@@ -6,10 +6,10 @@ export const dynamic='force-dynamic';
 export async function GET(req:Request){try{
  const user=await requireUser();
  const [scans,events,recent,total,blocks]=await Promise.all([
-  db.query('SELECT id,hostname,result,created_at FROM scans ORDER BY created_at DESC LIMIT 30'),
-  db.query("SELECT category,count(*)::int AS count FROM events WHERE created_at>now()-interval '24 hours' GROUP BY category"),
-  db.query("SELECT category,created_at FROM events WHERE created_at>now()-interval '24 hours' ORDER BY id DESC LIMIT 12"),
-  db.query('SELECT count(*)::int AS count FROM scans'),
+  db.query('SELECT id,hostname,result,created_at FROM scans WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',[user.id]),
+  db.query("SELECT category,count(*)::int AS count FROM events WHERE user_id=$1 AND created_at>now()-interval '24 hours' GROUP BY category",[user.id]),
+  db.query("SELECT category,created_at FROM events WHERE user_id=$1 AND created_at>now()-interval '24 hours' ORDER BY id DESC LIMIT 12",[user.id]),
+  db.query('SELECT count(*)::int AS count FROM scans WHERE user_id=$1',[user.id]),
   user.role==='admin'?db.query('SELECT host(address) AS address,strikes,blacklisted,blocked_until,last_reason,last_seen FROM public.ip_blocks WHERE strikes>0 ORDER BY last_seen DESC LIMIT 50'):Promise.resolve({rows:[]})
  ]);
  const hosts=approvedHosts();

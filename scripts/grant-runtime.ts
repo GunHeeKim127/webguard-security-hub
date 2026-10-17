@@ -24,7 +24,8 @@ try{
  await c.query(`GRANT SELECT ON users TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT, DELETE ON sessions TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT ON scans, events TO ${quoted}`);
- await c.query(`GRANT UPDATE(user_id,result,created_at) ON scans TO ${quoted}`);
+ await c.query(`REVOKE UPDATE(user_id) ON public.scans FROM ${quoted}`);
+ await c.query(`GRANT UPDATE(result,created_at) ON scans TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT, UPDATE ON rate_limits TO ${quoted}`);
  await c.query(`GRANT USAGE, SELECT ON SEQUENCE events_id_seq TO ${quoted}`);
  await c.query(`GRANT EXECUTE ON FUNCTION public.register_viewer(uuid,text,text) TO ${quoted}`);

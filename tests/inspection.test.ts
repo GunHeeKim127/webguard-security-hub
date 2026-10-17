@@ -42,6 +42,8 @@ test('offline advice is translated and checks all missing headers without an API
  for(const locale of locales){const guide=localAdvice(locale,[]);assert(guide.includes(adviceCopy[locale].help));assert(adviceCopy[locale].lines.every(line=>guide.includes(line)));const present=localAdvice(locale,adviceHeaders.map(header=>({header,present:true})));assert(!present.includes(adviceCopy[locale].lines[0]));}
 });
 test('cache identity follows actual sent findings, language and model rather than header order',()=>{
+ assert.notEqual(adviceKey('model','ko',[],'account-a'),adviceKey('model','ko',[],'account-b'));
+ assert.equal(adviceKey('model','ko',[],'account-a'),adviceKey('model','ko',[],'account-a'));
  const checks=[{header:'content-security-policy',present:true},{header:'referrer-policy',present:false}];
  assert.equal(adviceKey('model','ko',checks),adviceKey('model','ko',[...checks].reverse()));
  assert.notEqual(adviceKey('model','ko',checks),adviceKey('model','en',checks));assert.notEqual(adviceKey('model','ko',checks),adviceKey('other','ko',checks));assert.notEqual(adviceKey('model','ko',checks),adviceKey('model','ko',[]));

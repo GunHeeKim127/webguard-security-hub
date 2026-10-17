@@ -30,7 +30,7 @@ try{
  for(const file of ['00_create_roles.sql','01_create_database.sql','02_restrict_database.sql'])await pool.query(await readFile('sql/setup/'+file,'utf8'));
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'5');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'6');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  await assert.rejects(runtime.query('CREATE TABLE should_not_exist(id int)'),{code:'42501'});
  await assert.rejects(runtime.query('SELECT * FROM schema_migrations'),{code:'42501'});
@@ -41,7 +41,7 @@ try{
 
  await assert.rejects(projectAdmin.query("SET ROLE other_project_app; SELECT public.register_viewer(gen_random_uuid(),'blocked@example.test',repeat('a',32)||':'||repeat('b',128))"),{code:'42501'});await projectAdmin.query('RESET ROLE');
  const password=randomBytes(24).toString('hex');
- for(const role of ['admin','viewer'])await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:role+'@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:role});
+ for(const role of ['admin','viewer','analyst'])await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:role+'@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:role});
  let log='';server=spawn(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/serve.ts','--hostname','127.0.0.1','--port',String(webPort)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout?.on('data',d=>log+=d);server.stderr?.on('data',d=>log+=d);
  let ready=false;for(let i=0;i<60;i++){if(server.exitCode!==null)throw new Error(log);try{if((await call('/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}assert(ready,log);
  async function login(role:string){const r=await call('/api/login','POST',{email:role+'@example.test',password});assert.equal(r.status,200,await r.clone().text());const cookie=r.headers.get('set-cookie')!;assert(cookie.includes('HttpOnly'));assert(cookie.includes('SameSite=Strict'));return cookie.split(';')[0];}
@@ -82,7 +82,7 @@ try{
  const actor=(await projectAdmin.query("SELECT id FROM users WHERE email='admin@example.test'")).rows[0].id;
  await projectAdmin.query('BEGIN');
  try{
-  await projectAdmin.query('ALTER TABLE public.scans DROP CONSTRAINT scans_hostname_unique');
+  await projectAdmin.query('ALTER TABLE public.scans DROP CONSTRAINT scans_user_hostname_unique');
   await projectAdmin.query(`INSERT INTO public.scans(id,user_id,hostname,result,created_at) VALUES
    (gen_random_uuid(),$1,'legacy.example','{"status":201,"checks":[]}','2026-01-01'),
    (gen_random_uuid(),$1,'legacy.example','{"status":202,"checks":[]}','2026-01-02')`,[actor]);
@@ -131,7 +131,32 @@ try{
   await assert.rejects(writer.query("UPDATE scans SET hostname='changed.example'"),{code:'42501'});
  }finally{await writer.end();}
  console.log('PASS duplicate migration archive, stable-ID overwrite, updated timestamp, concurrent writes, failed-write preservation and archive isolation');
- assert.equal((await call('/api/ai','POST',{},admin)).status,503);console.log('PASS AI disabled without key; no external API call');
+ const otherActor=(await projectAdmin.query("SELECT id FROM users WHERE email='analyst@example.test'")).rows[0].id,analyst=await login('analyst');
+ const isolatedWriter=new Pool({connectionString:env.DATABASE_URL});
+ let otherScanId:string;
+ try{
+  const query=(sql:string,values:unknown[])=>isolatedWriter.query(sql,values);
+  const identicalChecks=[{header:'content-security-policy',present:true}];
+  otherScanId=await saveScan(query,otherActor,'owned.example',{status:201,checks:identicalChecks});
+  assert.notEqual(otherScanId,(await projectAdmin.query("SELECT id FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].id);
+  assert.equal(await saveScan(query,otherActor,'owned.example',{status:202,checks:identicalChecks}),otherScanId);
+  await saveScan(query,otherActor,'private-only.example',{status:200,checks:[]});
+  assert.equal((await projectAdmin.query("SELECT result FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].result.status,204);
+  await assert.rejects(isolatedWriter.query('UPDATE scans SET user_id=$1 WHERE id=$2',[actor,otherScanId]),{code:'42501'});
+ }finally{await isolatedWriter.end();}
+ await projectAdmin.query("INSERT INTO events(category,user_id) VALUES('private_a',$1),('private_b',$2),('legacy_unknown',NULL)",[actor,otherActor]);
+ const aData=await (await call('/api/dashboard','GET',undefined,admin)).json(),bData=await (await call('/api/dashboard','GET',undefined,analyst)).json(),vData=await (await call('/api/dashboard','GET',undefined,viewer)).json();
+ assert.equal(aData.scans.length,3);assert.equal(aData.overview.savedCount,3);assert(!aData.scans.some((s:any)=>s.id===otherScanId||s.hostname==='private-only.example'));
+ assert.equal(bData.scans.length,2);assert.equal(bData.overview.savedCount,2);assert(bData.scans.some((s:any)=>s.id===otherScanId));assert.equal(vData.scans.length,0);assert.equal(vData.overview.savedCount,0);
+ assert(aData.events.some((e:any)=>e.category==='private_a'));assert(!aData.events.some((e:any)=>['private_b','legacy_unknown'].includes(e.category)));
+ assert(bData.events.some((e:any)=>e.category==='private_b'));assert(!bData.events.some((e:any)=>['private_a','legacy_unknown'].includes(e.category)));
+ assert(!aData.recentEvents.some((e:any)=>['private_b','legacy_unknown'].includes(e.category)));assert(!bData.recentEvents.some((e:any)=>['private_a','legacy_unknown'].includes(e.category)));
+ assert.equal((await call('/api/ai','POST',{scanId:otherScanId},admin)).status,404);
+ const foreignAdminScan=(await projectAdmin.query("SELECT id FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].id;
+ assert.equal((await call('/api/ai','POST',{scanId:foreignAdminScan},analyst)).status,404);
+ console.log('PASS account-scoped results/counts/events, same-host independent overwrite, no owner reassignment, and cross-account AI ID rejection even for admin');
+ const ownScanId=(await projectAdmin.query("SELECT id FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].id;
+ assert.equal((await call('/api/ai','POST',{scanId:ownScanId},admin)).status,503);console.log('PASS AI disabled without key; no external API call');
  // A local fake OpenAI server proves the complete route never repeats a cached/quota-blocked request.
  let providerCalls=0,quotaMode=false;
  const provider=createServer((request,response)=>{
@@ -147,12 +172,14 @@ try{
   assert.equal((await fetch(adviceBase+'/api/register',{method:'POST',headers:{origin:adviceBase,'Content-Type':'application/json'},body:JSON.stringify({email:'public-blocked@example.test',password})})).status,403);
   assert.equal((await projectAdmin.query("SELECT count(*) FROM users WHERE email='public-blocked@example.test'")).rows[0].count,'0');
   console.log('PASS public-sharing profile blocks self-registration before account creation');
-  const scanId=(await projectAdmin.query("SELECT id FROM scans WHERE hostname='owned.example'")).rows[0].id;
+  const scanId=(await projectAdmin.query("SELECT id FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].id;
   const requestAdvice=(locale:string)=>fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:admin+`; wg_locale=${locale}`,'Content-Type':'application/json'},body:JSON.stringify({scanId})});
   const live=await requestAdvice('ko');assert.equal(live.status,200);const generated=await live.json();assert.equal(generated.source,'ai');assert.equal(generated.inputTokens,20);assert.equal(generated.outputTokens,30);
   const cached=await (await requestAdvice('ko')).json();assert.equal(cached.source,'cache');assert.equal(providerCalls,1);
-  quotaMode=true;const fallback=await (await requestAdvice('ja')).json();assert.equal(fallback.source,'local');assert.equal(fallback.reasonCode,'AI_QUOTA_EXCEEDED');assert(fallback.advice.length>0);assert.equal(providerCalls,2);
-  const cooldown=await (await requestAdvice('es')).json();assert.equal(cooldown.source,'local');assert.equal(cooldown.reasonCode,'AI_QUOTA_EXCEEDED');assert.equal(providerCalls,2);
+  const foreign=await fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:admin,'Content-Type':'application/json'},body:JSON.stringify({scanId:otherScanId})});assert.equal(foreign.status,404);assert.equal(providerCalls,1);
+  const otherAdvice=await fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:analyst+'; wg_locale=ko','Content-Type':'application/json'},body:JSON.stringify({scanId:otherScanId})});assert.equal(otherAdvice.status,200);assert.equal((await otherAdvice.json()).source,'ai');assert.equal(providerCalls,2);
+  quotaMode=true;const fallback=await (await requestAdvice('ja')).json();assert.equal(fallback.source,'local');assert.equal(fallback.reasonCode,'AI_QUOTA_EXCEEDED');assert(fallback.advice.length>0);assert.equal(providerCalls,3);
+  const cooldown=await (await requestAdvice('es')).json();assert.equal(cooldown.source,'local');assert.equal(cooldown.reasonCode,'AI_QUOTA_EXCEEDED');assert.equal(providerCalls,3);
   console.log('PASS complete AI route with local-only provider: token usage, cache avoids calls, quota fallback and cross-language cooldown');
  }finally{adviceServer.kill();provider.closeAllConnections();await new Promise<void>(resolve=>provider.close(()=>resolve()));}
 
@@ -217,6 +244,13 @@ try{
  const managed=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_managed_fixture`});
  try{
   await managed.query(await readFile('sql/migrations/prisma-postgres/001_initial.sql','utf8'));
+  const legacyUser=randomUUID(),legacyScan=randomUUID();
+  await managed.query('INSERT INTO users(id,email,password_hash,role) VALUES($1,$2,$3,$4)',[legacyUser,'legacy-managed@example.test',newAccount.password_hash,'viewer']);
+  await managed.query("INSERT INTO scans(id,user_id,hostname,result) VALUES($1,$2,'legacy-managed.example','{\"status\":200,\"checks\":[]}')",[legacyScan,legacyUser]);
+  await managed.query("INSERT INTO events(category) VALUES('legacy_actor_unknown')");
+  await managed.query(await readFile('sql/migrations/prisma-postgres/002_account_isolation.sql','utf8'));
+  assert.equal((await managed.query('SELECT user_id FROM scans WHERE id=$1',[legacyScan])).rows[0].user_id,legacyUser);
+  assert.equal((await managed.query("SELECT user_id FROM events WHERE category='legacy_actor_unknown'")).rows[0].user_id,null);
   const managedQuery=(sql:string,values:unknown[])=>{assertManagedRuntimeSql(sql);return managed.query(sql,values);};
   const managedId=randomUUID();await managedQuery('SELECT public.register_viewer($1,$2,$3)',[managedId,'managed@example.test',newAccount.password_hash]);
   assert.equal((await managedQuery('SELECT role FROM users WHERE id=$1',[managedId])).rows[0].role,'viewer');

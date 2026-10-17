@@ -20,5 +20,5 @@ export async function limit(bucket:string,max:number,seconds:number){
  const r=await db.query(`INSERT INTO rate_limits(bucket,hits,reset_at) VALUES($1,1,now()+$2*interval '1 second') ON CONFLICT(bucket) DO UPDATE SET hits=CASE WHEN rate_limits.reset_at<=now() THEN 1 ELSE rate_limits.hits+1 END,reset_at=CASE WHEN rate_limits.reset_at<=now() THEN now()+$2*interval '1 second' ELSE rate_limits.reset_at END RETURNING hits`,[bucket,seconds]);
  if(r.rows[0].hits>max)throw new HttpError(429,'Rate limit exceeded');
 }
-export async function event(category:string){await db.query('INSERT INTO events(category) VALUES($1)',[category]);}
+export async function event(category:string,userId:string|null=null){await db.query('INSERT INTO events(category,user_id) VALUES($1,$2)',[category,userId]);}
 export function failure(e:unknown,req:Request){const status=e instanceof HttpError?e.status:503;const code=errorCode(e instanceof HttpError?e.message:'',status);const {locale}=requestLocale(req.headers);return Response.json({error:errorText(locale,code),errorCode:code,locale},{status,headers:{'Cache-Control':'no-store','Content-Language':locale,'Vary':'Cookie, Accept-Language'}});}

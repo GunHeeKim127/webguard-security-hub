@@ -13,7 +13,7 @@ export async function POST(req:Request){try{
  const url=data.url,hosts=targetPolicy()==='approved'?approvedHosts():undefined;
  async function run(progress:(stage:Stage,state:'running'|'success')=>void,signal:AbortSignal){
   if(hosts&&!hosts.length)throw new HttpError(409,'No approved targets configured');
-  let result;try{result=await scan(url,hosts,progress,signal);}catch{if(!signal.aborted)await event('scan_rejected');throw new HttpError(400,'Target rejected or unreachable. Check allowlist, public DNS and TLS.');}
+  let result;try{result=await scan(url,hosts,progress,signal);}catch{if(!signal.aborted)await event('scan_rejected',user.id);throw new HttpError(400,'Target rejected or unreachable. Check allowlist, public DNS and TLS.');}
   if(signal.aborted)throw new Error('Scan cancelled');
   progress('store','running');const id=await saveScan((sql,values)=>db.query(sql,values),user.id,new URL(url).hostname,result);
   progress('store','success');return {id,result};
