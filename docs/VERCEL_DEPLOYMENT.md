@@ -71,7 +71,7 @@ npm run db:copy:production
 | `DATABASE_PROVIDER` | Prisma는 `prisma-postgres`, 일반 PostgreSQL은 `postgresql` |
 | `PROJECT_RUNTIME_ROLE` | 일반 PostgreSQL만 `webguard_hub_prod_app`; Prisma에서는 사용하지 않음 |
 | `DATABASE_URL` | 생성 파일의 runtime URL. Prisma는 `pooled.db.prisma.io`, 일반 PostgreSQL은 별도 앱 역할 |
-| `PUBLIC_REGISTRATION_ENABLED` | `false` — 기존 조직 계정만 사용 |
+| `PUBLIC_REGISTRATION_ENABLED` | `true` — 공개 가입 허용, 신규 계정은 viewer. `false`로 명시하면 가입 차단 |
 | `SCAN_TARGET_POLICY` | `public` |
 | `AI_ENABLED` | 우선 `false` |
 | `DEFAULT_LOCALE` | `ko` |
