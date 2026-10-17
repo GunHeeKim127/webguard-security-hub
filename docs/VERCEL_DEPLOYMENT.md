@@ -90,6 +90,6 @@ GitHub의 최신 main 커밋으로 **Redeploy**합니다. Framework는 Next.js, 
 
 - Vercel에서는 Next.js Node Proxy가 플랫폼 공식 IP 헤더를 사용해 DB의 5분 차단·블랙리스트를 적용합니다. IP가 없거나 보호 DB를 확인할 수 없으면 503으로 거절합니다. 로컬 서버에서는 이 헤더를 신뢰하지 않고 기존 소켓 IP 방어를 사용합니다.
 - `pg` 풀은 인스턴스당 최대 2개, idle 5초와 Vercel 공식 `attachDatabasePool`을 사용합니다. 외부 연결은 인증서 검증을 끄지 않습니다. 제공자의 TLS 옵션을 추출한 뒤 DB/user/host 우회 매개변수는 거절합니다.
-- 단일 조직용입니다. 회원별·고객별 데이터 격리, 가입 승인 UI, MFA·이메일 인증, 운영 백업 복원 훈련·부하 검증은 별도 작업입니다.
+- 계정별 진단·개인 이벤트·AI 소유권 분리를 적용했습니다. 조직/팀 공유·DB RLS, 가입 승인 UI, MFA·이메일 인증, 운영 백업 복원 훈련·부하 검증은 별도 작업입니다.
 
 참고: [Vercel PostgreSQL](https://vercel.com/docs/postgres), [Vercel 연결 풀](https://vercel.com/kb/guide/efficiently-manage-database-connection-pools-with-fluid-compute), [node-postgres SSL](https://node-postgres.com/features/ssl), [Neon 역할·권한](https://neon.com/docs/manage/roles).

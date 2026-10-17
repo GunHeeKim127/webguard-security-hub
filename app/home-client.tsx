@@ -25,10 +25,12 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
  const [locale,setLocale]=useState(initialLocale),[data,setData]=useState<Dashboard|null>(null),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[switching,setSwitching]=useState(false),[advice,setAdvice]=useState(''),[authorized,setAuthorized]=useState(false);
  const [inspection,setInspection]=useState<Inspection>({state:'idle',target:''}),[operation,setOperation]=useState<OperationState>(null),[activity,setActivity]=useState<NonNullable<OperationState>[]>([]),[targetValue,setTargetValue]=useState('');
  const [logs,setLogs]=useState<ScanLog[]>([]);const scanRequest=useRef<AbortController|null>(null),generation=useRef(0);
+ const accountGeneration=useRef(0),sessionChannel=useRef<BroadcastChannel|null>(null);
  useEffect(()=>()=>scanRequest.current?.abort(),[]);
  const [adviceInfo,setAdviceInfo]=useState<{source:string,reasonCode?:string,provider?:string,model?:string,inputTokens?:number,outputTokens?:number}|null>(null);
  const [bootLoading,setBootLoading]=useState(true);
  const t=messages[locale],ops=operationsMessages[locale],scanCopy=scanUI[locale];
+ function resetAccountView(loading=false){accountGeneration.current++;generation.current++;scanRequest.current?.abort();scanRequest.current=null;setData(null);setAdvice('');setAdviceInfo(null);setAuthorized(false);setTargetValue('');setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setBusy(false);setBootLoading(loading);}
  function changeTarget(value:string){if(value===targetValue)return;generation.current++;if(scanRequest.current){scanRequest.current.abort();setBusy(false);}scanRequest.current=null;setTargetValue(value);setAuthorized(false);setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setAdvice('');}
  const normalizedTarget=targetValue.trim().includes('://')?targetValue.trim():'https://'+targetValue.trim();
  const publicTargets=data?.overview.targetPolicy==='public';
@@ -51,17 +53,25 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
  function markOperation(kind:Operation,state:'running'|'success'|'error'){const item={kind,state,at:new Date().toISOString()};setOperation(item);if(state!=='running')setActivity(old=>[item,...old].slice(0,8));}
  const message=code==='THREAT_BLOCKED'?defenseText(locale,'temporary'):code==='IP_BLACKLISTED'?defenseText(locale,'permanent'):code==='PROTECTION_UNAVAILABLE'?defenseText(locale,'unavailable'):code==='NETWORK_ERROR'?t.networkError:code==='SWITCH_ERROR'?t.switchError:code==='INVALID_EMAIL'?t.invalidEmail:code==='REQUIRED'?t.required:code?errorText(locale,code):'';
  useEffect(()=>{document.documentElement.lang=locale;document.title=`WebGuard · ${messages[locale].title}`;},[locale]);
- async function load(record=true){if(record)markOperation('refresh','running');try{
+ async function load(record=true){const epoch=accountGeneration.current;if(record)markOperation('refresh','running');try{
   const r=await fetch('/api/dashboard',{cache:'no-store'});const json=await r.json();
+  if(epoch!==accountGeneration.current)return;
   if(r.ok){setData(json);if(record)markOperation('refresh','success');}
-  else {if(record)markOperation('refresh','error');if(r.status===401)setData(null);else setCode(json.errorCode??'SERVICE_UNAVAILABLE');}
- }catch{setCode('NETWORK_ERROR');if(record)markOperation('refresh','error');}finally{setBootLoading(false);}}
+  else {if(record)markOperation('refresh','error');if(r.status===401)resetAccountView();else setCode(json.errorCode??'SERVICE_UNAVAILABLE');}
+ }catch{if(epoch===accountGeneration.current){setCode('NETWORK_ERROR');if(record)markOperation('refresh','error');}}finally{if(epoch===accountGeneration.current)setBootLoading(false);}}
  useEffect(()=>{void load(false);},[]);
- async function post(path:string,payload:unknown,current=()=>true){setBusy(true);setCode('');const kind:Operation=path==='/api/login'?'login':path==='/api/logout'?'logout':path==='/api/ai'?'ai':'scan';markOperation(kind,'running');try{
+ useEffect(()=>{
+  const refreshSession=()=>{resetAccountView(true);void load(false);};
+  const restored=(event:PageTransitionEvent)=>{if(event.persisted)refreshSession();};
+  try{if(typeof BroadcastChannel!=='undefined'){sessionChannel.current=new BroadcastChannel('webguard-session');sessionChannel.current.onmessage=event=>{if(event.data==='changed')refreshSession();};}}catch{sessionChannel.current=null;}
+  window.addEventListener('pageshow',restored);
+  return()=>{sessionChannel.current?.close();sessionChannel.current=null;window.removeEventListener('pageshow',restored);};
+ },[]);
+ async function post(path:string,payload:unknown,current=()=>true){if(path==='/api/login'||path==='/api/logout')accountGeneration.current++;const epoch=accountGeneration.current,isCurrent=()=>epoch===accountGeneration.current&&current();setBusy(true);setCode('');const kind:Operation=path==='/api/login'?'login':path==='/api/logout'?'logout':path==='/api/ai'?'ai':'scan';markOperation(kind,'running');try{
   const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const json=await r.json();
-  if(!current())return null;
-  if(!r.ok){setCode(json.errorCode??'SERVICE_UNAVAILABLE');markOperation(kind,'error');return null;}markOperation(kind,'success');return json;
- }catch{if(current()){setCode('NETWORK_ERROR');markOperation(kind,'error');}return null;}finally{setBusy(false);}}
+  if(!isCurrent())return null;
+  if(!r.ok){setCode(json.errorCode??'SERVICE_UNAVAILABLE');markOperation(kind,'error');return null;}markOperation(kind,'success');if(kind==='login'||kind==='logout'){try{sessionChannel.current?.postMessage('changed');}catch{/* Tab notifications are optional; the authenticated response remains valid. */}}return json;
+ }catch{if(isCurrent()){setCode('NETWORK_ERROR');markOperation(kind,'error');}return null;}finally{if(epoch===accountGeneration.current)setBusy(false);}}
  async function changeLanguage(value:unknown){if(!isLocale(value))return;setSwitching(true);try{
   const r=await fetch('/api/locale',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locale:value})});
   if(!r.ok){setCode('SWITCH_ERROR');return;}setLocale(value);setAdvice('');
@@ -103,7 +113,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   </Box>:<>
    <Stack direction="row" gap={2} mb={3} alignItems="center" flexWrap="wrap">
     <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>
-    <Button disabled={busy} onClick={async()=>{if(await post('/api/logout',{})){setData(null);setAdvice('');setInspection({state:'idle',target:''});setActivity([]);setTargetValue('');setLogs([]);generation.current++;scanRequest.current?.abort();}}}>{t.logout}</Button><Button disabled={busy||operation?.state==='running'} onClick={()=>void load()}>{t.refresh}</Button>
+    <Button disabled={busy} onClick={async()=>{if(await post('/api/logout',{}))resetAccountView();}}>{t.logout}</Button><Button disabled={busy||operation?.state==='running'} onClick={()=>void load()}>{t.refresh}</Button>
    </Stack>
    {data.user.role==='viewer'&&<Alert severity="info" sx={{mb:3}}>{t.viewerHelp}</Alert>}
    <Box>
