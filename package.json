@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=.env.migration.local scripts/migrate.ts",
     "user:create": "tsx --env-file=.env.migration.local scripts/create-user.ts",
+    "user:password": "tsx --env-file=.env.migration.local scripts/reset-password.ts",
+    "user:password:production": "tsx --env-file=.env.migration.production.local scripts/reset-password.ts",
     "test:smoke": "tsx scripts/smoke.ts",
     "test:integration": "tsx scripts/integration.ts",
     "db:grant": "tsx --env-file=.env.migration.local scripts/grant-runtime.ts",

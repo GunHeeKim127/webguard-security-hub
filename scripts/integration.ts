@@ -11,12 +11,15 @@ import {cachedAdvice,adviceKey} from '../lib/advice-cache';
 import {withAiBudget} from '../lib/ai-budget';
 import {saveScan} from '../lib/scan-store';
 import {assertManagedRuntimeSql} from '../lib/runtime-sql';
+import {hashPassword,verifyPassword,tokenHash} from '../lib/password';
+import {resetAccountPassword} from './support/reset-account-password';
 const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/PostgreSQL/15/bin';
 await mkdir('work',{recursive:true});const dir=await mkdtemp(path.resolve('work/isolated-pg-'));
 const pgPort=45000+Math.floor(Math.random()*5000),webPort=50000+Math.floor(Math.random()*5000),base=`http://127.0.0.1:${webPort}`;
 const database=`postgresql://postgres@127.0.0.1:${pgPort}/postgres`;
 const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_ROLE:'webguard_hub_dev_app',DATABASE_URL:`postgresql://webguard_hub_dev_app@127.0.0.1:${pgPort}/webguard_hub_dev`,MIGRATION_DATABASE_URL:`postgresql://webguard_hub_dev_migrator@127.0.0.1:${pgPort}/webguard_hub_dev`,APP_ORIGIN:base,APP_ADDITIONAL_ORIGINS:`http://localhost:${webPort}`,AI_ENABLED:'false',AI_PROVIDER:'openai',OPENAI_API_KEY:'',ALLOWED_SCAN_HOSTS:'owned.example',SCAN_TARGET_POLICY:'public',TRUSTED_PROXY_IPS:'',WEBGUARD_PROXY_SECRET:''};
 const pool=new Pool({connectionString:database,connectionTimeoutMillis:1000});let pgStarted=false;let server:ReturnType<typeof spawn>|undefined;
+const projectPools:Pool[]=[];
 // Never inherit the real production DB profile or platform-IP mode from env files.
 Object.assign(env,{DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:''});
 async function control(args:string[]){await new Promise<void>((resolve,reject)=>{const p=spawn(path.join(bin,'pg_ctl.exe'),args,{windowsHide:true,stdio:'ignore'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error('pg_ctl failed: '+code)));});}
@@ -29,6 +32,7 @@ try{
  const {readFile}=await import('node:fs/promises');
  for(const file of ['00_create_roles.sql','01_create_database.sql','02_restrict_database.sql'])await pool.query(await readFile('sql/setup/'+file,'utf8'));
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
+ projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
  assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'6');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
@@ -257,7 +261,25 @@ try{
   const saved=await saveScan(managedQuery,managedId,'managed.example',{status:200,checks:[]});
   assert.equal(await saveScan(managedQuery,managedId,'managed.example',{status:204,checks:[]}),saved);
   await cachedAdvice(managedQuery,adviceKey('managed-test','ko',[]),async()=>({advice:'Local test only',inputTokens:1,outputTokens:1}));
+  const beforeRecovery=(await managed.query('SELECT id,user_id,hostname,result,created_at FROM scans WHERE id=$1',[saved])).rows;
+  await managed.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 hour')",[tokenHash('recovery-test-only-token'),managedId]);
+  await managed.query("INSERT INTO rate_limits(bucket,hits,reset_at) VALUES($1,5,now()+interval '5 minutes')",['login:'+tokenHash('managed@example.test')]);
+  const client=await managed.connect();try{
+   const hash=hashPassword('local-recovery-test-only#2026');
+   await assert.rejects(resetAccountPassword(client,'missing@example.test',hash,tokenHash('missing@example.test')),/ACCOUNT_NOT_FOUND/);
+   const broken={async query(sql:string,values?:unknown[]){if(sql.startsWith('DELETE FROM public.sessions'))throw new Error('SIMULATED_FAILURE');return client.query(sql,values);}};
+   await assert.rejects(resetAccountPassword(broken,'managed@example.test',hash,tokenHash('managed@example.test')),/SIMULATED_FAILURE/);
+   assert.equal((await client.query('SELECT password_hash FROM users WHERE id=$1',[managedId])).rows[0].password_hash,newAccount.password_hash);
+   assert.equal((await client.query('SELECT count(*) FROM sessions WHERE user_id=$1',[managedId])).rows[0].count,'1');
+   await resetAccountPassword(client,'managed@example.test',hash,tokenHash('managed@example.test'));
+  }finally{client.release();}
+  const recovered=(await managed.query('SELECT password_hash,role FROM users WHERE id=$1',[managedId])).rows[0];assert(verifyPassword('local-recovery-test-only#2026',recovered.password_hash));assert.equal(recovered.role,'viewer');
+  assert.deepEqual((await managed.query('SELECT id,user_id,hostname,result,created_at FROM scans WHERE id=$1',[saved])).rows,beforeRecovery);
+  assert.equal((await managed.query('SELECT count(*) FROM sessions WHERE user_id=$1',[managedId])).rows[0].count,'0');
+  assert.equal((await managed.query('SELECT count(*) FROM rate_limits WHERE bucket=$1',['login:'+tokenHash('managed@example.test')])).rows[0].count,'0');
+  assert.equal((await managed.query("SELECT count(*) FROM events WHERE user_id=$1 AND category='password_reset_admin'",[managedId])).rows[0].count,'1');
+  console.log('PASS administrative password recovery, rollback on partial failure, missing-user refusal, role/result preservation, session and login-limit invalidation');
   console.log('PASS managed-provider schema, forced-viewer registration, guarded upsert and cache SQL on disposable DB (provider ACL limitations remain)');
  }finally{await managed.end();}
  await projectAdmin.end();
-}finally{server?.kill();await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}
+}finally{server?.kill();await Promise.allSettled(projectPools.map(project=>project.end()));await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}
