@@ -34,3 +34,5 @@
 분리는 **서버 API의 소유권 검사**입니다. 공통 DB 자격증명에 사용자별 RLS/독립 DB를 새로 제공한 것은 아닙니다. 키 탈취·서버 코드 실행 권한을 얻은 공격자에 대한 DB 수준의 계정 격리를 보장하지 않습니다. 조직/팀 공유·위임·관리자 강제 열람 UI도 별도 기능입니다.
 
 기준: [OWASP 객체별 권한 검사](https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/), [PostgreSQL 복합 유일성 제약](https://www.postgresql.org/docs/current/ddl-constraints.html).
+
+2026-10-17 실제 적용 확인: 로컬/Prisma migration과 기존 데이터 보존 검증을 완료했습니다. 정식 Vercel 사이트에서 임시 admin/analyst의 빈 초기 기록·동일 주소별 개별 결과·자기 결과만 덮어쓰기·목록/개수/이벤트 분리·상대 결과 AI 404·로그아웃 후 401을 확인했습니다. 테스트 데이터만 정리했습니다. 외부 AI 비활성 설정은 유지했으며 캐시 비공유는 가짜 제공자를 사용하는 통합 테스트에서 검증했습니다.
