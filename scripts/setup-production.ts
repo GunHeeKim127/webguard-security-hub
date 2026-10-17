@@ -14,7 +14,7 @@ if(databaseProvider()==='prisma-postgres'){
  const config=projectDatabase('migration');
  const runtime=new URL(config.connectionString);runtime.hostname='pooled.db.prisma.io';runtime.searchParams.set('sslmode','verify-full');
  const file=await open(output,'wx',0o600);
- try{await file.writeFile(`APP_ORIGIN=https://webguard-security-hub.vercel.app\nDATABASE_PROVIDER=prisma-postgres\nPROJECT_DATABASE=${process.env.PROJECT_DATABASE}\nDATABASE_URL=${runtime.toString()}\nPUBLIC_REGISTRATION_ENABLED=false\nSCAN_TARGET_POLICY=public\nAI_ENABLED=false\nDEFAULT_LOCALE=ko\n`);}finally{await file.close();}
+ try{await file.writeFile(`APP_ORIGIN=https://webguard-security-hub.vercel.app\nDATABASE_PROVIDER=prisma-postgres\nPROJECT_DATABASE=${process.env.PROJECT_DATABASE}\nDATABASE_URL=${runtime.toString()}\nPUBLIC_REGISTRATION_ENABLED=true\nSCAN_TARGET_POLICY=public\nAI_ENABLED=false\nDEFAULT_LOCALE=ko\n`);}finally{await file.close();}
  console.log('Prisma provider-managed runtime settings written to the ignored production file. No role creation attempted; no secrets printed.');
  process.exit(0);
 }
@@ -39,7 +39,7 @@ try{
   }
   if(config.ssl)url.searchParams.set('sslmode','verify-full');
   if('enableChannelBinding' in config)url.searchParams.set('channel_binding','require');
-  await file.writeFile(`APP_ORIGIN=https://webguard-security-hub.vercel.app\nPROJECT_DATABASE=${database}\nPROJECT_RUNTIME_ROLE=${role}\nDATABASE_URL=${url.toString()}\nPUBLIC_REGISTRATION_ENABLED=false\nSCAN_TARGET_POLICY=public\nAI_ENABLED=false\nDEFAULT_LOCALE=ko\n`);
+  await file.writeFile(`APP_ORIGIN=https://webguard-security-hub.vercel.app\nPROJECT_DATABASE=${database}\nPROJECT_RUNTIME_ROLE=${role}\nDATABASE_URL=${url.toString()}\nPUBLIC_REGISTRATION_ENABLED=true\nSCAN_TARGET_POLICY=public\nAI_ENABLED=false\nDEFAULT_LOCALE=ko\n`);
  }finally{await file.close();}
  await c.query('COMMIT');committed=true;
  console.log('Production runtime role created. Credentials written only to the ignored local output file; no secrets printed.');

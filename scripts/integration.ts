@@ -201,7 +201,7 @@ try{
  const output=path.join(dir,'generated-production.env');
  await assert.rejects(exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output','unignored-credentials.txt'],{env:{...env,...cloudEnv},windowsHide:true}));
  await exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true});
- const generated=await readFile(output,'utf8');assert(generated.includes('DATABASE_URL='));assert(generated.includes('PUBLIC_REGISTRATION_ENABLED=false'));assert(!generated.includes('MIGRATION_DATABASE_URL'));
+ const generated=await readFile(output,'utf8');assert(generated.includes('DATABASE_URL='));assert(generated.includes('PUBLIC_REGISTRATION_ENABLED=true'));assert(!generated.includes('MIGRATION_DATABASE_URL'));
  const roleState=(await pool.query("SELECT rolsuper,rolcreatedb,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname='webguard_fixture_app'")).rows[0];assert(Object.values(roleState).every(value=>value===false));
  await assert.rejects(exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true}));assert.equal(await readFile(output,'utf8'),generated);
  await script('scripts/migrate.ts',cloudEnv);await script('scripts/grant-runtime.ts',cloudEnv);
