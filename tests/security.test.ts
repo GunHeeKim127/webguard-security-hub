@@ -23,11 +23,31 @@ test('SSRF blocks private, loopback, mapped, link-local, reserved ranges',()=>{f
 test('URL policy rejects bypasses and unapproved targets',()=>{for(const u of ['http://owned.example','https://owned.example:444','https://owned.example/path','https://owned.example?x=1','https://u:p@owned.example','https://owned.example.evil.com','https://127.1','https://2130706433','file:///etc/passwd','https://[::1]','https://owned.example#x'])assert.throws(()=>target(u,['owned.example']));assert.equal(target('https://owned.example',['owned.example']).hostname,'owned.example');});
 test('password hashing uses unique salts and rejects incorrect passwords',()=>{const p='a-long-local-password';const a=hashPassword(p),b=hashPassword(p);assert.notEqual(a,b);assert.equal(verifyPassword(p,a),true);assert.equal(verifyPassword('incorrect',a),false);assert.throws(()=>hashPassword('short'));assert.notEqual(tokenHash('token'),'token');});
 test('viewer cannot scan and unknown roles fail closed',()=>{assert.equal(canScan('viewer'),false);assert.equal(canScan('other'),false);assert.equal(canScan('analyst'),true);assert.equal(canScan('admin'),true);});
+
+test('malformed password hashes fail closed without ignoring trailing fields',()=>{
+ const password='a-long-local-password',valid=hashPassword(password);
+ for(const stored of ['',valid+':ignored',valid.slice(1),'invalid:hash','x'.repeat(4000)])assert.equal(verifyPassword(password,stored),false);
+ assert.equal(verifyPassword(password,valid),true);
+});
 test('missing security headers are reported without treating presence as a guarantee',()=>{assert.equal(findings({}).filter(x=>!x.present).length,4);assert.equal(findings({'content-security-policy':'anything'})[0].present,true);});
 test('CSRF exact origin and missing origin rejection',()=>{process.env.APP_ORIGIN='http://localhost:3000';for(const origin of ['https://evil.example','null','http://localhost:3000.evil.example',''])assert.throws(()=>sameOrigin(new Request('http://localhost:3000',{headers:origin?{origin}:{}})));sameOrigin(new Request('http://localhost:3000',{headers:{origin:'http://localhost:3000'}}));});
 test('RBAC actual authorization policy fails closed',()=>{assert.equal(roleAllowed('viewer',['admin','analyst']),false);assert.equal(roleAllowed('admin',['admin','analyst']),true);assert.equal(roleAllowed('unknown',['admin','analyst','viewer']),false);});
 test('JSON limit enforces actual streamed size and parsing',async()=>{const request=(value:string,type='application/json')=>new Request('http://localhost',{method:'POST',body:value,headers:{'Content-Type':type}});await assert.rejects(body(request('x'.repeat(4097))),{status:413});await assert.rejects(body(request('{broken')),{status:400});await assert.rejects(body(request('{}','text/plain')),{status:415});assert.deepEqual(await body(request('{"ok":true}')),{ok:true});});
 test('honeypot paths detect probes without classifying normal users',()=>{for(const p of ['/.env','/.git/config','/wp-admin','/wp-login.php'])assert.equal(suspiciousPath(p),true);assert.equal(suspiciousPath('/dashboard'),false);});
+
+test('JSON media type is exact, case-insensitive and permits charset parameters',async()=>{
+ const request=(type:string)=>new Request('http://localhost',{method:'POST',body:'{}',headers:{'Content-Type':type}});
+ for(const type of ['application/jsonp','application/json-malformed','text/application/json'])await assert.rejects(body(request(type)),{status:415});
+ for(const type of ['application/json; charset=utf-8','Application/JSON'])assert.deepEqual(await body(request(type)),{});
+});
+
+test('cancelling pending DNS rejects promptly and never opens HTTPS',async t=>{
+ let started!:()=>void;const ready=new Promise<void>(resolve=>{started=resolve;});
+ t.mock.method(dns,'lookup',()=>{started();return new Promise(()=>{});});
+ const transport=t.mock.method(https,'request',()=>{throw new Error('Must not connect');});
+ const abort=new AbortController(),pending=scan('https://owned.example',undefined,()=>{},abort.signal);await ready;abort.abort();
+ await assert.rejects(pending,/cancelled/);assert.equal(transport.mock.callCount(),0);
+});
 test('scanner rejects a mixed public/private DNS answer before connecting',async t=>{
  t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4},{address:'127.0.0.1',family:4}]);
  const transport=t.mock.method(https,'request',()=>{throw new Error('Must never connect');});

@@ -57,10 +57,11 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   else {if(record)markOperation('refresh','error');if(r.status===401)setData(null);else setCode(json.errorCode??'SERVICE_UNAVAILABLE');}
  }catch{setCode('NETWORK_ERROR');if(record)markOperation('refresh','error');}finally{setBootLoading(false);}}
  useEffect(()=>{void load(false);},[]);
- async function post(path:string,payload:unknown){setBusy(true);setCode('');const kind:Operation=path==='/api/login'?'login':path==='/api/logout'?'logout':path==='/api/ai'?'ai':'scan';markOperation(kind,'running');try{
+ async function post(path:string,payload:unknown,current=()=>true){setBusy(true);setCode('');const kind:Operation=path==='/api/login'?'login':path==='/api/logout'?'logout':path==='/api/ai'?'ai':'scan';markOperation(kind,'running');try{
   const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const json=await r.json();
+  if(!current())return null;
   if(!r.ok){setCode(json.errorCode??'SERVICE_UNAVAILABLE');markOperation(kind,'error');return null;}markOperation(kind,'success');return json;
- }catch{setCode('NETWORK_ERROR');markOperation(kind,'error');return null;}finally{setBusy(false);}}
+ }catch{if(current()){setCode('NETWORK_ERROR');markOperation(kind,'error');}return null;}finally{setBusy(false);}}
  async function changeLanguage(value:unknown){if(!isLocale(value))return;setSwitching(true);try{
   const r=await fetch('/api/locale',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locale:value})});
   if(!r.ok){setCode('SWITCH_ERROR');return;}setLocale(value);setAdvice('');
@@ -131,7 +132,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
      <Typography variant="caption" color="text.secondary">{new Date(s.created_at).toLocaleString(locale)}</Typography>
      <Stack direction="row" flexWrap="wrap" gap={1} my={2}>{s.result.checks.map(c=>{const detail=s.result.assessment?.find(item=>item.id===headerKeys[c.header]);return <Chip key={c.header} title={c.header} color={detail?(detail.status==='pass'?'success':detail.status==='warning'?'warning':'default'):c.present?'default':'warning'} variant="outlined" label={`${t[headerKeys[c.header]??'scanTitle']}: ${detail?assessmentText(locale,detail.status):c.present?t.present:t.missing}`}/>;})}</Stack>
      <Stack direction="row" gap={1} flexWrap="wrap"><Button variant="outlined" onClick={()=>{const next=localAdvice(locale,s.result.checks);setAdviceExpanded(advice===next&&adviceInfo?.source==='local'?!adviceExpanded:true);setAdvice(next);setAdviceInfo({source:'local'});}}>{adviceCopy[locale].button}</Button>
-     <Button disabled={busy||switching||!data.aiEnabled||data.user.role==='viewer'} onClick={async()=>{setAdvice('');setAdviceInfo(null);setAdviceExpanded(true);const r=await post('/api/ai',{scanId:s.id});if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
+     <Button disabled={busy||switching||!data.aiEnabled||data.user.role==='viewer'} onClick={async()=>{setAdvice('');setAdviceInfo(null);setAdviceExpanded(true);const run=generation.current;const r=await post('/api/ai',{scanId:s.id},()=>generation.current===run);if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
      <Typography variant="caption" color="text.secondary" display="block" mt={1}>{adviceCopy[locale].note}</Typography>
     </Box>)}
     {!data.aiEnabled&&<Typography color="text.secondary" variant="body2" sx={{mt:2}}>{t.aiDisabled}</Typography>}

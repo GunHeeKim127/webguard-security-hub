@@ -31,7 +31,7 @@
 
 `npm run dev`는 app 계정을 사용합니다. 프로젝트 DB 이름과 URL의 DB가 다르면 연결을 거부합니다. migration 계정을 앱 실행에 넣는 것도 거부합니다.
 
-현재 로컬 연결 URL은 query parameter를 허용하지 않습니다. pg의 database/user override를 차단하기 위한 제한입니다. 외부 TLS DB 연결은 별도 검증된 SSL 설정을 추가한 뒤 사용하세요.
+연결 URL에서는 TLS용 `sslmode=require|verify-full`, `channel_binding=require`만 명시적으로 처리하며 DB·사용자·host 우회나 중복 옵션을 거절합니다. 외부 DB는 인증서를 검증하는 TLS를 사용합니다. Prisma의 별도 프로필과 권한 제약은 [Vercel 배포](VERCEL_DEPLOYMENT.md)를 참고하세요.
 
 ## 경계와 기존 프로젝트
 
