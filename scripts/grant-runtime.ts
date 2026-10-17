@@ -9,7 +9,7 @@ const quoted='"'+role+'"';
 const c=await pool.connect();
 try{
  await c.query('BEGIN');
- const exists=await c.query('SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=$1',[role]);
+ const exists=await c.query('SELECT rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls FROM pg_roles WHERE rolname=$1',[role]);
  if(!exists.rowCount || Object.values(exists.rows[0]).some(Boolean))throw new Error('Runtime role missing or has administrative privileges');
  const database=process.env.PROJECT_DATABASE!;
  if(!/^[a-z][a-z0-9_]{0,62}$/.test(database))throw new Error('Invalid database identifier');

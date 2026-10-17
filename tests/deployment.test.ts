@@ -5,6 +5,15 @@ import {deploymentReadiness} from '../lib/deployment-readiness';
 import {vercelClientAddress,vercelProtection} from '../lib/vercel-protection';
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
 import {assertManagedRuntimeSql} from '../lib/runtime-sql';
+import {runtimePoolConfig} from '../lib/runtime-pool-config';
+
+test('runtime and local guard use provider-compatible timeout options',()=>{
+ const before={...process.env};try{
+  cloudEnv();const ordinary=runtimePoolConfig();assert.equal(ordinary.statement_timeout,5000);assert.equal(ordinary.query_timeout,undefined);
+  process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';process.env.DATABASE_URL='postgres://test:test@pooled.db.prisma.io/postgres';
+  const managed=runtimePoolConfig();assert.equal(managed.statement_timeout,undefined);assert.equal(managed.query_timeout,5000);assert.deepEqual(managed.ssl,{rejectUnauthorized:true});
+ }finally{process.env=before;}
+});
 
 function cloudEnv(){process.env.DATABASE_PROVIDER='postgresql';process.env.PROJECT_DATABASE='neondb';process.env.PROJECT_RUNTIME_ROLE='webguard_hub_prod_app';process.env.DATABASE_URL='postgresql://webguard_hub_prod_app:dummy-password@db.example/neondb?sslmode=require&channel_binding=require';}
 test('Prisma managed profile accepts provider credentials only on the matching pooled/direct hosts',()=>{

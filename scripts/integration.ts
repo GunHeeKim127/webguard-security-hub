@@ -4,18 +4,21 @@ import { execFile,spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdtemp,mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { randomBytes,randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import assert from 'node:assert/strict';
 import {cachedAdvice,adviceKey} from '../lib/advice-cache';
 import {withAiBudget} from '../lib/ai-budget';
 import {saveScan} from '../lib/scan-store';
+import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/PostgreSQL/15/bin';
 await mkdir('work',{recursive:true});const dir=await mkdtemp(path.resolve('work/isolated-pg-'));
 const pgPort=45000+Math.floor(Math.random()*5000),webPort=50000+Math.floor(Math.random()*5000),base=`http://127.0.0.1:${webPort}`;
 const database=`postgresql://postgres@127.0.0.1:${pgPort}/postgres`;
 const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_ROLE:'webguard_hub_dev_app',DATABASE_URL:`postgresql://webguard_hub_dev_app@127.0.0.1:${pgPort}/webguard_hub_dev`,MIGRATION_DATABASE_URL:`postgresql://webguard_hub_dev_migrator@127.0.0.1:${pgPort}/webguard_hub_dev`,APP_ORIGIN:base,APP_ADDITIONAL_ORIGINS:`http://localhost:${webPort}`,AI_ENABLED:'false',AI_PROVIDER:'openai',OPENAI_API_KEY:'',ALLOWED_SCAN_HOSTS:'owned.example',SCAN_TARGET_POLICY:'public',TRUSTED_PROXY_IPS:'',WEBGUARD_PROXY_SECRET:''};
 const pool=new Pool({connectionString:database,connectionTimeoutMillis:1000});let pgStarted=false;let server:ReturnType<typeof spawn>|undefined;
+// Never inherit the real production DB profile or platform-IP mode from env files.
+Object.assign(env,{DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:''});
 async function control(args:string[]){await new Promise<void>((resolve,reject)=>{const p=spawn(path.join(bin,'pg_ctl.exe'),args,{windowsHide:true,stdio:'ignore'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error('pg_ctl failed: '+code)));});}
 async function script(name:string,extra:Partial<NodeJS.ProcessEnv>={}){return exec(process.execPath,['node_modules/tsx/dist/cli.mjs',name],{env:{...env,...extra},windowsHide:true});}
 async function call(route:string,method='GET',payload?:unknown,cookie?:string){return fetch(base+route,{method,headers:{origin:base,...(payload===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{cookie}:{})},body:payload===undefined?undefined:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});}
@@ -178,6 +181,14 @@ try{
  assert.equal((await call('/')).status,200);assert.equal((await projectAdmin.query("SELECT strikes FROM ip_blocks WHERE address='127.0.0.1'")).rows[0].strikes,0);
  assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category='ip_unblocked'")).rows[0].count,'1');
  console.log('PASS local administrator recovery and audited unblock');
+ await projectAdmin.query('ALTER ROLE webguard_hub_dev_app REPLICATION');
+ assert.equal((await (await call('/api/ready')).json()).code,'DATABASE_RUNTIME_ROLE_UNSAFE');
+ await assert.rejects(script('scripts/grant-runtime.ts'));
+ await projectAdmin.query('ALTER ROLE webguard_hub_dev_app NOREPLICATION');
+ await projectAdmin.query('ALTER ROLE webguard_hub_dev_app BYPASSRLS');
+ await assert.rejects(script('scripts/grant-runtime.ts'));
+ await projectAdmin.query('ALTER ROLE webguard_hub_dev_app NOBYPASSRLS');
+ console.log('PASS replication/RLS-bypass runtime privileges are rejected by readiness/grant checks');
  await projectAdmin.query("INSERT INTO ip_blocks(address,strikes,blacklisted,blocked_until,last_reason) VALUES('198.51.100.99',1,false,now()+interval '5 minutes','probe')");
  const newAdmin=await login('admin'),newViewer=await login('viewer');
  const adminDefense=await (await call('/api/dashboard','GET',undefined,newAdmin)).json(),viewerDefense=await (await call('/api/dashboard','GET',undefined,newViewer)).json();
@@ -188,6 +199,7 @@ try{
  const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
  const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};
  const output=path.join(dir,'generated-production.env');
+ await assert.rejects(exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output','unignored-credentials.txt'],{env:{...env,...cloudEnv},windowsHide:true}));
  await exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true});
  const generated=await readFile(output,'utf8');assert(generated.includes('DATABASE_URL='));assert(generated.includes('PUBLIC_REGISTRATION_ENABLED=false'));assert(!generated.includes('MIGRATION_DATABASE_URL'));
  const roleState=(await pool.query("SELECT rolsuper,rolcreatedb,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname='webguard_fixture_app'")).rows[0];assert(Object.values(roleState).every(value=>value===false));
@@ -201,5 +213,17 @@ try{
  await assert.rejects(script('scripts/copy-production-data.ts',cloudEnv));
  assert.equal((await copied.query("SELECT count(*) FROM events WHERE category='production_data_imported'")).rows[0].count,'1');
  await copied.end();console.log('PASS production role setup, existing-file protection, account hash/result copy, no copied sessions and non-empty target rejection');
+ await pool.query('CREATE DATABASE webguard_managed_fixture');
+ const managed=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_managed_fixture`});
+ try{
+  await managed.query(await readFile('sql/migrations/prisma-postgres/001_initial.sql','utf8'));
+  const managedQuery=(sql:string,values:unknown[])=>{assertManagedRuntimeSql(sql);return managed.query(sql,values);};
+  const managedId=randomUUID();await managedQuery('SELECT public.register_viewer($1,$2,$3)',[managedId,'managed@example.test',newAccount.password_hash]);
+  assert.equal((await managedQuery('SELECT role FROM users WHERE id=$1',[managedId])).rows[0].role,'viewer');
+  const saved=await saveScan(managedQuery,managedId,'managed.example',{status:200,checks:[]});
+  assert.equal(await saveScan(managedQuery,managedId,'managed.example',{status:204,checks:[]}),saved);
+  await cachedAdvice(managedQuery,adviceKey('managed-test','ko',[]),async()=>({advice:'Local test only',inputTokens:1,outputTokens:1}));
+  console.log('PASS managed-provider schema, forced-viewer registration, guarded upsert and cache SQL on disposable DB (provider ACL limitations remain)');
+ }finally{await managed.end();}
  await projectAdmin.end();
 }finally{server?.kill();await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}

@@ -15,7 +15,11 @@ export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,st
  const checkAbort=()=>{if(signal?.aborted)throw new Error('Scan cancelled');};
  checkAbort();progress('target','running');
  const u=target(raw,allowed);progress('target','success');progress('network','running');
- const addresses=await Promise.race([dns.lookup(u.hostname,{all:true}),new Promise<never>((_,reject)=>{const timer=setTimeout(()=>reject(new Error('DNS timeout')),3000);timer.unref();})]);
+ let dnsTimer:ReturnType<typeof setTimeout>|undefined,abortDns:(()=>void)|undefined;
+ const addresses=await Promise.race([dns.lookup(u.hostname,{all:true}),new Promise<never>((_,reject)=>{
+  dnsTimer=setTimeout(()=>reject(new Error('DNS timeout')),3000);dnsTimer.unref();
+  abortDns=()=>reject(new Error('Scan cancelled'));signal?.addEventListener('abort',abortDns,{once:true});if(signal?.aborted)abortDns();
+ })]).finally(()=>{clearTimeout(dnsTimer);if(abortDns)signal?.removeEventListener('abort',abortDns);});
  checkAbort();
  if(!addresses.length || addresses.some(a=>!publicAddress(a.address)))throw new Error('Non-public DNS rejected');
  const pinned=addresses[0];

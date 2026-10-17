@@ -2,7 +2,7 @@ import {createServer,type IncomingMessage,type ServerResponse} from 'node:http';
 import next from 'next';
 import nextEnv from '@next/env';
 import {Pool} from 'pg';
-import {projectDatabase} from '../lib/project-database';
+import {runtimePoolConfig} from '../lib/runtime-pool-config';
 import {activeBlock,clientAddress,detectThreat,recordThreat,type IpBlock} from '../lib/ingress-guard';
 import {requestLocale} from '../lib/request-locale';
 import {defenseText} from '../lib/defense-copy';
@@ -11,7 +11,8 @@ nextEnv.loadEnvConfig(process.cwd(),dev);
 const option=(name:string,fallback:string)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1]??fallback;};
 const port=Number(option('--port',process.env.PORT??'3000')),hostname=option('--hostname','127.0.0.1');
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('Invalid port');
-const pool=new Pool({...projectDatabase('runtime'),max:5,connectionTimeoutMillis:3000,statement_timeout:5000});
+const pool=new Pool(runtimePoolConfig());
+pool.on('error',()=>console.error('PostgreSQL guard connection closed'));
 const query=(sql:string,values:unknown[])=>pool.query(sql,values);
 function headers(req:IncomingMessage){return new Headers(Object.entries(req.headers).flatMap(([key,value])=>value===undefined?[]:[[key,Array.isArray(value)?value.join(','):value]]));}
 async function inspect(req:IncomingMessage):Promise<IpBlock|null>{

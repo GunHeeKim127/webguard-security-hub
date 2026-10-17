@@ -9,6 +9,7 @@ const index=process.argv.indexOf('--output');
 const output=path.resolve(index<0?'.env.production.local':process.argv[index+1]??'');
 const relative=path.relative(process.cwd(),output);
 if(!relative||relative.startsWith('..')||path.isAbsolute(relative))throw new Error('Output must be a new file inside this project');
+if(!(path.dirname(relative)==='.'&&/^\.env\.production(?:\.|$)/.test(path.basename(relative)))&&!relative.startsWith('work'+path.sep))throw new Error('Credential output must stay in ignored .env.production.* or work/');
 if(databaseProvider()==='prisma-postgres'){
  const config=projectDatabase('migration');
  const runtime=new URL(config.connectionString);runtime.hostname='pooled.db.prisma.io';runtime.searchParams.set('sslmode','verify-full');

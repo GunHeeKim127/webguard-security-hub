@@ -5,8 +5,8 @@ export function hashPassword(password:string) {
  return salt+':'+scryptSync(password,salt,64).toString('hex');
 }
 export function verifyPassword(password:string,stored:string) {
+ if(!/^[0-9a-f]{32}:[0-9a-f]{128}$/.test(stored)||password.length>128)return false;
  const [salt,hash]=stored.split(':');
- if(!salt || !hash || password.length>128) return false;
  const expected=Buffer.from(hash,'hex'), actual=scryptSync(password,salt,64);
  return expected.length===actual.length && timingSafeEqual(expected,actual);
 }
