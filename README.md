@@ -124,3 +124,5 @@ DBeaver에서 실제 운영 DB를 확인하려면 [운영 Prisma 연결 안내](
 `npm test`, `npm run typecheck`, `npm run build`를 사용합니다. 실제 HTTP 서버 검증은 `npm run test:smoke`, `npm run test:locale`입니다. `npm run test:integration`은 PostgreSQL native 도구로 임시 loopback DB를 생성해 검사합니다. 기본 PG_BIN은 `C:/Program Files/PostgreSQL/15/bin`이며 기존 운영 DB는 사용하지 않습니다. 테스트용 API는 로컬 모형으로 대체합니다.
 
 실행 중인 개발 캐시를 보존하려면 PowerShell에서 `$env:WEBGUARD_VERIFY='true'` 후 build 및 start 기반 검증을 실행하면 `.next-verify`를 사용합니다. 작업 후 해당 환경변수를 제거하면 기본 `.next`로 돌아갑니다.
+
+2026-10-19 추가 수정: 다른 기기에서 진단 시 나타나던 접속 보호 오류를 운영 요청에서도 재현했습니다. 보호 DB 조회 시간 초과를 로그로 확인했고, 읽기 전용 조회만 1회 재시도하도록 보완했습니다. 실패 시 503·기존 IP 차단은 유지하고 차단 기록 쓰기는 재시도하지 않습니다. 자동 테스트 75개·타입 검사·빌드를 통과했고, 정식 사이트에서 같은 계정의 독립된 두 세션으로 실제 진단 성공을 확인했습니다. 상세 원인과 검증 범위는 VALIDATION.md와 docs/ACCESS_DEFENSE.md를 참고하세요.
