@@ -11,7 +11,7 @@ test('runtime and local guard use provider-compatible timeout options',()=>{
  const before={...process.env};try{
   cloudEnv();const ordinary=runtimePoolConfig();assert.equal(ordinary.statement_timeout,5000);assert.equal(ordinary.query_timeout,undefined);
   process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';process.env.DATABASE_URL='postgres://test:test@pooled.db.prisma.io/postgres';
-  const managed=runtimePoolConfig();assert.equal(managed.statement_timeout,undefined);assert.equal(managed.query_timeout,5000);assert.deepEqual(managed.ssl,{rejectUnauthorized:true});
+  const managed=runtimePoolConfig();assert.equal(managed.statement_timeout,undefined);assert.equal(managed.query_timeout,5000);assert.equal(managed.connectionTimeoutMillis,10000);assert.deepEqual(managed.ssl,{rejectUnauthorized:true});
  }finally{process.env=before;}
 });
 
@@ -97,4 +97,28 @@ test('Vercel protection detects probes, fails closed, and leaves readiness reach
  const failed=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/',{headers:{'x-real-ip':'203.0.113.2'}}),async()=>{throw new Error('private database secret');},{VERCEL:'1'});assert.equal(failed?.status,503);assert(!(await failed!.text()).includes('secret'));
  const missing=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/'),async()=>{throw new Error('not called');},{VERCEL:'1'});assert.equal(missing?.status,503);
  for(const path of ['/api/ready','/api/health'])assert.equal(await vercelProtection(new Request('https://webguard-security-hub.vercel.app'+path),async()=>{throw new Error('not called');},{VERCEL:'1'}),null);
+});
+
+test('Vercel protection retries a transient block read once and still enforces the recovered block',async()=>{
+ const req=new Request('https://webguard-security-hub.vercel.app/api/scans',{method:'POST',headers:{'x-real-ip':'2001:db8::2'}});
+ let reads=0;const query=async(sql:string,values:unknown[])=>{assert(sql.startsWith('SELECT'));assert.equal(values[0],'2001:db8::2');if(++reads===1)throw new Error('Query read timeout');return {rows:[]};};
+ assert.equal(await vercelProtection(req,query,{VERCEL:'1'}),null);assert.equal(reads,2);
+ reads=0;const blocked=await vercelProtection(req,async()=>{if(++reads===1)throw Object.assign(new Error('private connection text'),{code:'ECONNRESET'});return {rows:[{blacklisted:true,strikes:6}]};},{VERCEL:'1'});
+ assert.equal(blocked?.status,403);assert.equal(reads,2);
+});
+
+test('Vercel protection stops after a failed retry, rejects permanent errors immediately, and logs no secrets',async()=>{
+ const req=new Request('https://webguard-security-hub.vercel.app/api/scans',{headers:{'x-real-ip':'203.0.113.2'}});
+ let calls=0;const logs:unknown[][]=[],warn=console.warn;console.warn=(...args:unknown[])=>{logs.push(args);};
+ try{
+  const unavailable=await vercelProtection(req,async()=>{calls++;throw Object.assign(new Error('secret-db-password'),{code:'ECONNRESET'});},{VERCEL:'1'});
+  assert.equal(calls,2);assert.equal(unavailable?.status,503);assert.equal((await unavailable!.json()).errorCode,'PROTECTION_UNAVAILABLE');
+  calls=0;const denied=await vercelProtection(req,async()=>{calls++;throw Object.assign(new Error('secret-db-password'),{code:'42501'});},{VERCEL:'1'});
+  assert.equal(calls,1);assert.equal(denied?.status,503);assert(!JSON.stringify(logs).includes('secret-db-password'));assert(!JSON.stringify(logs).includes('203.0.113.2'));
+ }finally{console.warn=warn;}
+});
+
+test('Vercel protection never retries a threat write after an ambiguous connection error',async()=>{
+ let calls=0;const response=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/.env',{headers:{'x-real-ip':'203.0.113.2'}}),async sql=>{calls++;if(sql.startsWith('SELECT'))return {rows:[]};throw Object.assign(new Error('write connection interrupted'),{code:'ECONNRESET'});},{VERCEL:'1'});
+ assert.equal(calls,2);assert.equal(response?.status,503);
 });

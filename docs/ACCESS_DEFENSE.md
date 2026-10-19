@@ -61,6 +61,12 @@ npm run security:unblock -- 127.0.0.1
 
 ## 검증
 
+### 접속 보호 상태 확인 실패
+
+`PROTECTION_UNAVAILABLE`은 등록 기기 제한이나 비밀번호 오류가 아닙니다. Vercel의 클라이언트 IP 확인 또는 보호 DB 조회/기록이 실패했다는 뜻입니다. 기기·IP에 로그인 세션을 묶지 않습니다. 보호 상태 SELECT의 일시적인 연결 중단/조회 제한 시간 초과에만 한 번 재조회합니다. 재조회 결과 차단 상태이면 그대로 차단하고, 계속 실패하거나 IP를 확인할 수 없으면 503을 유지합니다. 차단 횟수를 기록하는 쓰기는 결과가 불확실해도 재실행하지 않습니다.
+
+Prisma 연결 수립 대기는 10초, 각 쿼리의 클라이언트 대기는 5초이며 무한 대기는 없습니다. 로그에는 `client_identity`/`block_lookup`/`threat_record` 단계와 고정 오류 분류만 기록합니다. IP·이메일·쿠키·본문·연결 문자열·DB 오류 원문은 추가하지 않습니다.
+
 임시 DB 통합 테스트에서 실제 소켓 IP 차단, 위조 헤더 무시, 동시 요청의 중복 누적 방지, 5분 만료 후 정상 접근, 6번째 블랙리스트, 관리자 해제와 IP 목록 권한을 검증합니다. 5분 경과는 임시 DB 만료 시각만 이동시켜 시험하므로 실제 사용자 IP를 차단하거나 25분을 기다리지 않습니다. 운영 DB에 가짜 공격 기록을 넣지 않습니다.
 
 근거: [Node.js socket.remoteAddress](https://nodejs.org/api/net.html#socketremoteaddress), [OWASP SSRF 방어](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), 설치된 Next.js `custom-server.md`.
