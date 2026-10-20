@@ -87,7 +87,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
    <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
    <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
-    <Chip label={t.local} variant="outlined"/>{languageControl}
+    <Button href="/workbench" variant="outlined">{locale==='ko'?'VELTHARA 모듈 진단':'VELTHARA modules'}</Button><Chip label={t.local} variant="outlined"/>{languageControl}
    </Stack>
   </Stack>
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}

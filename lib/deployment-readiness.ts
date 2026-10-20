@@ -4,7 +4,7 @@ type Query=(sql:string)=>Promise<{rows:Record<string,unknown>[]}>;
 export async function deploymentReadiness(query:Query){
  try{projectDatabase('runtime');}catch(error){return {ready:false,code:error instanceof DatabaseConfigurationError?error.code:'DATABASE_IDENTITY_MISMATCH'};}
  try{
-  const r=await query("SELECT to_regclass('public.users') IS NOT NULL AND to_regclass('public.sessions') IS NOT NULL AND to_regclass('public.scans') IS NOT NULL AND to_regclass('public.events') IS NOT NULL AND to_regclass('public.rate_limits') IS NOT NULL AND to_regclass('public.ip_blocks') IS NOT NULL AND to_regclass('public.ai_advice_cache') IS NOT NULL AND to_regclass('public.scans_user_hostname_unique') IS NOT NULL AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='user_id') AS schema_ready");
+  const r=await query("SELECT to_regclass('public.users') IS NOT NULL AND to_regclass('public.sessions') IS NOT NULL AND to_regclass('public.scans') IS NOT NULL AND to_regclass('public.events') IS NOT NULL AND to_regclass('public.rate_limits') IS NOT NULL AND to_regclass('public.ip_blocks') IS NOT NULL AND to_regclass('public.ai_advice_cache') IS NOT NULL AND to_regclass('public.assessment_assets') IS NOT NULL AND to_regclass('public.assessment_runs') IS NOT NULL AND to_regclass('public.assessment_traffic') IS NOT NULL AND to_regclass('public.scans_user_hostname_unique') IS NOT NULL AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='user_id') AS schema_ready");
   if(r.rows[0]?.schema_ready!==true)return {ready:false,code:'DATABASE_SCHEMA_NOT_READY'};
   if(databaseProvider()!=='prisma-postgres'){
    const role=await query('SELECT NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole AND NOT rolreplication AND NOT rolbypassrls AND current_user<>pg_get_userbyid((SELECT datdba FROM pg_database WHERE datname=current_database())) AS role_safe FROM pg_roles WHERE rolname=current_user');
@@ -14,6 +14,9 @@ export async function deploymentReadiness(query:Query){
   if(writes.rows[0]?.writes_ready!==true)return {ready:false,code:'DATABASE_PERMISSIONS_NOT_READY'};
   await query('SELECT 1 FROM public.users LIMIT 1');
   await query('SELECT 1 FROM public.ip_blocks LIMIT 1');
+  await query('SELECT 1 FROM public.assessment_assets LIMIT 1');
+  await query('SELECT 1 FROM public.assessment_runs LIMIT 1');
+  await query('SELECT 1 FROM public.assessment_traffic LIMIT 1');
   return {ready:true,code:'READY',...(databaseProvider()==='prisma-postgres'?{permissionModel:'provider-managed'}:{})};
  }catch{return {ready:false,code:'DATABASE_CONNECTION_OR_PERMISSIONS_FAILED'};}
 }
