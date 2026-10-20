@@ -1,5 +1,7 @@
 import {createHash} from 'node:crypto';
 import {binaryInput,checkpoint,pick,report,type SecurityScanner,type Finding} from './types';
+import {executableSnapshot} from './executable-snapshot';
+import {executableFindings} from './local-modules';
 const peRef='https://learn.microsoft.com/en-us/windows/win32/debug/pe-format';
 export function peMetadata(b:Buffer){
  if(b.length<64||b.toString('ascii',0,2)!=='MZ')throw new Error('INPUT_INVALID');
@@ -12,8 +14,10 @@ export function peMetadata(b:Buffer){
  if(directories>4&&base+40<=o+size){const off=b.readUInt32LE(base+32),len=b.readUInt32LE(base+36);if(off&&len){if(off+len>b.length||len<8)throw new Error('INPUT_INVALID');certificate=true;}}
  return {flags:b.readUInt16LE(o+70),writableExecutable,certificate,sha256:createHash('sha256').update(b).digest('hex')};
 }
-export const peScanner:SecurityScanner={id:'application.pe',version:'1.0.0',targetKind:'windows-pe-file',maxBytes:2097152,validate(input){peMetadata(binaryInput(input));},async scan(input,ctx){
- checkpoint(ctx);const meta=peMetadata(binaryInput(input));
+export const peScanner:SecurityScanner={id:'application.pe',version:'2.0.0',targetKind:'windows-pe-file',maxBytes:2097152,validate(input){if(input.snapshot!==undefined)executableSnapshot(input.snapshot,'pe');else peMetadata(binaryInput(input));},async scan(input,ctx){
+ checkpoint(ctx);
+ if(input.snapshot!==undefined){const s=executableSnapshot(input.snapshot,'pe');return {...report(this,executableFindings(s,ctx),[pick(ctx,'브라우저 부분 읽기 또는 로컬 도구의 PE 헤더 요약','PE header summary from browser range reads or local tool')],[pick(ctx,'요약은 자기 보고이며 원본·서명을 서버가 검증하지 않습니다. 파일 미전송·미실행, 악성코드·전체 앱·MSI는 미검사입니다.','Summary is self-reported; no server verification of original/signature. No original upload/execution; malware, whole app and MSI are unassessed.')]),ruleVersion:'2026-10-20.1'};}
+ const meta=peMetadata(binaryInput(input));
  const findings:Finding[]=[
   ...([['aslr',0x40,'ASLR 선언 플래그','ASLR declaration flag'],['nx',0x100,'DEP/NX 선언 플래그','DEP/NX declaration flag']] as const).map(([id,flag,ko,en])=>({id,title:pick(ctx,ko,en),status:meta.flags&flag?'pass' as const:'warning' as const,severity:meta.flags&flag?'info' as const:'medium' as const,evidence:[`declared=${!!(meta.flags&flag)}`],remediation:pick(ctx,'빌드 설정과 실제 로더 적용 여부를 검토하세요. 플래그만으로 런타임 보호를 증명하지 않습니다.','Review build options and effective loader behavior. A flag alone does not establish runtime protection.'),reference:peRef})),
   {id:'writable-executable',title:pick(ctx,'쓰기·실행 동시 선언 섹션','Sections declared writable and executable'),status:meta.writableExecutable?'warning':'pass',severity:meta.writableExecutable?'medium':'info',evidence:[`sectionCount=${meta.writableExecutable}`],remediation:pick(ctx,'섹션 권한과 패커/JIT 사용을 검토하고 필요한 경우 빌드를 수정하세요.','Review section permissions and packer/JIT requirements before changing the build.'),reference:peRef},
