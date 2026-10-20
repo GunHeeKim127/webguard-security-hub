@@ -11,7 +11,7 @@ export const target=scanTarget;
 export function findings(headers:Record<string,string|string[]|undefined>){
  return ['content-security-policy','strict-transport-security','x-content-type-options','referrer-policy'].map(header=>({header,present:!!headers[header],severity:headers[header]?'info':'medium'}));
 }
-export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,state:'running'|'success')=>void=()=>{},signal?:AbortSignal) {
+export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,state:'running'|'success')=>void=()=>{},signal?:AbortSignal,profile?:'desktop'|'mobile') {
  const checkAbort=()=>{if(signal?.aborted)throw new Error('Scan cancelled');};
  checkAbort();progress('target','running');
  const u=target(raw,allowed);progress('target','success');progress('network','running');
@@ -24,7 +24,8 @@ export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,st
  if(!addresses.length || addresses.some(a=>!publicAddress(a.address)))throw new Error('Non-public DNS rejected');
  const pinned=addresses[0];
  return new Promise<CheckResult>((resolve,reject)=>{
- const req=https.request(u,{method:'HEAD',agent:false,rejectUnauthorized:true,minVersion:'TLSv1.2',maxHeaderSize:16384,family:pinned.family,lookup:((_hostname:unknown,_options:unknown,callback:Function)=>callback(null,pinned.address,pinned.family)) as never,headers:{'User-Agent':'WebGuard/0.2 authorized-passive-check',Origin:corsProbeOrigin}},res=>{
+ const userAgent=profile==='mobile'?'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36 WebGuard/0.3':profile==='desktop'?'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 WebGuard/0.3':'WebGuard/0.2 authorized-passive-check';
+ const req=https.request(u,{method:'HEAD',agent:false,rejectUnauthorized:true,minVersion:'TLSv1.2',maxHeaderSize:16384,family:pinned.family,lookup:((_hostname:unknown,_options:unknown,callback:Function)=>callback(null,pinned.address,pinned.family)) as never,headers:{'User-Agent':userAgent,Origin:corsProbeOrigin}},res=>{
   try{checkAbort();progress('network','success');progress('headers','running');
    const socket=res.socket as TLSSocket,certificate=socket?.getPeerCertificate?.();
    const tls=socket?.getProtocol?{authorized:socket.authorized===true,protocol:socket.getProtocol(),validTo:certificate?.valid_to??null}:undefined;

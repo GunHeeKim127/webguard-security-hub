@@ -31,5 +31,8 @@ try{
  await c.query(`GRANT EXECUTE ON FUNCTION public.register_viewer(uuid,text,text) TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT, UPDATE ON public.ai_advice_cache TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT, UPDATE ON public.ip_blocks TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT ON public.assessment_assets,public.assessment_runs TO ${quoted}`);
+ await c.query(`GRANT UPDATE(label,updated_at,ingest_token_hash) ON public.assessment_assets TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT, UPDATE ON public.assessment_traffic TO ${quoted}`);
  await c.query('COMMIT');console.log('Project runtime privileges applied; migration history is not exposed to runtime.');
 }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();await pool.end();}
