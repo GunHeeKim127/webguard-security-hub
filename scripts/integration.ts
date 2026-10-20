@@ -22,7 +22,7 @@ const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_RO
 const pool=new Pool({connectionString:database,connectionTimeoutMillis:1000});let pgStarted=false;let server:ReturnType<typeof spawn>|undefined;
 const projectPools:Pool[]=[];
 // Never inherit the real production DB profile or platform-IP mode from env files.
-Object.assign(env,{DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:''});
+Object.assign(env,{WEBGUARD_VERIFY:'true',DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:''});
 async function control(args:string[]){await new Promise<void>((resolve,reject)=>{const p=spawn(path.join(bin,'pg_ctl.exe'),args,{windowsHide:true,stdio:'ignore'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error('pg_ctl failed: '+code)));});}
 async function script(name:string,extra:Partial<NodeJS.ProcessEnv>={}){return exec(process.execPath,['node_modules/tsx/dist/cli.mjs',name],{env:{...env,...extra},windowsHide:true});}
 async function call(route:string,method='GET',payload?:unknown,cookie?:string){return fetch(base+route,{method,headers:{origin:base,...(payload===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{cookie}:{})},body:payload===undefined?undefined:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});}
@@ -35,7 +35,7 @@ try{
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'7');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'8');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  await assert.rejects(runtime.query('CREATE TABLE should_not_exist(id int)'),{code:'42501'});
  await assert.rejects(runtime.query('SELECT * FROM schema_migrations'),{code:'42501'});
@@ -244,6 +244,12 @@ try{
  assert.equal((await ingest(key1)).status,202);assert.equal((await ingest('0'.repeat(64))).status,401);assert.equal((await ingest(key1,{...telemetryBody,rawIp:'PRIVATE_IP'})).status,400);
  const signalData=await (await call('/api/assessments?assetId='+webAsset.asset_id,'GET',undefined,newAdmin)).json();assert.equal(Number(signalData.traffic.requests),10);assert.equal(signalData.signals.loginFailures,true);assert.equal(signalData.signals.probes,true);assert(!JSON.stringify(signalData).includes(key1));
  const key2=await issueKey();assert.notEqual(key1,key2);assert.equal((await ingest(key1)).status,401);assert.equal((await ingest(key2)).status,202);
+ const machInput={moduleId:'application.macho',label:'Mac summary test',authorized:true,snapshot:{schemaVersion:1,source:'browser',format:'macho',size:4000000000,architectures:[{bits:64,fileType:2,flags:0x200000,writableExecutable:0,certificateTable:false}]}};
+ const mach=await call('/api/assessments','POST',machInput,newAdmin);assert.equal(mach.status,200);const machSaved=await mach.json();assert(machSaved.report.findings.every((f:any)=>f.status!=='pass'));assert.equal((await call('/api/assessments?assetId='+machSaved.asset_id,'GET',undefined,phaseAnalyst)).status,404);
+ const mobileInput={moduleId:'application.package',label:'IPA summary test',authorized:true,snapshot:{schemaVersion:1,source:'browser',format:'ipa',size:3000000000,entries:100,nestedPackages:0,settings:{decoded:true,arbitraryLoads:true,debuggable:null,allowBackup:null,cleartext:null,permissionCount:null}}};
+ const mobile=await call('/api/assessments','POST',mobileInput,phaseAnalyst);assert.equal(mobile.status,200);assert((await mobile.json()).report.findings.some((f:any)=>f.id==='arbitraryLoads'&&f.status==='warning'));
+ assert.equal((await call('/api/assessments','POST',{...mobileInput,snapshot:{...mobileInput.snapshot,path:'PRIVATE_PATH'}},phaseAnalyst)).status,400);
+ console.log('PASS macOS/mobile summary API persistence, self-report labels, owner isolation and raw-field rejection');
  assert.equal((await call('/api/assessments','POST',{action:'rotateTelemetryToken',assetId:webAsset.asset_id},phaseAnalyst)).status,404);
  const phaseWriter=new Pool({connectionString:env.DATABASE_URL});try{await assert.rejects(phaseWriter.query('UPDATE assessment_assets SET user_id=$1 WHERE id=$2',[otherActor,phaseA.asset_id]),{code:'42501'});await assert.rejects(phaseWriter.query("UPDATE assessment_runs SET report='{}'"),{code:'42501'});}finally{await phaseWriter.end();}
  console.log('PASS modular HTTP assessments: viewer denial, owner-only assets/history, redaction, retest preservation, aggregate-only ingestion, token rotation/revocation and immutable runtime results');
@@ -275,6 +281,7 @@ try{
   await managed.query("INSERT INTO events(category) VALUES('legacy_actor_unknown')");
   await managed.query(await readFile('sql/migrations/prisma-postgres/002_account_isolation.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/003_modular_assessments.sql','utf8'));
+  await managed.query(await readFile('sql/migrations/prisma-postgres/004_local_file_inspection.sql','utf8'));
   assert.equal((await managed.query('SELECT user_id FROM scans WHERE id=$1',[legacyScan])).rows[0].user_id,legacyUser);
   assert.equal((await managed.query("SELECT user_id FROM events WHERE category='legacy_actor_unknown'")).rows[0].user_id,null);
   const managedQuery=(sql:string,values:unknown[])=>{assertManagedRuntimeSql(sql);return managed.query(sql,values);};
