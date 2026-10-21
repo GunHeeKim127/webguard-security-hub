@@ -231,7 +231,12 @@ try{
  const homeEntry=await fetch(base+'/',{headers:{cookie:newAdmin},redirect:'manual'});assert.equal(homeEntry.status,307);assert.equal(homeEntry.headers.get('location'),'/workbench');
  const classicEntry=await call('/?view=web','GET',undefined,newAdmin);assert.equal(classicEntry.status,200);
  const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
- console.log('PASS authenticated platform landing, eight-category shell and preserved classic web entry');
+ assert(!platformHtml.includes('id="asset-inspector"'));assert(!platformHtml.includes('id="assessment-results"'));
+ for(const href of ['/?view=web','/workbench/mobile','/workbench/endpoint','/workbench/results'])assert(platformHtml.includes('href="'+href+'"'));
+ for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newAdmin);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});assert.equal(guest.status,307);assert.equal(guest.headers.get('location'),'/');}
+ const resultsPage=await (await call('/workbench/results','GET',undefined,newAdmin)).text();assert(resultsPage.includes('id="assessment-results"'));assert(!resultsPage.includes('id="asset-inspector"'));
+ assert.equal((await call('/workbench/not-a-module','GET',undefined,newAdmin)).status,404);
+ console.log('PASS button-only landing, dedicated category pages, direct-link authentication, results page, unknown route 404 and preserved classic web entry');
  assert.equal((await call('/api/assessments','POST',{moduleId:'linux.ssh',label:'lab',text:'PermitRootLogin yes',authorized:true},newViewer)).status,403);
  const phaseInput={moduleId:'linux.ssh',label:'integration lab',text:'PermitRootLogin yes\n# PRIVATE_CONFIG_TOKEN',authorized:true};
  const phaseFirst=await call('/api/assessments','POST',phaseInput,newAdmin);assert.equal(phaseFirst.status,200);const phaseA=await phaseFirst.json();assert(!JSON.stringify(phaseA).includes('PRIVATE_CONFIG_TOKEN'));
