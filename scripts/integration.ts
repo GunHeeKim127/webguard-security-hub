@@ -228,6 +228,10 @@ try{
  assert.equal(Object.hasOwn(viewerDefense,'ipBlocks'),false);console.log('PASS public-target metadata and administrator-only IP disclosure');
  assert.equal((await call('/api/ready')).status,200);console.log('PASS readiness confirms migrated least-privilege runtime');
  assert.equal((await call('/workbench','GET',undefined,newAdmin)).status,200);
+ const homeEntry=await fetch(base+'/',{headers:{cookie:newAdmin},redirect:'manual'});assert.equal(homeEntry.status,307);assert.equal(homeEntry.headers.get('location'),'/workbench');
+ const classicEntry=await call('/?view=web','GET',undefined,newAdmin);assert.equal(classicEntry.status,200);
+ const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
+ console.log('PASS authenticated platform landing, eight-category shell and preserved classic web entry');
  assert.equal((await call('/api/assessments','POST',{moduleId:'linux.ssh',label:'lab',text:'PermitRootLogin yes',authorized:true},newViewer)).status,403);
  const phaseInput={moduleId:'linux.ssh',label:'integration lab',text:'PermitRootLogin yes\n# PRIVATE_CONFIG_TOKEN',authorized:true};
  const phaseFirst=await call('/api/assessments','POST',phaseInput,newAdmin);assert.equal(phaseFirst.status,200);const phaseA=await phaseFirst.json();assert(!JSON.stringify(phaseA).includes('PRIVATE_CONFIG_TOKEN'));

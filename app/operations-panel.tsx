@@ -11,7 +11,7 @@ import AssessmentPanel from './assessment-panel';
 import {assessmentText} from '../lib/assessment-copy';
 export default function OperationsPanel({locale,data,inspection,operation,activity,logs}:{locale:Locale,data:Dashboard,inspection:Inspection,operation:OperationState,activity:NonNullable<OperationState>[],logs:ScanLog[]}){
  const copy=scanUI[locale];
- const pulse={animation:"scanPulse 1.2s ease-in-out infinite",'@keyframes scanPulse':{'0%,100%':{boxShadow:'0 0 0 0 #66e6c322'},'50%':{boxShadow:'0 0 0 4px #66e6c366'}},'@media (prefers-reduced-motion: reduce)':{animation:'none'}};
+ const pulse={animation:"scanPulse 1.2s ease-in-out infinite",'@keyframes scanPulse':{'0%,100%':{boxShadow:'0 0 0 0 #276b5910'},'50%':{boxShadow:'0 0 0 4px #47887066'}},'@media (prefers-reduced-motion: reduce)':{animation:'none'}};
  const stepLabels=[data.overview.targetPolicy==='public'?assessmentText(locale,'targetStep'):operationsMessages[locale].targetStep,operationsMessages[locale].networkStep,operationsMessages[locale].headersStep,operationsMessages[locale].storeStep];
  const t=operationsMessages[locale],ui=messages[locale],summary=inspectionSummary(inspection);
  const stateLabel=(state:string)=>state==='running'?t.running:state==='success'?t.success:state==='error'?t.failed:t.idle;
@@ -23,19 +23,19 @@ export default function OperationsPanel({locale,data,inspection,operation,activi
    <Box><Typography variant="h5" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" variant="body2" mt={1}>{t.help}</Typography></Box>
    <Chip color={operation?.state==='running'?'primary':operation?.state==='error'?'warning':'default'} label={stateLabel(inspection.state)} variant="outlined"/>
   </Stack>
-  <Paper variant="outlined" sx={{overflow:'hidden',borderColor:'#294451',background:'linear-gradient(120deg,#102b33,#101c2b)'}}>
-   <Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr 1fr',md:'repeat(4,1fr)'}}}>{stats.map((item,index)=><Box key={item.label} sx={{p:2.5,borderBottom:'1px solid #294451',borderInlineEnd:index<3?'1px solid #294451':undefined}}><Typography variant="caption" color="text.secondary">{item.label}</Typography><Typography variant="h4" fontWeight={800} color={index===3?'text.primary':'primary'} mt={1}>{typeof item.value==='number'?new Intl.NumberFormat(locale).format(item.value):item.value}</Typography></Box>)}</Box>
+  <Paper variant="outlined" sx={{overflow:'hidden',borderColor:'#dce6e0',background:'linear-gradient(120deg,#f5faf7,#f7f9fa)'}}>
+   <Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr 1fr',md:'repeat(4,1fr)'}}}>{stats.map((item,index)=><Box key={item.label} sx={{p:2.5,borderBottom:'1px solid #dce6e0',borderInlineEnd:index<3?'1px solid #dce6e0':undefined}}><Typography variant="caption" color="text.secondary">{item.label}</Typography><Typography variant="h4" fontWeight={800} color={index===3?'text.primary':'primary'} mt={1}>{typeof item.value==='number'?new Intl.NumberFormat(locale).format(item.value):item.value}</Typography></Box>)}</Box>
    <Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr',lg:'minmax(0,1.6fr) minmax(260px,1fr)'}}}>
-    <Box sx={{p:3,borderInlineEnd:{lg:'1px solid #294451'}}}>
+    <Box sx={{p:3,borderInlineEnd:{lg:'1px solid #dce6e0'}}}>
      <Typography variant="overline" color="primary">{t.active}</Typography><Typography fontWeight={700} role="status" aria-live="polite">{current}</Typography>
      <Typography variant="caption" color="text.secondary">{t.updated}: {new Date(data.overview.updatedAt).toLocaleString(locale)}</Typography>
-     <Box sx={{my:2,p:2,bgcolor:'#08151f',border:'1px solid #31535a',borderRadius:2}}>
+     <Box sx={{my:2,p:2,bgcolor:'#ffffff',border:'1px solid #dce6e0',borderRadius:2}}>
       <Typography variant="caption" color="text.secondary">{t.target}</Typography><Typography fontWeight={700} sx={{overflowWrap:'anywhere',mt:.5}}>{inspection.target||t.noTarget}</Typography>
       <Typography variant="body2" color="text.secondary" mt={1}>{t.scope}: {assessmentText(locale,'scope')}</Typography>
      </Box>
      <Box role="list" sx={{display:'grid',gridTemplateColumns:{xs:'1fr 1fr',sm:'repeat(4,1fr)'},gap:1}}>{stages.map((stage,index)=>{
       const latest=logs.filter(log=>log.stage===stage).at(-1),state=latest?.state??(summary.complete?'success':'idle'),active=state==='running'&&inspection.state==='running';
-      return <Box key={stage} role="listitem" aria-current={active?'step':undefined} sx={{p:1.5,border:'1px solid',borderColor:active||state==='success'?'#66e6c3':state==='error'?'#ed9c46':'#304350',borderRadius:2,bgcolor:active?'#173e3b':'#10202c',...(active?pulse:{}),...(state==='success'?{animation:'scanComplete .9s ease-out','@keyframes scanComplete':{from:{backgroundColor:'#286957'},to:{backgroundColor:'#10202c'}},'@media (prefers-reduced-motion: reduce)':{animation:'none'}}:{})}}>
+      return <Box key={stage} role="listitem" aria-current={active?'step':undefined} sx={{p:1.5,border:'1px solid',borderColor:active||state==='success'?'#478870':state==='error'?'#ad6c27':'#dce1e3',borderRadius:2,bgcolor:active?'#e9f3ed':'#ffffff',...(active?pulse:{}),...(state==='success'?{animation:'scanComplete .9s ease-out','@keyframes scanComplete':{from:{backgroundColor:'#e2f0e7'},to:{backgroundColor:'#ffffff'}},'@media (prefers-reduced-motion: reduce)':{animation:'none'}}:{})}}>
        <Typography color={active||state==='success'?'primary':'text.secondary'} fontWeight={800}>{state==='success'?'✓':String(index+1).padStart(2,'0')}</Typography><Typography variant="body2" fontWeight={700} mt={1}>{stepLabels[index]}</Typography><Typography variant="caption" color="text.secondary">{state==='idle'?t.waiting:stateLabel(state)}</Typography>
       </Box>;
      })}</Box>
@@ -56,8 +56,8 @@ export default function OperationsPanel({locale,data,inspection,operation,activi
        a.href=url;a.download=`webguard-${host}-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
       }}>{copy.download}</Button>
      </Stack>
-     <Box role="log" aria-label={copy.log} aria-live="polite" sx={{maxHeight:300,overflowY:'auto',fontFamily:'monospace',bgcolor:'#07131c',p:1.5,borderRadius:2}}>
-      {logs.length?logs.map((log,index)=><Box key={index} sx={{py:.8,borderBottom:'1px solid #20303a'}}><Typography variant="caption" color="text.secondary">{new Date(log.at).toLocaleTimeString(locale)} · {stepLabels[stages.indexOf(log.stage)]}</Typography><Typography variant="body2" color={log.state==='error'?'warning.main':'text.primary'}>{stateLabel(log.state)}{log.errorCode?' · '+(log.errorCode==='NETWORK_ERROR'?ui.networkError:errorText(locale,log.errorCode)):''}</Typography></Box>):<Typography variant="body2" color="text.secondary">{t.noLog}</Typography>}
+     <Box role="log" aria-label={copy.log} aria-live="polite" sx={{maxHeight:300,overflowY:'auto',fontFamily:'monospace',bgcolor:'#f5f7f8',p:1.5,borderRadius:2}}>
+      {logs.length?logs.map((log,index)=><Box key={index} sx={{py:.8,borderBottom:'1px solid #e1e6e8'}}><Typography variant="caption" color="text.secondary">{new Date(log.at).toLocaleTimeString(locale)} · {stepLabels[stages.indexOf(log.stage)]}</Typography><Typography variant="body2" color={log.state==='error'?'warning.main':'text.primary'}>{stateLabel(log.state)}{log.errorCode?' · '+(log.errorCode==='NETWORK_ERROR'?ui.networkError:errorText(locale,log.errorCode)):''}</Typography></Box>):<Typography variant="body2" color="text.secondary">{t.noLog}</Typography>}
      </Box>
      <Typography variant="caption" color="text.secondary" display="block" sx={{mt:2}}>{t.inactive}</Typography>
      <Typography fontWeight={700} variant="body2" mt={2}>{t.requestLog}</Typography>
