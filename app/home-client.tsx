@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress} from '@mui/material';
+import {ThemeProvider,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
 import {messages,eventLabel,type MessageKey} from '../lib/messages';
 import {errorText} from '../lib/errors-i18n';
@@ -16,8 +16,8 @@ import LoginIllustration from './login-illustration';
 import {defenseText} from '../lib/defense-copy';
 import {operationsMessages} from '../lib/operations-messages';
 import type {Dashboard,Inspection,Operation,OperationState} from '../lib/inspection';
+import {platformTheme} from './platform-theme';
 
-const theme=createTheme({palette:{mode:'dark',primary:{main:'#66e6c3'},background:{default:'#091321',paper:'#111f31'}},typography:{fontFamily:'Arial, sans-serif'},shape:{borderRadius:14}});
 const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','strict-transport-security':'hsts','x-content-type-options':'nosniff','referrer-policy':'referrer'};
 
 export default function Home({initialLocale}:{initialLocale:Locale}){
@@ -52,7 +52,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
  }
  function markOperation(kind:Operation,state:'running'|'success'|'error'){const item={kind,state,at:new Date().toISOString()};setOperation(item);if(state!=='running')setActivity(old=>[item,...old].slice(0,8));}
  const message=code==='THREAT_BLOCKED'?defenseText(locale,'temporary'):code==='IP_BLACKLISTED'?defenseText(locale,'permanent'):code==='PROTECTION_UNAVAILABLE'?defenseText(locale,'unavailable'):code==='NETWORK_ERROR'?t.networkError:code==='SWITCH_ERROR'?t.switchError:code==='INVALID_EMAIL'?t.invalidEmail:code==='REQUIRED'?t.required:code?errorText(locale,code):'';
- useEffect(()=>{document.documentElement.lang=locale;document.title=`WebGuard · ${messages[locale].title}`;},[locale]);
+ useEffect(()=>{document.documentElement.lang=locale;document.title=`VELTHARA · ${messages[locale].title}`;},[locale]);
  async function load(record=true){const epoch=accountGeneration.current;if(record)markOperation('refresh','running');try{
   const r=await fetch('/api/dashboard',{cache:'no-store'});const json=await r.json();
   if(epoch!==accountGeneration.current)return;
@@ -83,9 +83,9 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
    {locales.map(l=><MenuItem key={l} value={l} lang={l}>{localeNames[l]}</MenuItem>)}
   </Select>
  </FormControl>;
- return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:3,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
+ return <ThemeProvider theme={platformTheme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:3,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
   {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
-   <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
+   <Typography variant="h6" color="primary">◈ VELTHARA</Typography>
    <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
     <Button href="/workbench" variant="outlined">{locale==='ko'?'VELTHARA 모듈 진단':'VELTHARA modules'}</Button><Chip label={t.local} variant="outlined"/>{languageControl}
    </Stack>
@@ -93,8 +93,8 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
   {data&&message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
   {bootLoading?<Paper sx={{p:4,maxWidth:520}}><Typography role="status" mb={2}>{ops.refresh}</Typography><LinearProgress aria-label={ops.refresh}/></Paper>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
-   <Paper component="section" elevation={0} sx={{p:{xs:3,sm:4,md:5},border:'1px solid #26394b',background:'linear-gradient(145deg,#142537,#101d2d)'}}>
-   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" mb={5}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ WEBGUARD</Typography>{languageControl}</Stack>
+   <Paper component="section" variant="outlined" sx={{p:{xs:3,sm:4,md:5},background:'#fafbfb'}}>
+   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" mb={5}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ VELTHARA</Typography>{languageControl}</Stack>
    <Typography variant="overline" color="primary">{t.operations}</Typography>
    <Typography component="h1" variant="h4" fontWeight={800} sx={{mt:1,mb:2}}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={4} sx={{lineHeight:1.7}}>{registrationCopy[locale].help}</Typography>
    {message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
@@ -102,14 +102,14 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
     e.preventDefault();const form=e.currentTarget;const email=form.elements.namedItem('email') as HTMLInputElement;const password=form.elements.namedItem('password') as HTMLInputElement;
     if(!email.value||!password.value){setCode('REQUIRED');(!email.value?email:password).focus();return;}
     if(!email.validity.valid){setCode('INVALID_EMAIL');email.focus();return;}
-    if(await post('/api/login',{email:email.value,password:password.value}))await load();
+    if(await post('/api/login',{email:email.value,password:password.value}))window.location.replace('/workbench');
    }}><Stack spacing={2}>
     <TextField name="email" label={t.email} type="email" autoComplete="username" required/>
     <TextField name="password" label={t.password} type="password" autoComplete="current-password" required/>
     <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button>
    </Stack></Box>
    </Paper>
-   <Box sx={{minWidth:0,textAlign:'center',px:{xs:2,md:0}}}><Box sx={{maxWidth:{xs:300,md:580},mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>
+   <Box sx={{minWidth:0,textAlign:'center',px:{xs:2,md:0}}}><Box sx={{maxWidth:{xs:280,md:450},mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>VELTHARA</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>Unified Asset Security Assessment Platform</Typography></Box>
   </Box>:<>
    <Stack direction="row" gap={2} mb={3} alignItems="center" flexWrap="wrap">
     <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>

@@ -1,15 +1,15 @@
 'use client';
 import {useState} from 'react';
-import {ThemeProvider,createTheme,CssBaseline,Container,Paper,Typography,Stack,TextField,Button,Alert,Box} from '@mui/material';
+import {ThemeProvider,CssBaseline,Container,Paper,Typography,Stack,TextField,Button,Alert,Box} from '@mui/material';
 import type {Locale} from '../../lib/locale';
 import {messages} from '../../lib/messages';
 import {registrationCopy} from '../../lib/registration-copy';
 import {registrationInput} from '../../lib/registration';
 import {errorText} from '../../lib/errors-i18n';
-const theme=createTheme({palette:{mode:'dark',primary:{main:'#66e6c3'},background:{default:'#091321',paper:'#111f31'}},shape:{borderRadius:14}});
+import {platformTheme} from '../platform-theme';
 export default function Signup({locale}:{locale:Locale}){
  const t=registrationCopy[locale],ui=messages[locale];const [busy,setBusy]=useState(false),[done,setDone]=useState(false),[error,setError]=useState('');
- return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="sm" sx={{py:5}}><Typography color="primary" variant="h6" mb={3}>◈ WEBGUARD</Typography><Paper sx={{p:{xs:3,sm:4}}}>
+ return <ThemeProvider theme={platformTheme}><CssBaseline/><Container maxWidth="sm" sx={{py:5}}><Typography color="primary" variant="h6" mb={3}>◈ VELTHARA</Typography><Paper variant="outlined" sx={{p:{xs:3,sm:4}}}>
   <Typography variant="h4" fontWeight={800} mb={2}>{t.title}</Typography><Typography color="text.secondary" mb={3}>{t.intro}</Typography>
   {error&&<Alert severity="warning" role="alert" sx={{mb:2}}>{error}</Alert>}
   {done?<Alert severity="success" role="status">{t.done}</Alert>:<Box component="form" noValidate onSubmit={async e=>{
