@@ -1,0 +1,12 @@
+import {headers} from 'next/headers';
+import {notFound,redirect} from 'next/navigation';
+import {currentUser} from '../../../lib/security';
+import {requestLocale} from '../../../lib/request-locale';
+import Workbench from '../workbench-client';
+export const dynamic='force-dynamic';
+export default async function Page({params}:{params:Promise<{category:string}>}){
+ const {category}=await params;
+ if(category!=='web'&&category!=='mobile'&&category!=='endpoint'&&category!=='results')notFound();
+ const user=await currentUser();if(!user)redirect('/');
+ return <Workbench key={category} view={category} initialUser={user} initialLocale={requestLocale(await headers()).locale==='ko'?'ko':'en'}/>;
+}
