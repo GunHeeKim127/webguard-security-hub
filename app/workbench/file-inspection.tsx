@@ -11,14 +11,18 @@ export default function FileInspection({moduleId,locale,disabled,onSnapshot}:Pro
  useEffect(()=>()=>{epoch.current++;worker.current?.terminate();clearTimeout(timer.current);},[]);
  function validate(value:unknown){return moduleId==='application.package'?packageSnapshot(value):executableSnapshot(value,moduleId==='application.pe'?'pe':'macho');}
  async function read(){
-  if(!file||!consent||disabled)return;const stamp=++epoch.current;setReading(true);setError('');setSummary(null);onSnapshot(undefined);
+  if(disabled||reading)return;
+  if(!file){setError(t('검사할 파일을 먼저 선택해 주세요.','Select a file before starting inspection.'));return;}
+  if(!consent){setError(t('현재 선택한 파일의 읽기를 허용해 주세요.','Allow reading the selected file before inspection.'));return;}
+  if(file.size===0){setError(t('선택한 파일이 비어 있습니다. 내용이 있는 파일을 선택해 주세요.','The selected file is empty. Choose a file with content.'));setConsent(false);return;}
+  const stamp=++epoch.current;setReading(true);setError('');setSummary(null);onSnapshot(undefined);
   const done=(value:unknown)=>{if(stamp!==epoch.current)return;try{const valid=validate(value);setSummary(valid);onSnapshot(valid);}catch{setError(t('요약 형식이 올바르지 않거나 선택한 모듈과 다릅니다.','The summary is invalid or does not match this module.'));}finally{setReading(false);setConsent(false);worker.current?.terminate();worker.current=null;clearTimeout(timer.current);}};
   const failed=()=>{if(stamp!==epoch.current)return;stop();setError(t('지원하지 않거나 손상된 파일, 읽기 실패 또는 분석 제한 초과입니다. 지원 형식과 미검사 범위를 확인하세요.','Unsupported/corrupt file, read failure or analysis limit exceeded. Check supported formats and limits.'));};
   try{
    if(mode==='local'){if(file.size>65536){failed();return;}const value=JSON.parse((await file.text()).replace(/^\uFEFF/,''));if(value.source!=='local'){failed();return;}done(value);return;}
    if(file.size>8*1024**3){failed();return;}
    const url=moduleId==='application.package'?'/tools/package-inspector.mjs':'/tools/executable-inspector.mjs';
-   const instance=new Worker(url,{type:'module'});worker.current=instance;instance.onmessage=e=>e.data.ok?done(e.data.result):failed();instance.onerror=failed;timer.current=setTimeout(failed,20000);
+   const instance=new Worker(url,{type:'module'});worker.current=instance;instance.onmessage=e=>e.data.ok?done(e.data.result):failed();instance.onerror=()=>{if(stamp!==epoch.current)return;stop();setError(t('파일 검사 도구를 불러오거나 실행하지 못했습니다. 사이트 연결과 브라우저 지원 상태를 확인한 뒤 읽기를 다시 허용해 검사하세요.','The inspection tool could not be loaded or run. Check site connectivity and browser support, then allow reading again and retry.'));};timer.current=setTimeout(failed,20000);
    instance.postMessage({file,format:moduleId==='application.pe'?'pe':'macho'});
   }catch{failed();}
  }
@@ -40,7 +44,7 @@ export default function FileInspection({moduleId,locale,disabled,onSnapshot}:Pro
    <Button component="label" variant="outlined" disabled={disabled||reading}>{mode==='local'?t('결과 JSON 선택','Select report JSON'):t('기기에서 파일 선택 · 최대 8 GiB','Select file on device · up to 8 GiB')}<input ref={input} type="file" hidden accept={mode==='local'?'.json':moduleId==='application.pe'?'.exe,.dll':moduleId==='application.package'?'.apk,.aab,.ipa,.apks,.xapk':undefined} onChange={e=>{stop();setError('');const chosen=e.target.files?.[0]??null;if(chosen&&chosen.size>(mode==='local'?65536:8*1024**3)){setFile(null);setError(t('파일 크기 제한을 초과했습니다.','The file exceeds the size limit.'));}else setFile(chosen);}}/></Button>
    <Typography variant="body2" sx={{overflowWrap:'anywhere'}}>{file?`${file.name} · ${(file.size/1024**2).toFixed(2)} MiB`:t('선택 후에도 허용 전에는 파일 내용을 읽지 않습니다.','File contents are not read until you allow it.')}</Typography>
    <FormControlLabel control={<Checkbox checked={consent} disabled={!file||reading||disabled} onChange={e=>setConsent(e.target.checked)}/>} label={t('현재 선택한 파일의 내용을 이 검사에 한해 읽도록 허용합니다.','I allow reading the selected file for this inspection only.')}/>
-   <Stack direction="row" gap={1}><Button variant="outlined" disabled={!file||!consent||reading||disabled} onClick={()=>void read()}>{t('허용한 파일 점검','Inspect permitted file')}</Button><Button disabled={disabled||(!reading&&!summary&&!consent)} onClick={stop}>{t('취소·허용 초기화','Cancel / clear consent')}</Button></Stack>
+   <Stack direction="row" gap={1}><Button variant="outlined" disabled={reading||disabled||!!file&&!consent} onClick={()=>void read()}>{t('허용한 파일 점검','Inspect permitted file')}</Button><Button disabled={disabled||(!reading&&!summary&&!consent)} onClick={stop}>{t('취소·허용 초기화','Cancel / clear consent')}</Button></Stack>
    {reading&&<><LinearProgress/><Typography role="status">{t('허용한 파일을 기기에서 읽는 중입니다. 취소하면 읽기를 중단합니다.','Reading the permitted file on your device. Cancel stops inspection.')}</Typography></>}
    {error&&<Alert severity="warning">{error}</Alert>}
    {summary!==null&&<Alert severity="success">{t('기기 내 점검 완료. 원본은 전송하지 않았습니다. 아래 요약만 별도의 저장 버튼으로 전송됩니다.','On-device inspection complete. Original not transmitted. Only the summary below is sent when you separately save.')}<Box component="details" sx={{mt:1}}><Box component="summary" sx={{cursor:'pointer'}}>{t('전송될 요약 펼치기','Expand outgoing summary')}</Box><Typography component="pre" variant="caption" sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify(summary,null,2)}</Typography></Box></Alert>}

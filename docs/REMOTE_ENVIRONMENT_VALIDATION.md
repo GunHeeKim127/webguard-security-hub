@@ -1,6 +1,6 @@
 # 다른 컴퓨터의 Linux·네트워크 실환경 검증 계획
 
-작성일: 2026-10-22. **앞으로 수행할 계획이며 테스트 완료 기록이 아니다.** 프로젝트 상태는 1단계 완료·2단계 진행 중이다.
+작성일: 2026-10-22. 아래 절차·사례표는 **실환경 검증 계획이며 전체 완료 기록이 아니다.** 프로젝트 상태는 1단계 완료·2단계 진행 중이다. 이후 현재 PC에서 수행한 합성·회귀 검사와 VM 접근 확인은 [별도 실행 기록](LOCAL_ENVIRONMENT_VALIDATION.md)에 구분했다. 로컬 SQL은 미설정이며 Kali는 SSH/root라는 사용자 설명을 확인했으나 현재 실행 환경의 키 인증은 거절됐다. 실제 SSH 설정·유효 정책 대조는 아직 미검증이다.
 
 ## 1. 환경과 검증 상태
 
@@ -27,7 +27,7 @@
 ### 현재 지원 범위
 
 - 진입: 검사 선택 → Endpoint → Windows·macOS 실행 파일 및 시스템 진단 작전실 → Linux SSH 설정.
-- 검사 ID: `linux.ssh`. 현재 규칙 버전은 `1.0.0`이며 실제 실행 결과의 버전도 기록한다.
+- 검사 ID: `linux.ssh`. 현재 모듈 버전은 `1.0.0`, 규칙 버전은 `2026-10-19.1`이며 실제 실행 결과의 두 필드를 각각 기록한다.
 - 입력: 최대 64 KiB `sshd_config` 텍스트. 원격 SSH 접속·자동 수집이 아니다.
 - 대상: 명시적 전역 PermitRootLogin, PasswordAuthentication, PermitEmptyPasswords, PubkeyAuthentication, MaxAuthTries.
 - Linux ELF·패키지 CVE·계정 권한·서비스·방화벽 전체 진단은 현재 미지원이다.

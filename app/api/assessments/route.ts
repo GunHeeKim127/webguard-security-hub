@@ -34,7 +34,7 @@ export async function POST(req:Request){try{
  let input;try{input=assessmentInput(data);}catch{throw new HttpError(400,'Invalid assessment input');}
  const locale=requestLocale(req.headers).locale==='ko'?'ko':'en';
  const signal=AbortSignal.any([req.signal,AbortSignal.timeout(20000)]);
- let report;try{report=await runAssessment(input,{signal,locale});}catch{await event('assessment_rejected',user.id);throw new HttpError(400,'Target rejected or unreachable. Check allowlist, public DNS and TLS.');}
+ let report;try{report=await runAssessment(input,{signal,locale});}catch{await event('assessment_rejected',user.id);throw new HttpError(400,input.moduleId==='web.compare'?'Target rejected or unreachable. Check allowlist, public DNS and TLS.':'Invalid assessment input');}
  signal.throwIfAborted();
  const key=input.moduleId==='web.compare'?new URL(input.url!).hostname:input.label.toLowerCase();
  const saved=await saveAssessment((sql,values)=>db.query(sql,values),user.id,key,input.label,report);
