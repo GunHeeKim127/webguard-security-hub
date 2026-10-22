@@ -15,6 +15,8 @@ import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 import {hashPassword,verifyPassword,tokenHash} from '../lib/password';
 import {resetAccountPassword} from './support/reset-account-password';
 import {saveAssessment} from '../lib/assessment/store';
+import {protectionQuery} from '../lib/protection-query';
+import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
 const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/PostgreSQL/15/bin';
 // Windows PostgreSQL can reject non-ASCII checkout paths during initdb.
 // Keep disposable cluster data in the OS temp directory, separate from real DBs.
@@ -41,6 +43,21 @@ try{
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
  assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'8');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
+ // Reproduce an upstream read lasting over the general 5s client deadline.
+ // Locks exist only in this disposable DB; no production writes or traffic.
+ const guardPool=new Pool({connectionString:env.DATABASE_URL,query_timeout:5000});projectPools.push(guardPool);
+ for(const adjusted of [false,true]){
+  const blocker=await projectAdmin.connect();let unlock:Promise<unknown>|undefined;
+  try{
+   await blocker.query('BEGIN');await blocker.query('LOCK public.ip_blocks IN ACCESS EXCLUSIVE MODE');
+   const timer=setTimeout(()=>{unlock=blocker.query('COMMIT');},6000);
+   try{
+    if(adjusted)assert.deepEqual((await protectionQuery(guardPool,ACTIVE_BLOCK_SQL,['192.0.2.199'],true)).rows,[]);
+    else await assert.rejects(guardPool.query(ACTIVE_BLOCK_SQL,['192.0.2.199']),/Query read timeout/);
+   }finally{await new Promise(resolve=>setTimeout(resolve,1100));clearTimeout(timer);if(unlock)await unlock;else await blocker.query('ROLLBACK');}
+  }finally{blocker.release();}
+ }
+ console.log('PASS real PostgreSQL delayed protection read: old 5s deadline fails, scoped 10s deadline succeeds; no production DB used');
  await assert.rejects(runtime.query('CREATE TABLE should_not_exist(id int)'),{code:'42501'});
  await assert.rejects(runtime.query('SELECT * FROM schema_migrations'),{code:'42501'});
  await assert.rejects(runtime.query("INSERT INTO users(id,email,password_hash,role) VALUES(gen_random_uuid(),'blocked@test','blocked','admin')"),{code:'42501'});
