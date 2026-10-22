@@ -8,7 +8,7 @@ import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../.
 export const runtime='nodejs';
 export const maxDuration=30;
 export async function POST(req:Request){try{
- sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('scan:'+user.id,5,60);
+ sameOrigin(req);const user=await requireUser();await limit('scan:'+user.id,5,60);
  const data=await body(req);if(typeof data.url!=='string'||!data.url.trim()||data.url.length>300||data.authorized!==true)throw new HttpError(400,'Owned target and authorization confirmation required');
  const url=data.url,hosts=targetPolicy()==='approved'?approvedHosts():undefined;
  async function run(progress:(stage:Stage,state:'running'|'success')=>void,signal:AbortSignal){

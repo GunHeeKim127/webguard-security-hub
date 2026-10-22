@@ -4,6 +4,7 @@ import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,Tex
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
 import {messages,eventLabel,type MessageKey} from '../lib/messages';
 import {errorText} from '../lib/errors-i18n';
+import {canAssess} from '../lib/assessment-permission';
 import {appendLog,readScanStream,type ScanLog} from '../lib/scan-run';
 import {adviceCopy,localAdvice} from '../lib/local-advice';
 import {registrationCopy} from '../lib/registration-copy';
@@ -35,7 +36,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
  const normalizedTarget=targetValue.trim().includes('://')?targetValue.trim():'https://'+targetValue.trim();
  const publicTargets=data?.overview.targetPolicy==='public';
  let targetApproved=false;try{scanTarget(normalizedTarget,publicTargets?undefined:data?.overview.approvedHosts??[]);targetApproved=true;}catch{}
- const blockReason=!targetValue.trim()?scanCopy.address:!authorized?scanCopy.permission:data?.user.role==='viewer'?t.viewerHelp:!publicTargets&&data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?(publicTargets?assessmentText(locale,'targetInvalid'):scanCopy.unapproved):'';
+ const blockReason=!targetValue.trim()?scanCopy.address:!authorized?scanCopy.permission:!canAssess(data?.user.role??'')?t.viewerHelp:!publicTargets&&data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?(publicTargets?assessmentText(locale,'targetInvalid'):scanCopy.unapproved):'';
  async function runScan(){
   const url=normalizedTarget;scanRequest.current?.abort();const request=new AbortController(),run=++generation.current;scanRequest.current=request;
   setTargetValue(url);setLogs([]);setCode('');setAdvice('');setInspection({state:'running',target:url});setBusy(true);markOperation('scan','running');
@@ -115,7 +116,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
     <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>
     <Button disabled={busy} onClick={async()=>{if(await post('/api/logout',{}))resetAccountView();}}>{t.logout}</Button><Button disabled={busy||operation?.state==='running'} onClick={()=>void load()}>{t.refresh}</Button>
    </Stack>
-   {data.user.role==='viewer'&&<Alert severity="info" sx={{mb:3}}>{t.viewerHelp}</Alert>}
+   {!canAssess(data.user.role)&&<Alert severity="info" sx={{mb:3}}>{t.viewerHelp}</Alert>}
    <Box>
     <Paper sx={{p:3}}><Typography variant="h6">{assessmentText(locale,'title')}</Typography><Typography color="text.secondary" my={2}>{assessmentText(locale,'scope')}</Typography>
      <Box component="form" noValidate onSubmit={e=>{e.preventDefault();if(blockReason||busy||switching)return;void runScan();}}><Stack spacing={2}>
@@ -142,7 +143,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
      <Typography variant="caption" color="text.secondary">{new Date(s.created_at).toLocaleString(locale)}</Typography>
      <Stack direction="row" flexWrap="wrap" gap={1} my={2}>{s.result.checks.map(c=>{const detail=s.result.assessment?.find(item=>item.id===headerKeys[c.header]);return <Chip key={c.header} title={c.header} color={detail?(detail.status==='pass'?'success':detail.status==='warning'?'warning':'default'):c.present?'default':'warning'} variant="outlined" label={`${t[headerKeys[c.header]??'scanTitle']}: ${detail?assessmentText(locale,detail.status):c.present?t.present:t.missing}`}/>;})}</Stack>
      <Stack direction="row" gap={1} flexWrap="wrap"><Button variant="outlined" onClick={()=>{const next=localAdvice(locale,s.result.checks);setAdviceExpanded(advice===next&&adviceInfo?.source==='local'?!adviceExpanded:true);setAdvice(next);setAdviceInfo({source:'local'});}}>{adviceCopy[locale].button}</Button>
-     <Button disabled={busy||switching||!data.aiEnabled||data.user.role==='viewer'} onClick={async()=>{setAdvice('');setAdviceInfo(null);setAdviceExpanded(true);const run=generation.current;const r=await post('/api/ai',{scanId:s.id},()=>generation.current===run);if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
+     <Button disabled={busy||switching||!data.aiEnabled||!canAssess(data.user.role)} onClick={async()=>{setAdvice('');setAdviceInfo(null);setAdviceExpanded(true);const run=generation.current;const r=await post('/api/ai',{scanId:s.id},()=>generation.current===run);if(r&&typeof r.advice==='string'){setAdvice(r.advice);setAdviceInfo(r);}}}>{t.ai}</Button></Stack>
      <Typography variant="caption" color="text.secondary" display="block" mt={1}>{adviceCopy[locale].note}</Typography>
     </Box>)}
     {!data.aiEnabled&&<Typography color="text.secondary" variant="body2" sx={{mt:2}}>{t.aiDisabled}</Typography>}
