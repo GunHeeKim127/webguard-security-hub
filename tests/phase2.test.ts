@@ -9,10 +9,32 @@ import {compareAssessments} from '../lib/assessment/compare';
 import {peMetadata,apkMetadata} from '../lib/assessment/binary-modules';
 import {trafficSignals} from '../lib/assessment/store';
 import {body} from '../lib/request';
+import {protectedRequest} from '../lib/protected-request';
 import type {AssessmentContext} from '../lib/assessment/types';
 const context=():AssessmentContext=>({locale:'ko',signal:AbortSignal.timeout(20000)});
 const ssh=(text:string)=>assessmentInput({moduleId:'linux.ssh',label:'router lab',text,authorized:true});
 const safe='PermitRootLogin no\nPasswordAuthentication no\nPermitEmptyPasswords no\nPubkeyAuthentication yes\nMaxAuthTries 4';
+test('assessment retry only replays an explicit pre-handler protection failure, once',async()=>{
+ const payload=JSON.stringify({moduleId:'linux.ssh',authorized:true});let calls=0;
+ const response=await protectedRequest('/api/assessments',{method:'POST',body:payload},async(_url,init)=>{
+  calls++;assert.equal(init?.body,payload);
+  return calls===1?Response.json({errorCode:'PROTECTION_UNAVAILABLE'},{status:503}):Response.json({saved:true});
+ });
+ assert.equal(calls,2);assert.deepEqual(await response.json(),{saved:true});
+ calls=0;const unavailable=await protectedRequest('/api/assessments',{},async()=>{calls++;return Response.json({errorCode:'PROTECTION_UNAVAILABLE'},{status:503});});
+ assert.equal(calls,2);assert.equal(unavailable.status,503);
+ for(const [status,errorCode]of [[503,'SERVICE_UNAVAILABLE'],[403,'IP_BLACKLISTED'],[429,'THREAT_BLOCKED'],[400,'INPUT_INVALID'],[200,'PROTECTION_UNAVAILABLE']] as const){
+  calls=0;await protectedRequest('/api/assessments',{},async()=>{calls++;return Response.json({errorCode},{status});});assert.equal(calls,1);
+ }
+ calls=0;await assert.rejects(protectedRequest('/api/assessments',{},async()=>{calls++;throw new Error('AMBIGUOUS_NETWORK_FAILURE');}),/AMBIGUOUS_NETWORK_FAILURE/);assert.equal(calls,1);
+ calls=0;await protectedRequest('/api/assessments',{},async()=>{calls++;return new Response('not JSON',{status:503});});assert.equal(calls,1);
+});
+test('cancelled assessments never replay during the protection retry wait',async()=>{
+ const controller=new AbortController();let calls=0;
+ const pending=protectedRequest('/api/assessments',{signal:controller.signal},async()=>{calls++;return Response.json({errorCode:'PROTECTION_UNAVAILABLE'},{status:503});});
+ setTimeout(()=>controller.abort(),30);
+ await assert.rejects(pending,{name:'AbortError'});assert.equal(calls,1);
+});
 function pe(){const b=Buffer.alloc(1024);b.write('MZ');b.writeUInt32LE(64,60);b.writeUInt32LE(0x4550,64);b.writeUInt16LE(0x8664,68);b.writeUInt16LE(1,70);b.writeUInt16LE(240,84);const o=88;b.writeUInt16LE(0x20b,o);b.writeUInt16LE(0x140,o+70);b.writeUInt32LE(16,o+108);b.writeUInt32LE(512,o+240+16);b.writeUInt32LE(512,o+240+20);b.writeUInt32LE(0x60000020,o+240+36);return b;}
 function apk(){const name=Buffer.from('AndroidManifest.xml'),data=Buffer.alloc(4),local=Buffer.alloc(30);local.writeUInt32LE(0x04034b50);local.writeUInt16LE(name.length,26);local.writeUInt32LE(4,18);local.writeUInt32LE(4,22);const central=Buffer.alloc(46);central.writeUInt32LE(0x02014b50);central.writeUInt16LE(name.length,28);central.writeUInt32LE(4,20);central.writeUInt32LE(4,24);const end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(1,8);end.writeUInt16LE(1,10);end.writeUInt32LE(central.length+name.length,12);end.writeUInt32LE(local.length+name.length+data.length,16);return Buffer.concat([local,name,data,central,name,end]);}
 test('module catalog is allowlisted; permission, target type and size validation cannot be bypassed',()=>{

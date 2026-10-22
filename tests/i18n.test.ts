@@ -4,6 +4,10 @@ import {locales,preferredLanguage,localeCookie,resolveLocale} from '../lib/local
 import {trustedCountry} from '../lib/geo-country';
 import {messages,en,eventLabel} from '../lib/messages';
 import {errorMessages,errorCode,errorText} from '../lib/errors-i18n';
+test('offline assessment errors refer to supplied input rather than HTTPS or DNS',()=>{
+ assert.equal(errorCode('Invalid assessment input',400),'ASSESSMENT_INPUT_INVALID');
+ for(const locale of locales){const message=errorText(locale,'ASSESSMENT_INPUT_INVALID');assert(message.length>20);assert(!/HTTPS|DNS/.test(message));assert.notEqual(message,errorText(locale,'SERVICE_UNAVAILABLE'));}
+});
 test('all six languages have complete UI and error dictionaries',()=>{for(const locale of locales){assert.deepEqual(Object.keys(messages[locale]).sort(),Object.keys(en).sort());assert(Object.values(messages[locale]).every(v=>v.trim().length));assert.deepEqual(Object.keys(errorMessages[locale]).sort(),Object.keys(errorMessages.en).sort());assert(Object.values(errorMessages[locale]).every(v=>v.trim().length));}});
 test('manual language outranks browser and country; browser outranks country',()=>{assert.deepEqual(resolveLocale({cookie:'wg_locale=ja',acceptLanguage:'ko-KR',trustedCountry:'US'}),{locale:'ja',source:'manual'});assert.deepEqual(resolveLocale({acceptLanguage:'fr-CA,fr;q=0.9,en;q=0.8',trustedCountry:'KR'}),{locale:'fr',source:'browser'});});
 test('language negotiation handles weights, regional tags, exclusions and malformed q',()=>{assert.equal(preferredLanguage('en;q=0.2,ja-JP;q=0.9,ko;q=0'),'ja');assert.equal(preferredLanguage('en;q=0,es;q=0.8'),'es');assert.equal(preferredLanguage('fr;q=bad,ko-KR;q=0.5'),'ko');assert.equal(preferredLanguage('de-DE,zh-Hans;q=0.8'),'zh');assert.equal(preferredLanguage('en;q=2,fr;q=0.123'),'fr');assert.equal(preferredLanguage('de-DE'),undefined);});

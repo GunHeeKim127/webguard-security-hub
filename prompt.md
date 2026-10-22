@@ -45,7 +45,8 @@
 
 | 항목 | 현재 기준 |
 |---|---|
-| 프로젝트 | `C:\Users\kimgu\OneDrive\바탕 화면\projects\webguard-security-hub` |
+| 현재 프로젝트 | `D:\gun\새 폴더\webguard-security-hub` |
+| 이전 PC 프로젝트 | `C:\Users\kimgu\OneDrive\바탕 화면\projects\webguard-security-hub` — 이전 환경 경로로 보존 |
 | 정식 서비스 | https://webguard-security-hub.vercel.app/ |
 | 웹·언어·UI | Next.js / TypeScript / MUI |
 | 배포 | Vercel. 임시 Cloudflare 주소를 정식 배포 주소로 사용하지 않음 |
@@ -95,6 +96,8 @@
 ## 6. Linux — 다른 컴퓨터에서 확인할 작업
 
 사용자는 Linux를 확인할 수 있는 환경이 있고 **개발 노트북이 아닌 다른 컴퓨터에서 테스트할 예정**이다. 배포판·버전·실물/VM 여부·OpenSSH 버전은 아직 확정하지 않았다.
+
+2026-10-22 후속 확인: 현재 Windows PC의 VMware에서 `123_Kali 26.1` 로그인 데스크톱과 Tools 실행을 확인했다. 사용자는 SSH/root로 접속한다고 설명했다. 현재 실행 환경의 키·에이전트 인증은 거절돼 실제 OpenSSH 버전·설정·유효 정책은 아직 대조하지 못했다. 이 PC에는 로컬 SQL도 미설정이다. 이전 환경의 자동·운영 검증과 이번 확인은 [현재 환경 검증 기록](docs/LOCAL_ENVIRONMENT_VALIDATION.md)으로 구분한다.
 
 1. 다른 컴퓨터에서 정식 사이트에 같은 계정으로 로그인한다. 실행은 admin/analyst가 필요하며 신규 viewer는 조회 전용이다.
 2. 검사 선택 → Endpoint → Linux SSH 설정을 선택한다.
@@ -206,9 +209,10 @@ PC·모바일 웹 비교, 개선안·재검증·집계 이벤트, Windows/Linux 
 
 ## 15. 다음 작업과 참고 문서
 
-**우선순위: 다른 컴퓨터의 Linux 실검증 준비 → 실행·결과 대조 → macOS 미검증 상태 정리 → 네트워크 별도 실습 환경·지원 대상 확인.** 현재 요청은 문서 정리이며 새 진단 엔진 구현은 이번 작업에 포함하지 않는다.
+**우선순위: 현재 Kali의 인증된 읽기 경로 확보 → Linux 실제 설정·결과 대조 → 다른 기기 저장·조회 확인 → macOS 미검증 상태 유지 → 네트워크 별도 실습 환경·지원 대상 확인.** 이전 문서 정리 요청 이후 사용자가 현 환경을 확인하고 검증·검토를 이어가도록 요청했다. 기존 구현과 데이터를 보존하며 검증 결과에 따라 필요한 수정을 진행하고, 새 엔진이나 실제 장비 검증 완료를 추정하지 않는다.
 
 - [다른 컴퓨터 실환경 검증 계획](docs/REMOTE_ENVIRONMENT_VALIDATION.md)
+- [현재 Windows·VMware 환경 검증 기록](docs/LOCAL_ENVIRONMENT_VALIDATION.md)
 - [현재 기능·문제 해결·정식 주소](README.md)
 - [2단계 기술 범위](docs/PHASE2.md) — 초기 서버 파일 설명보다 파일 검사 문서의 최신 확장을 우선
 - [파일 형식별 범위·사용법](docs/FILE_INSPECTION.md)

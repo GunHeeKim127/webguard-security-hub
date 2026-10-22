@@ -4,6 +4,7 @@ import { execFile,spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdtemp,mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import {tmpdir} from 'node:os';
 import { randomBytes,randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import assert from 'node:assert/strict';
@@ -15,7 +16,10 @@ import {hashPassword,verifyPassword,tokenHash} from '../lib/password';
 import {resetAccountPassword} from './support/reset-account-password';
 import {saveAssessment} from '../lib/assessment/store';
 const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/PostgreSQL/15/bin';
-await mkdir('work',{recursive:true});const dir=await mkdtemp(path.resolve('work/isolated-pg-'));
+// Windows PostgreSQL can reject non-ASCII checkout paths during initdb.
+// Keep disposable cluster data in the OS temp directory, separate from real DBs.
+const clusterRoot=process.env.PG_TEST_ROOT??(process.platform==='win32'?path.join(tmpdir(),'webguard-tests'):path.resolve('work'));
+await mkdir(clusterRoot,{recursive:true});const dir=await mkdtemp(path.join(clusterRoot,'isolated-pg-'));
 const pgPort=45000+Math.floor(Math.random()*5000),webPort=50000+Math.floor(Math.random()*5000),base=`http://127.0.0.1:${webPort}`;
 const database=`postgresql://postgres@127.0.0.1:${pgPort}/postgres`;
 const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_ROLE:'webguard_hub_dev_app',DATABASE_URL:`postgresql://webguard_hub_dev_app@127.0.0.1:${pgPort}/webguard_hub_dev`,MIGRATION_DATABASE_URL:`postgresql://webguard_hub_dev_migrator@127.0.0.1:${pgPort}/webguard_hub_dev`,APP_ORIGIN:base,APP_ADDITIONAL_ORIGINS:`http://localhost:${webPort}`,AI_ENABLED:'false',AI_PROVIDER:'openai',OPENAI_API_KEY:'',ALLOWED_SCAN_HOSTS:'owned.example',SCAN_TARGET_POLICY:'public',TRUSTED_PROXY_IPS:'',WEBGUARD_PROXY_SECRET:''};
@@ -245,6 +249,11 @@ try{
  const phaseOther=await call('/api/assessments','POST',phaseInput,phaseAnalyst);assert.equal(phaseOther.status,200);assert.notEqual((await phaseOther.json()).asset_id,phaseA.asset_id);
  assert.equal((await call('/api/assessments?assetId='+phaseA.asset_id,'GET',undefined,phaseAnalyst)).status,404);
  const phaseHistory=await (await call('/api/assessments?assetId='+phaseA.asset_id,'GET',undefined,newAdmin)).json();assert.equal(phaseHistory.runs.length,2);assert.equal(phaseHistory.runs[0].report.findings[0].status,'pass');assert.equal(phaseHistory.runs[1].report.findings[0].status,'warning');
+ const ownAssets=await (await call('/api/assessments','GET',undefined,phaseAnalyst)).json();
+ const ownId=ownAssets.assets[0].id,ownHistory=await (await call('/api/assessments?assetId='+ownId,'GET',undefined,phaseAnalyst)).json();
+ const invalidConfig=await call('/api/assessments','POST',{...phaseInput,text:'UnrelatedDirective invalid-fixture'},phaseAnalyst);assert.equal(invalidConfig.status,400);assert.equal((await invalidConfig.json()).errorCode,'ASSESSMENT_INPUT_INVALID');
+ const afterInvalid=await (await call('/api/assessments?assetId='+ownId,'GET',undefined,phaseAnalyst)).json();assert.deepEqual(afterInvalid.runs,ownHistory.runs);
+ console.log('PASS invalid offline configuration gives input-specific guidance and preserves the previous successful run');
  assert.equal((await (await call('/api/assessments','GET',undefined,newViewer)).json()).assets.length,0);
  const webAsset=await saveAssessment((sql,values)=>projectAdmin.query(sql,values),actor,'aggregate-fixture.example','Aggregate test',{...phaseA.report,moduleId:'web.compare',targetKind:'public-https'});
  const issueKey=async()=>{const r=await call('/api/assessments','POST',{action:'rotateTelemetryToken',assetId:webAsset.asset_id},newAdmin);assert.equal(r.status,200);return (await r.json()).token as string;};
@@ -265,7 +274,9 @@ try{
  await pool.query('CREATE DATABASE webguard_copy_fixture');
  const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
  const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};
- const output=path.join(dir,'generated-production.env');
+ await mkdir('work',{recursive:true});
+ const fixtureDir=await mkdtemp(path.resolve('work/integration-fixtures-'));
+ const output=path.join(fixtureDir,'generated-production.env');
  await assert.rejects(exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output','unignored-credentials.txt'],{env:{...env,...cloudEnv},windowsHide:true}));
  await exec(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/setup-production.ts','--output',output],{env:{...env,...cloudEnv},windowsHide:true});
  const generated=await readFile(output,'utf8');assert(generated.includes('DATABASE_URL='));assert(generated.includes('PUBLIC_REGISTRATION_ENABLED=true'));assert(!generated.includes('MIGRATION_DATABASE_URL'));
@@ -320,4 +331,4 @@ try{
   console.log('PASS managed-provider schema, forced-viewer registration, guarded upsert and cache SQL on disposable DB (provider ACL limitations remain)');
  }finally{await managed.end();}
  await projectAdmin.end();
-}finally{server?.kill();await Promise.allSettled(projectPools.map(project=>project.end()));await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in ignored work/ for inspection.');}
+}finally{server?.kill();await Promise.allSettled(projectPools.map(project=>project.end()));await pool.end();if(pgStarted)await control(['-D',dir,'-m','fast','-w','stop']);console.log('Disposable cluster stopped; test data remains in the isolated test directory for inspection.');}
