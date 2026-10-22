@@ -22,8 +22,9 @@ export function detectThreat(rawTarget:string):ThreatReason|null{
  if(/<script(?:\s|>)|\bunion\s+(?:all\s+)?select\b|(?:__proto__|constructor\[prototype\])(?:\[|=)/i.test(text))return 'injection';
  return null;
 }
+export const ACTIVE_BLOCK_SQL="SELECT host(address) AS address,strikes,blacklisted,blocked_until,last_reason,ceil(greatest(0,extract(epoch FROM blocked_until-now())))::int AS retry_after FROM public.ip_blocks WHERE address=$1::inet AND (blacklisted OR blocked_until>now())";
 export async function activeBlock(query:GuardQuery,address:string):Promise<IpBlock|null>{
- const row=(await query("SELECT host(address) AS address,strikes,blacklisted,blocked_until,last_reason,ceil(greatest(0,extract(epoch FROM blocked_until-now())))::int AS retry_after FROM public.ip_blocks WHERE address=$1::inet AND (blacklisted OR blocked_until>now())",[address])).rows[0];return row??null;
+ const row=(await query(ACTIVE_BLOCK_SQL,[address])).rows[0];return row??null;
 }
 export async function recordThreat(query:GuardQuery,address:string,reason:ThreatReason):Promise<IpBlock>{
  const result=await query(`WITH changed AS (

@@ -6,6 +6,32 @@ import {vercelClientAddress,vercelProtection} from '../lib/vercel-protection';
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
 import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 import {runtimePoolConfig} from '../lib/runtime-pool-config';
+import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from '../lib/protection-query';
+import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
+import type {Pool} from 'pg';
+
+test('protection query gives only the exact managed block read a longer deadline and releases clients',async()=>{
+ const configs:any[]=[],releases:unknown[]=[];
+ const pool={connect:async()=>({query:async(config:unknown)=>{configs.push(config);return {rows:[]};},release:(failed:unknown)=>releases.push(failed)})} as unknown as Pick<Pool,'connect'>;
+ for(const [sql,managed] of [[ACTIVE_BLOCK_SQL,true],[ACTIVE_BLOCK_SQL,false],['WITH changed AS (INSERT INTO events(category) VALUES($1) RETURNING id) SELECT * FROM changed',true],['SELECT 1',true]] as const)await protectionQuery(pool,sql,['private-ip'],managed);
+ assert.equal(configs[0].query_timeout,PROTECTION_READ_TIMEOUT_MS);
+ for(const config of configs.slice(1))assert.equal(config.query_timeout,undefined);
+ assert.deepEqual(releases,[false,false,false,false]);
+});
+
+test('protection database failures discard clients without replay and keep credentials out of logs',async()=>{
+ const logs:unknown[][]=[],warn=console.warn;console.warn=(...args:unknown[])=>logs.push(args);
+ try{
+  let calls=0;const releases:unknown[]=[];
+  const pool={connect:async()=>({query:async()=>{calls++;throw new Error('Query read timeout');},release:(failed:unknown)=>releases.push(failed)})} as unknown as Pick<Pool,'connect'>;
+  await assert.rejects(protectionQuery(pool,ACTIVE_BLOCK_SQL,['private-ip'],true),/Query read timeout/);
+  assert.equal(calls,1);assert.deepEqual(releases,[true]);
+  const failed={connect:async()=>{throw Object.assign(new Error('secret-password private-ip'),{code:'ECONNRESET'});}} as unknown as Pick<Pool,'connect'>;
+  await assert.rejects(protectionQuery(failed,ACTIVE_BLOCK_SQL,['private-ip'],true));
+  assert.equal((logs[0][1] as any).phase,'block_read');assert.equal((logs[1][1] as any).phase,'acquire');
+  assert(!JSON.stringify(logs).includes('secret-password'));assert(!JSON.stringify(logs).includes('private-ip'));
+ }finally{console.warn=warn;}
+});
 
 test('runtime and local guard use provider-compatible timeout options',()=>{
  const before={...process.env};try{
