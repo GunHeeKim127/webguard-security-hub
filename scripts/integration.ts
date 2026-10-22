@@ -89,15 +89,22 @@ try{
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword+'different'})).status,202);
  assert.equal((await projectAdmin.query("SELECT password_hash FROM users WHERE email='new@example.test'")).rows[0].password_hash,newAccount.password_hash);
  const newLogin=await call('/api/login','POST',{email:'new@example.test',password:signupPassword});assert.equal(newLogin.status,200);const newCookie=newLogin.headers.get('set-cookie')!.split(';')[0];
- assert.equal((await call('/api/scans','POST',{url:'https://owned.example',authorized:true},newCookie)).status,403);
+ assert.equal((await call('/api/scans','POST',{url:'https://127.0.0.1',authorized:true},newCookie)).status,400);
+ const memberInput={moduleId:'linux.ssh',label:'Member owned asset',text:'PermitRootLogin yes',authorized:true};
+ const memberFirst=await call('/api/assessments','POST',memberInput,newCookie);assert.equal(memberFirst.status,200);const memberSaved=await memberFirst.json();
+ const memberRetest=await call('/api/assessments','POST',{...memberInput,text:'PermitRootLogin no'},newCookie);assert.equal(memberRetest.status,200);assert.equal((await memberRetest.json()).asset_id,memberSaved.asset_id);
+ const memberHistory=await (await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,newCookie)).json();assert.equal(memberHistory.runs.length,2);
+ assert.equal((await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,admin)).status,404);
+ assert.equal(Object.hasOwn(await (await call('/api/dashboard','GET',undefined,newCookie)).json(),'ipBlocks'),false);
+ const memberPage=await (await call('/workbench/endpoint','GET',undefined,newCookie+'; wg_locale=ko')).text();assert(memberPage.includes('일반 회원'));assert(!memberPage.includes('진단은 admin/analyst'));
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword})).status,202);
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword})).status,429);
- console.log('PASS registration, normalization, hashed password, viewer-only role, duplicate safety, sign-in, CSRF and rate limits');
+ console.log('PASS public signup member assessment/retest/history, admin isolation, SSRF protection, role injection rejection, hashed password, duplicate safety and rate limits');
 
  const token=admin.split('=')[1];assert.equal((await projectAdmin.query('SELECT count(*) FROM sessions WHERE token_hash=$1',[token])).rows[0].count,'0');
- const overviewResponse=await call('/api/dashboard','GET',undefined,admin);assert.equal(overviewResponse.status,200);const overviewData=await overviewResponse.json();assert.equal(overviewData.overview.approvedCount,1);assert(Array.isArray(overviewData.recentEvents));const viewerData=await (await call('/api/dashboard','GET',undefined,viewer)).json();assert.deepEqual(viewerData.overview.approvedHosts,[]);console.log('PASS account bootstrap, login, hashed sessions, dashboard');
- assert.equal((await call('/api/scans','POST',{url:'https://owned.example',authorized:true},viewer)).status,403);
- assert.equal((await call('/api/ai','POST',{scanId:'00000000-0000-0000-0000-000000000000'},viewer)).status,403);console.log('PASS viewer denied scan and AI');
+ const overviewResponse=await call('/api/dashboard','GET',undefined,admin);assert.equal(overviewResponse.status,200);const overviewData=await overviewResponse.json();assert.equal(overviewData.overview.approvedCount,1);assert(Array.isArray(overviewData.recentEvents));const viewerData=await (await call('/api/dashboard','GET',undefined,viewer)).json();assert.deepEqual(viewerData.overview.approvedHosts,['owned.example']);console.log('PASS account bootstrap, login, hashed sessions, dashboard');
+ assert.equal((await call('/api/scans','POST',{url:'https://127.0.0.1',authorized:true},viewer)).status,400);
+ assert.equal((await call('/api/ai','POST',{scanId:'00000000-0000-0000-0000-000000000000'},viewer)).status,404);console.log('PASS general member scan input validation and AI ownership enforcement');
  assert.equal((await call('/api/scans','POST',{url:'https://169.254.169.254',authorized:true},admin)).status,400);console.log('PASS metadata SSRF attempt denied by live API');
  const streamed=await fetch(base+'/api/scans',{method:'POST',headers:{origin:base,cookie:admin,'Content-Type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({url:'https://169.254.169.254',authorized:true})});
  assert.equal(streamed.status,200);assert(streamed.headers.get('content-type')?.includes('application/x-ndjson'));const scanEvents=(await streamed.text()).trim().split('\n').map(line=>JSON.parse(line));
@@ -258,7 +265,7 @@ try{
  const resultsPage=await (await call('/workbench/results','GET',undefined,newAdmin)).text();assert(resultsPage.includes('id="assessment-results"'));assert(!resultsPage.includes('id="asset-inspector"'));
  assert.equal((await call('/workbench/not-a-module','GET',undefined,newAdmin)).status,404);
  console.log('PASS button-only landing, dedicated category pages, direct-link authentication, results page, unknown route 404 and preserved classic web entry');
- assert.equal((await call('/api/assessments','POST',{moduleId:'linux.ssh',label:'lab',text:'PermitRootLogin yes',authorized:true},newViewer)).status,403);
+ assert.equal((await call('/api/assessments','POST',{moduleId:'linux.ssh',label:'lab',text:'PermitRootLogin yes',authorized:true},newViewer)).status,200);
  const phaseInput={moduleId:'linux.ssh',label:'integration lab',text:'PermitRootLogin yes\n# PRIVATE_CONFIG_TOKEN',authorized:true};
  const phaseFirst=await call('/api/assessments','POST',phaseInput,newAdmin);assert.equal(phaseFirst.status,200);const phaseA=await phaseFirst.json();assert(!JSON.stringify(phaseA).includes('PRIVATE_CONFIG_TOKEN'));
  const phaseSecond=await call('/api/assessments','POST',{...phaseInput,text:'PermitRootLogin no'},newAdmin);assert.equal(phaseSecond.status,200);const phaseB=await phaseSecond.json();assert.equal(phaseA.asset_id,phaseB.asset_id);assert.notEqual(phaseA.id,phaseB.id);
@@ -271,7 +278,7 @@ try{
  const invalidConfig=await call('/api/assessments','POST',{...phaseInput,text:'UnrelatedDirective invalid-fixture'},phaseAnalyst);assert.equal(invalidConfig.status,400);assert.equal((await invalidConfig.json()).errorCode,'ASSESSMENT_INPUT_INVALID');
  const afterInvalid=await (await call('/api/assessments?assetId='+ownId,'GET',undefined,phaseAnalyst)).json();assert.deepEqual(afterInvalid.runs,ownHistory.runs);
  console.log('PASS invalid offline configuration gives input-specific guidance and preserves the previous successful run');
- assert.equal((await (await call('/api/assessments','GET',undefined,newViewer)).json()).assets.length,0);
+ assert.equal((await (await call('/api/assessments','GET',undefined,newViewer)).json()).assets.length,1);
  const webAsset=await saveAssessment((sql,values)=>projectAdmin.query(sql,values),actor,'aggregate-fixture.example','Aggregate test',{...phaseA.report,moduleId:'web.compare',targetKind:'public-https'});
  const issueKey=async()=>{const r=await call('/api/assessments','POST',{action:'rotateTelemetryToken',assetId:webAsset.asset_id},newAdmin);assert.equal(r.status,200);return (await r.json()).token as string;};
  const key1=await issueKey(),telemetryBody={assetId:webAsset.asset_id,requests:10,loginFailures:5,probes:3,serverErrors:5};
@@ -287,7 +294,11 @@ try{
  console.log('PASS macOS/mobile summary API persistence, self-report labels, owner isolation and raw-field rejection');
  assert.equal((await call('/api/assessments','POST',{action:'rotateTelemetryToken',assetId:webAsset.asset_id},phaseAnalyst)).status,404);
  const phaseWriter=new Pool({connectionString:env.DATABASE_URL});try{await assert.rejects(phaseWriter.query('UPDATE assessment_assets SET user_id=$1 WHERE id=$2',[otherActor,phaseA.asset_id]),{code:'42501'});await assert.rejects(phaseWriter.query("UPDATE assessment_runs SET report='{}'"),{code:'42501'});}finally{await phaseWriter.end();}
- console.log('PASS modular HTTP assessments: viewer denial, owner-only assets/history, redaction, retest preservation, aggregate-only ingestion, token rotation/revocation and immutable runtime results');
+ const memberMach=await call('/api/assessments','POST',machInput,newViewer);assert.equal(memberMach.status,200);const memberMachSaved=await memberMach.json();assert.equal((await call('/api/assessments?assetId='+memberMachSaved.asset_id,'GET',undefined,newAdmin)).status,404);
+ assert.equal((await call('/api/assessments','POST',{action:'rotateTelemetryToken',assetId:webAsset.asset_id},newViewer)).status,404);
+ assert.equal((await call('/api/assessments','POST',{...machInput,authorized:false},newViewer)).status,400);
+ assert.equal((await call('/api/assessments','POST',machInput)).status,401);
+ console.log('PASS modular HTTP assessments: general member config/file summary assessment, required consent, guest denial, owner-only assets/history/keys, redaction and immutable results');
  await pool.query('CREATE DATABASE webguard_copy_fixture');
  const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
  const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};

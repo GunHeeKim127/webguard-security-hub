@@ -13,5 +13,5 @@ export async function GET(req:Request){try{
   user.role==='admin'?db.query('SELECT host(address) AS address,strikes,blacklisted,blocked_until,last_reason,last_seen FROM public.ip_blocks WHERE strikes>0 ORDER BY last_seen DESC LIMIT 50'):Promise.resolve({rows:[]})
  ]);
  const hosts=approvedHosts();
- return Response.json({user,scans:scans.rows,events:events.rows,recentEvents:recent.rows,...(user.role==='admin'?{ipBlocks:blocks.rows}:{}),aiEnabled:process.env.AI_ENABLED==='true'&&providerConfigs().length>0,aiProviders:providerConfigs().map(({provider,model})=>({provider,model})),overview:{targetPolicy:targetPolicy(),approvedCount:hosts.length,approvedHosts:user.role==='viewer'?[]:hosts,savedCount:total.rows[0].count,updatedAt:new Date().toISOString()}},{headers:{'Cache-Control':'no-store'}});
+ return Response.json({user,scans:scans.rows,events:events.rows,recentEvents:recent.rows,...(user.role==='admin'?{ipBlocks:blocks.rows}:{}),aiEnabled:process.env.AI_ENABLED==='true'&&providerConfigs().length>0,aiProviders:providerConfigs().map(({provider,model})=>({provider,model})),overview:{targetPolicy:targetPolicy(),approvedCount:hosts.length,approvedHosts:hosts,savedCount:total.rows[0].count,updatedAt:new Date().toISOString()}},{headers:{'Cache-Control':'no-store'}});
 }catch(e){return failure(e,req);}}

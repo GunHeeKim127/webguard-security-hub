@@ -11,4 +11,4 @@ export function verifyPassword(password:string,stored:string) {
  return expected.length===actual.length && timingSafeEqual(expected,actual);
 }
 export const tokenHash=(token:string)=>createHash('sha256').update(token).digest('hex');
-export const canScan=(role:string)=>['admin','analyst'].includes(role);
+export {canAssess as canScan} from './assessment-permission';

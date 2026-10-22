@@ -11,7 +11,7 @@ import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../.
 export const runtime='nodejs';
 export const maxDuration=60;
 export async function POST(req:Request){try{
- sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('ai-attempt:'+user.id,10,60);
+ sameOrigin(req);const user=await requireUser();await limit('ai-attempt:'+user.id,10,60);
  const data=await body(req);if(typeof data.scanId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.scanId))throw new HttpError(400,'Invalid scan ID');
  const r=await db.query('SELECT result FROM scans WHERE id=$1 AND user_id=$2',[data.scanId,user.id]);if(!r.rowCount)throw new HttpError(404,'Scan not found');
  const configs=providerConfigs();if(process.env.AI_ENABLED!=='true'||!configs.length)throw new HttpError(503,'AI disabled: configure server environment');

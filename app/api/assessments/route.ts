@@ -22,7 +22,7 @@ export async function GET(req:Request){try{
  const counts=traffic.rows[0];return Response.json({user,modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:hub.rows},{headers:{'Cache-Control':'no-store'}});
  }catch(error){return failure(error,req);}}
 export async function POST(req:Request){try{
- sameOrigin(req);const user=await requireUser(['admin','analyst']);await limit('assessment:'+user.id,5,60);
+ sameOrigin(req);const user=await requireUser();await limit('assessment:'+user.id,5,60);
  const data=await body(req,3*1024*1024);
  if(data.action==='rotateTelemetryToken'){
   if(!uuid(data.assetId)||Object.keys(data).some(k=>!['action','assetId'].includes(k)))throw new HttpError(400,'Invalid scan ID');
