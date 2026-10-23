@@ -6,7 +6,7 @@ import Workbench from '../workbench-client';
 export const dynamic='force-dynamic';
 export default async function Page({params}:{params:Promise<{category:string}>}){
  const {category}=await params;
- if(category!=='web'&&category!=='mobile'&&category!=='endpoint'&&category!=='results')notFound();
+ if(category!=='web'&&category!=='mobile'&&category!=='endpoint'&&category!=='virtualization'&&category!=='network'&&category!=='results')notFound();
  const user=await currentUser();if(!user)redirect('/');
  return <Workbench key={category} view={category} initialUser={user} initialLocale={requestLocale(await headers()).locale==='ko'?'ko':'en'}/>;
 }

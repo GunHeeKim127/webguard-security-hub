@@ -10,6 +10,37 @@ import {peMetadata,apkMetadata} from '../lib/assessment/binary-modules';
 import {trafficSignals} from '../lib/assessment/store';
 import {body} from '../lib/request';
 import {protectedRequest} from '../lib/protected-request';
+import {parseVmx,parseGns3} from '../lib/assessment/infrastructure-modules';
+
+test('VMX explicit unsafe flags warn; missing values remain unassessed and private fields never enter reports',async()=>{
+ const text='config.version = "8"\nvirtualHW.version = "21"\nisolation.tools.copy.disable = "FALSE"\nisolation.tools.paste.disable = "TRUE"\nethernet0.connectionType = "bridged"\nRemoteDisplay.vnc.enabled = "TRUE"\ndisplayName = "PRIVATE_VM_NAME"\nsharedFolder0.hostPath = "PRIVATE_HOST_PATH"';
+ const input=assessmentInput({moduleId:'virtualization.vmx',label:'VMX check',authorized:true,text});
+ const result=await runAssessment(input,{locale:'ko',signal:new AbortController().signal});
+ assert.equal(result.findings.find(f=>f.id==='copy')?.status,'warning');assert.equal(result.findings.find(f=>f.id==='paste')?.status,'pass');
+ assert.equal(result.findings.find(f=>f.id==='dragDrop')?.status,'not_assessed');assert.equal(result.findings.find(f=>f.id==='networkBoundary')?.status,'warning');
+ assert.equal(result.findings.find(f=>f.id==='remoteConsole')?.status,'warning');
+ assert(!JSON.stringify(result).includes('PRIVATE_'));assert.throws(()=>parseVmx({...input,text:text+'\nCONFIG.VERSION = "9"'}));
+ assert.throws(()=>parseVmx({...input,text:'something = "not a VMX"'}));assert.throws(()=>parseVmx({...input,text:'x'.repeat(65537)}));
+});
+
+test('GNS3 topology flags explicit external boundaries and non-loopback consoles without claiming device security',async()=>{
+ const topology={type:'topology',version:'2.2.61',name:'PRIVATE_LAB',topology:{nodes:[{node_id:'a',node_type:'vpcs',console_host:'127.0.0.1',name:'PRIVATE_NODE'},{node_id:'b',node_type:'cloud',console_host:'0.0.0.0',properties:{password:'PRIVATE_SECRET'}}],links:[{nodes:[{node_id:'a'},{node_id:'b'}]}]}};
+ const input=assessmentInput({moduleId:'network.gns3',label:'Lab check',authorized:true,text:JSON.stringify(topology)});
+ const result=await runAssessment(input,{locale:'en',signal:new AbortController().signal});
+ assert.equal(result.findings.find(f=>f.id==='externalBoundary')?.status,'warning');assert.equal(result.findings.find(f=>f.id==='consoleBinding')?.status,'warning');
+ assert.equal(result.findings.find(f=>f.id==='devicePolicy')?.status,'not_assessed');assert(!JSON.stringify(result).includes('PRIVATE_'));
+ delete (topology.topology.nodes[1] as any).console_host;
+ const missing=await runAssessment({...input,text:JSON.stringify(topology)},{locale:'en',signal:new AbortController().signal});assert.equal(missing.findings.find(f=>f.id==='consoleBinding')?.status,'not_assessed');
+ topology.topology.links[0].nodes[1].node_id='missing';assert.throws(()=>parseGns3({...input,text:JSON.stringify(topology)}));
+ assert.throws(()=>parseGns3({...input,text:JSON.stringify({type:'not-topology',topology:{nodes:[],links:[]}})}));
+});
+
+test('infrastructure inspection remains bounded and rejects cancellation before parsing',async()=>{
+ const stop=new AbortController();stop.abort();
+ await assert.rejects(runAssessment({moduleId:'network.gns3',label:'lab',text:'{}'},{locale:'en',signal:stop.signal}));
+ assert.throws(()=>assessmentInput({moduleId:'virtualization.vmx',label:'lab',authorized:false,text:'config.version = "8"'}));
+ assert.throws(()=>assessmentInput({moduleId:'network.gns3',label:'lab',authorized:true,snapshot:{}}));
+});
 import type {AssessmentContext} from '../lib/assessment/types';
 const context=():AssessmentContext=>({locale:'ko',signal:AbortSignal.timeout(20000)});
 const ssh=(text:string)=>assessmentInput({moduleId:'linux.ssh',label:'router lab',text,authorized:true});

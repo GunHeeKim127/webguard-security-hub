@@ -8,12 +8,12 @@ const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,scop
  {id:'mobile',title:'Mobile',subtitle:'APK / IPA / PWA',module:'application.package',scope:['패키지 정적 점검 · PWA 준비 중','Package baseline · PWA planned']},
  {id:'endpoint',title:'Endpoint',subtitle:'Windows / Linux / macOS',module:'application.pe',scope:['실행 파일·설정 스냅샷 점검','Executable and configuration snapshots']},
  {id:'cloud',title:'Cloud',subtitle:'AWS / Azure / GCP',scope:['클라우드 설정·권한 점검 예정','Cloud configuration and access · planned']},
- {id:'virtualization',title:'Virtualization',subtitle:'VM / Hypervisor',scope:['게스트·하이퍼바이저 점검 예정','Guest and hypervisor assessment · planned']},
- {id:'network',title:'Network',subtitle:'Router / Switch / Firewall',scope:['네트워크 장비 모듈 추가 예정','Network device modules · planned']},
+ {id:'virtualization',title:'Virtualization',subtitle:'VMware VMX',module:'virtualization.vmx',scope:['VMX 명시적 격리 설정','Explicit VMX isolation declarations']},
+ {id:'network',title:'Network',subtitle:'GNS3 2.x topology',module:'network.gns3',scope:['GNS3 프로젝트 구성 점검','GNS3 project configuration baseline']},
  {id:'iot',title:'IoT',subtitle:'Firmware / Device Config',scope:['펌웨어·장비 설정 분석 예정','Firmware and device configuration · planned']},
  {id:'container',title:'Container',subtitle:'Docker / Kubernetes',scope:['컨테이너·클러스터 점검 예정','Container and cluster assessment · planned']},
 ];
-export function categoryFor(module:ModuleId):Category{return module==='web.compare'?'web':['application.package','application.apk'].includes(module)?'mobile':'endpoint';}
+export function categoryFor(module:ModuleId):Category{return module==='virtualization.vmx'?'virtualization':module==='network.gns3'?'network':module==='web.compare'?'web':['application.package','application.apk'].includes(module)?'mobile':'endpoint';}
 export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'report',size?:number}){
  const lines={
   web:<><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.5" ry="8"/><path d="M4 12h16"/></>,
@@ -38,7 +38,7 @@ export default function ArchitectureOverview({locale}:{locale:'ko'|'en'}){
   <Box aria-hidden="true" sx={{display:'flex',justifyContent:'center',py:1,color:'#9a9fa2'}}><ModuleIcon kind="arrow" size={20}/></Box>
   <Box sx={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:{xs:1,sm:1.4}}}>
    {categories.map(c=>{const available=!!c.module;return <ButtonBase key={c.id} {...(available?{component:Link,href:c.id==='web'?'/?view=web':'/workbench/'+c.id,prefetch:false}:{disabled:true})} aria-label={`${c.title} · ${available?t('검사 화면으로 이동','Go to assessment'):t('준비 중','Planned')}`} sx={{display:'flex',flexDirection:'column',justifyContent:'center',gap:.65,p:1.75,minHeight:{xs:132,sm:126},borderRadius:'16px',bgcolor:'background.paper',border:'1px solid transparent',color:'text.primary',transition:'background-color .16s, border-color .16s','&:hover':{bgcolor:'#183339',borderColor:'primary.main'},'&.Mui-focusVisible':{outline:'3px solid #66e6c3',outlineOffset:3},'&.Mui-disabled':{color:'text.disabled'}}}>
-    <ModuleIcon kind={c.id} size={22}/><Typography component="h2" sx={{fontSize:{xs:16,sm:18},fontWeight:600}}>{c.title}</Typography><Typography sx={{fontSize:{xs:10.5,sm:12},color:'text.secondary',textAlign:'center'}}>{locale==='en'&&c.id==='web'?'HTTP / TLS / Authentication':c.subtitle}</Typography><Typography variant="caption" sx={{fontSize:10.5,color:available?'primary.main':'text.secondary',mt:.25}}>{available?t(c.id==='web'?'웹 진단 작전실 →':c.id==='mobile'?'모바일 진단 작전실 →':'실행 파일·시스템 진단 작전실 →','Go to assessment operations →'):t('준비 중','Planned')}</Typography>
+    <ModuleIcon kind={c.id} size={22}/><Typography component="h2" sx={{fontSize:{xs:16,sm:18},fontWeight:600}}>{c.title}</Typography><Typography sx={{fontSize:{xs:10.5,sm:12},color:'text.secondary',textAlign:'center'}}>{locale==='en'&&c.id==='web'?'HTTP / TLS / Authentication':c.subtitle}</Typography><Typography variant="caption" sx={{fontSize:10.5,color:available?'primary.main':'text.secondary',mt:.25}}>{available?t(c.id==='web'?'웹 진단 작전실 →':c.id==='mobile'?'모바일 진단 작전실 →':c.id==='virtualization'?'VMware 설정 진단 →':c.id==='network'?'GNS3 구성 진단 →':'실행 파일·시스템 진단 작전실 →','Go to assessment operations →'):t('준비 중','Planned')}</Typography>
    </ButtonBase>;})}
   </Box>
   <Box aria-hidden="true" sx={{display:'flex',justifyContent:'center',py:1,color:'#9a9fa2'}}><ModuleIcon kind="arrow" size={20}/></Box>
