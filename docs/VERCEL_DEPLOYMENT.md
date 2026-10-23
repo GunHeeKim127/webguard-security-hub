@@ -17,7 +17,7 @@ Prisma Postgres의 공식 TCP 연결은 기존 `pg` 라이브러리로 사용할
 5. Vercel → 프로젝트 → Settings → Environment Variables → **Production**에 `.env.production.local`을 가져옵니다. `DATABASE_PROVIDER=prisma-postgres`, `PROJECT_DATABASE=postgres`, **풀 호스트의 `DATABASE_URL`**, 공식 `APP_ORIGIN`이 필요합니다. 이전 `PROJECT_RUNTIME_ROLE`은 이 프로필에서 사용하지 않습니다. migration 파일 자체는 올리지 않습니다.
 6. 최신 커밋을 재배포한 뒤 `/api/ready`의 HTTP 200, `code: READY`, `permissionModel: provider-managed`와 실제 로그인을 확인합니다. 환경변수 수정만으로 기존 배포가 갱신되지는 않습니다.
 
-샘플은 `deploy/prisma.vercel.env.example`입니다. 이후 1~2절은 **독립 SQL 역할을 지원하는 일반 PostgreSQL**을 선택했을 때만 적용합니다. Prisma에서는 위 순서를 사용하세요.
+설정 항목은 [환경 설정 안내](CONFIGURATION.md)를 참고하세요. 환경 예제 파일도 Git에서 제외합니다. 이후 1~2절은 **독립 SQL 역할을 지원하는 일반 PostgreSQL**을 선택했을 때만 적용합니다. Prisma에서는 위 순서를 사용하세요.
 
 실제 풀 연결 검증에서 시작 매개변수 `statement_timeout`을 넣으면 upstream 연결 실패가 재현됐습니다. Prisma 앱 풀은 해당 매개변수를 보내지 않고 클라이언트 대기 제한 `query_timeout=5000`을 사용합니다. 이는 서버 쿼리 취소를 보장하지 않습니다. 일반 PostgreSQL의 서버 statement timeout은 유지합니다.
 
@@ -31,7 +31,7 @@ Vercel 프로젝트 → **Storage → Marketplace의 PostgreSQL(예: Neon)** 에
 
 ## 2. PC에서 새 DB 준비
 
-`deploy/migration.production.env.example`을 프로젝트의 `.env.migration.production.local`로 복사합니다. 기존 `.env.local`·`.env.migration.local`은 수정하지 않습니다.
+[환경 설정 안내](CONFIGURATION.md)에 따라 프로젝트의 `.env.migration.production.local`을 로컬에서 만듭니다. 기존 `.env.local`·`.env.migration.local`은 수정하지 않습니다.
 
 - `PROJECT_DATABASE`: 새 외부 DB의 실제 이름. Neon 기본 예시는 `neondb`입니다.
 - `PROJECT_RUNTIME_ROLE`: `webguard_hub_prod_app`.
