@@ -11,7 +11,7 @@ export async function POST(req:Request){try{
  if(Object.keys(data).some(k=>!keys.includes(k))||typeof data.assetId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.assetId))throw new HttpError(400,'Invalid scan ID');
  for(const k of keys.slice(1))if(!Number.isInteger(data[k])||data[k]<0||data[k]>1000)throw new HttpError(400,'Invalid scan ID');
  if(data.requests<1||[data.loginFailures,data.probes,data.serverErrors].some(n=>n>data.requests))throw new HttpError(400,'Invalid scan ID');
- const owner=await db.query("SELECT id,user_id FROM public.assessment_assets WHERE id=$1 AND ingest_token_hash=$2 AND module_id='web.compare'",[data.assetId,tokenHash(bearer.slice(7))]);
+ const owner=await db.query("SELECT id,user_id FROM public.assessment_assets WHERE id=$1 AND ingest_token_hash=$2 AND module_id='web.compare' AND updated_at>=now()-interval '30 days'",[data.assetId,tokenHash(bearer.slice(7))]);
  if(!owner.rowCount)throw new HttpError(401,'Login required');
  await limit('telemetry:'+data.assetId,60,60);
  await db.query(`INSERT INTO public.assessment_traffic(user_id,asset_id,window_at,requests,login_failures,probes,server_errors)

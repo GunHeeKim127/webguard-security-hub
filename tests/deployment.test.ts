@@ -9,6 +9,23 @@ import {runtimePoolConfig} from '../lib/runtime-pool-config';
 import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from '../lib/protection-query';
 import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
 import type {Pool} from 'pg';
+import {maintenanceAuthorized} from '../lib/retention';
+import {migrationChecksums} from '../scripts/support/migration-checksum';
+
+test('migration checksums accept only LF/CRLF equivalents and reject changed SQL',()=>{
+ const lf='SELECT 1;\nSELECT 2;\n',crlf=lf.replace(/\n/g,'\r\n');
+ assert.equal(migrationChecksums(lf).canonical,migrationChecksums(crlf).canonical);
+ assert(migrationChecksums(crlf).accepted.has(migrationChecksums(lf).canonical));
+ assert(!migrationChecksums(lf.replace('SELECT 2','SELECT 3')).accepted.has(migrationChecksums(lf).canonical));
+});
+
+test('archive maintenance is inaccessible without the exact configured secret',()=>{
+ const secret='a'.repeat(64);
+ assert.equal(maintenanceAuthorized('Bearer '+secret,secret),true);
+ for(const value of [null,'Bearer wrong',secret,'bearer '+secret,'Bearer '+secret+'x'])assert.equal(maintenanceAuthorized(value,secret),false);
+ assert.equal(maintenanceAuthorized('Bearer '+secret,undefined),false);
+ assert.equal(maintenanceAuthorized('Bearer x','x'),false);
+});
 
 test('protection query gives only the exact managed block read a longer deadline and releases clients',async()=>{
  const configs:any[]=[],releases:unknown[]=[];
@@ -59,6 +76,8 @@ test('Prisma managed runtime client rejects DDL, multi-statements, direct accoun
  assert.throws(()=>assertManagedRuntimeSql('DO $$ BEGIN NULL; END $$'));
  for(const sql of ['SELECT id FROM users WHERE email=$1','SELECT public.register_viewer($1,$2,$3)',"WITH changed AS (INSERT INTO events(category) VALUES('scan_success') RETURNING id) SELECT id FROM changed",'UPDATE scans SET result=$1 WHERE id=$2','DELETE FROM sessions WHERE token_hash=$1',"SELECT 'DROP' AS label"])assert.doesNotThrow(()=>assertManagedRuntimeSql(sql));
  for(const sql of ['DROP TABLE users','SELECT 1; DROP TABLE users','CREATE TABLE bad(id int)','TRUNCATE scans','GRANT ALL ON users TO PUBLIC','SELECT * FROM schema_migrations','SELECT * FROM public.scan_duplicate_archive','UPDATE users SET role=$1','INSERT INTO public.users(id) VALUES($1)','DELETE FROM "users"','SELECT set_config($1,$2,true)','SELECT 1 -- hidden'])assert.throws(()=>assertManagedRuntimeSql(sql));
+ assert.throws(()=>assertManagedRuntimeSql('SELECT payload FROM webguard_archive.diagnostic_records'));
+ assert.doesNotThrow(()=>assertManagedRuntimeSql('SELECT public.archive_diagnostics_30d() AS result'));
 });
 test('Prisma readiness reports provider-managed permissions without asserting separate SQL role isolation',async()=>{
  const before={...process.env};try{
