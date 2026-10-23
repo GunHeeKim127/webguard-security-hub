@@ -1,8 +1,12 @@
 node_modules/
 .next/
+# Environment configuration is always local, including examples/downloads.
+# Basename patterns apply at every directory depth.
 .env*
-!.env.example
-!.env.migration.example
+env
+env.*
+*.env
+*.env.*
 *.tsbuildinfo
 coverage/
 work/

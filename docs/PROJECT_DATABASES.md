@@ -25,7 +25,7 @@
 
 ## 프로젝트 설정
 
-`.env.example`에서 복사한 `.env.local`에 PROJECT_DATABASE와 PROJECT_RUNTIME_ROLE을 설정하고 DATABASE_URL에는 app 계정만 사용합니다. `.env.migration.example`을 `.env.migration.local`로 복사하여 migration 계정 URL 및 최초 앱 사용자 생성 값을 설정합니다. migration 자격증명은 앱 환경 파일에 넣지 않습니다. 두 파일은 OneDrive 동기화 밖에서 관리하는 것이 권장됩니다. Git 제외는 동기화를 막지 않습니다.
+[환경 설정 안내](CONFIGURATION.md)에 따라 `.env.local`에 PROJECT_DATABASE·PROJECT_RUNTIME_ROLE과 app 계정 DATABASE_URL을 설정합니다. `.env.migration.local`에는 별도 migration 계정 URL 및 최초 앱 사용자 생성 값을 설정합니다. 환경 예제도 Git에서 제외하며 migration 자격증명은 앱 환경 파일에 넣지 않습니다. 두 파일은 OneDrive 동기화 밖에서 관리하는 것이 권장됩니다. Git 제외는 동기화를 막지 않습니다.
 
 `npm run db:migrate` → `npm run db:grant` → `npm run user:create` 순서입니다. 사용자 생성 후 BOOTSTRAP_PASSWORD를 지웁니다. migration 이후 필요한 새 테이블 권한은 명시적으로 grant 도구에 추가합니다. 미래의 모든 테이블에 일괄 권한을 부여하지 않습니다.
 

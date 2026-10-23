@@ -126,7 +126,7 @@ Node.js 20.9 이상과 PostgreSQL 15 이상이 필요합니다. DBeaver는 DB �
 
 1. [프로젝트별 DB 설정](docs/PROJECT_DATABASES.md)에 따라 sql/setup의 역할·DB 생성 스크립트를 순서대로 실행합니다. CREATE DATABASE는 Auto-commit에서 별도로 실행합니다. 기존 다른 프로젝트 DB는 변경하지 않습니다.
 2. `npm ci`를 실행합니다.
-3. `.env.example`을 `.env.local`, `.env.migration.example`을 `.env.migration.local`로 복사합니다. 이미 파일이 있으면 덮어쓰지 말고 새 항목만 추가합니다.
+3. [환경 설정 안내](docs/CONFIGURATION.md)에 따라 `.env.local`과 `.env.migration.local`을 로컬에서 만듭니다. 예제도 Git에 올리지 않습니다. 기존 파일은 덮어쓰지 않습니다.
 4. 앱 환경 파일에는 app 역할의 DATABASE_URL, migration 환경 파일에는 migrator 역할의 MIGRATION_DATABASE_URL을 입력합니다. URL의 비밀번호 특수문자는 percent encoding합니다.
 5. `npm run db:migrate`, `npm run db:grant`를 실행합니다.
 6. 최초 관리자는 migration 환경 파일의 BOOTSTRAP_EMAIL/PASSWORD/ROLE을 로컬에서 설정한 뒤 `npm run user:create`로 생성합니다. 비밀번호는 14~128자이며 생성 후 BOOTSTRAP_PASSWORD를 비웁니다.
