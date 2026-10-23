@@ -1,5 +1,7 @@
 # VELTHARA · WebGuard Security Hub
 
+2026-10-23 추가: 일반 회원용 **VMware VMX 설정 작전실**과 **GNS3 프로젝트 구성 작전실**을 제공합니다. 현재 PC의 실제 설정과 별도 GNS3 VPCS 통신으로 교차 검증합니다. 고객 서버/VM에 자동 접속하지 않는 정적 설정 점검입니다. [지원 범위·검증 기록](docs/INFRASTRUCTURE_CHECKS.md).
+
 2026-10-23: 일반 고객의 본인 진단 기능을 제공하며 최근 30일 결과만 고객 API에 노출합니다. 지난 기록은 별도 보관 테이블에 남깁니다. 일반 PG migration 009 / Prisma 005가 필요합니다. [고객 데이터·30일 보관 정책](docs/DATA_RETENTION.md)을 참고하세요.
 
 허가된 웹·모바일 패키지·실행 파일·설정 스냅샷을 지원 범위 안에서 점검하고 근거·개선 방법·재검증 결과를 관리하는 **모듈형 자산 보안 진단 MVP**입니다. Next.js / TypeScript / MUI / PostgreSQL을 사용합니다. 전체 취약점 진단기나 외부 사이트의 WAF는 아직 아닙니다.

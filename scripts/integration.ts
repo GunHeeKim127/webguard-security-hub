@@ -42,7 +42,7 @@ try{
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0] .count,'9');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'10');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  // Reproduce an upstream read lasting over the general 5s client deadline.
  // Locks exist only in this disposable DB; no production writes or traffic.
@@ -262,7 +262,7 @@ try{
  const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
  assert(!platformHtml.includes('id="asset-inspector"'));assert(!platformHtml.includes('id="assessment-results"'));
  for(const href of ['/?view=web','/workbench/mobile','/workbench/endpoint','/workbench/results'])assert(platformHtml.includes('href="'+href+'"'));
- for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newAdmin);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});assert.equal(guest.status,307);assert.equal(guest.headers.get('location'),'/');}
+ for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare'],['virtualization','virtualization.vmx'],['network','network.gns3']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newViewer);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});assert.equal(guest.status,307);assert.equal(guest.headers.get('location'),'/');}
  const resultsPage=await (await call('/workbench/results','GET',undefined,newAdmin)).text();assert(resultsPage.includes('id="assessment-results"'));assert(!resultsPage.includes('id="asset-inspector"'));
  assert.equal((await call('/workbench/not-a-module','GET',undefined,newAdmin)).status,404);
  console.log('PASS button-only landing, dedicated category pages, direct-link authentication, results page, unknown route 404 and preserved classic web entry');
@@ -300,6 +300,16 @@ try{
  assert.equal((await call('/api/assessments','POST',{...machInput,authorized:false},newViewer)).status,400);
  assert.equal((await call('/api/assessments','POST',machInput)).status,401);
  console.log('PASS modular HTTP assessments: general member config/file summary assessment, required consent, guest denial, owner-only assets/history/keys, redaction and immutable results');
+ await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:'infra@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:'viewer'});const infraUser=await login('infra');
+ const vmxText='config.version = "8"\nvirtualHW.version = "21"\nisolation.tools.copy.disable = "FALSE"\ndisplayName = "PRIVATE_VM_LABEL"';
+ const vmxSaved=await call('/api/assessments','POST',{moduleId:'virtualization.vmx',label:'VM settings',text:vmxText,authorized:true},infraUser);assert.equal(vmxSaved.status,200);const vmx=await vmxSaved.json();assert(!JSON.stringify(vmx).includes('PRIVATE_VM_LABEL'));assert(vmx.report.findings.some((f:any)=>f.id==='copy'&&f.status==='warning'));
+ const vmxRetest=await call('/api/assessments','POST',{moduleId:'virtualization.vmx',label:'VM settings',text:vmxText.replace('FALSE','TRUE'),authorized:true},infraUser);assert.equal(vmxRetest.status,200);assert.equal((await vmxRetest.json()).asset_id,vmx.asset_id);
+ assert.equal((await call('/api/assessments?assetId='+vmx.asset_id,'GET',undefined,newAdmin)).status,404);
+ const topology={type:'topology',version:'2.2.61',topology:{nodes:[{node_id:'a',node_type:'vpcs'},{node_id:'b',node_type:'nat'}],links:[{nodes:[{node_id:'a'},{node_id:'b'}]}]}};
+ const labSaved=await call('/api/assessments','POST',{moduleId:'network.gns3',label:'Network lab',text:JSON.stringify(topology),authorized:true},infraUser);assert.equal(labSaved.status,200);assert((await labSaved.json()).report.findings.some((f:any)=>f.id==='externalBoundary'&&f.status==='warning'));
+ assert.equal((await call('/api/assessments','POST',{moduleId:'network.gns3',label:'bad',text:'{}',authorized:true},infraUser)).status,400);
+ const vmxHistory=await (await call('/api/assessments?assetId='+vmx.asset_id,'GET',undefined,infraUser)).json();assert.equal(vmxHistory.runs.length,2);
+ console.log('PASS general customer VMware/GNS3 pages, assessment APIs, warning-to-pass retest, private-field redaction and owner isolation');
  // Archive validation touches only this disposable database. Backdate fixture
  // records, verify API filtering BEFORE maintenance, then prove atomic moves.
  const oldScan=randomUUID(),failedScan=randomUUID(),recentScan=randomUUID();
@@ -362,6 +372,7 @@ try{
   await managed.query(await readFile('sql/migrations/prisma-postgres/003_modular_assessments.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/004_local_file_inspection.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/005_diagnostic_retention.sql','utf8'));
+  await managed.query(await readFile('sql/migrations/prisma-postgres/006_infrastructure_modules.sql','utf8'));
   await managed.query("UPDATE scans SET created_at=now()-interval '31 days' WHERE id=$1",[legacyScan]);
   assert.equal((await managed.query('SELECT public.archive_diagnostics_30d() AS result')).rows[0].result.moved,1);
   assert.equal((await managed.query('SELECT count(*) FROM webguard_archive.diagnostic_records WHERE source_id=$1',[legacyScan])).rows[0].count,'1');
