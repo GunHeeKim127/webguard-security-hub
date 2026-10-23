@@ -28,7 +28,8 @@ const env={...process.env,PROJECT_DATABASE:'webguard_hub_dev',PROJECT_RUNTIME_RO
 const pool=new Pool({connectionString:database,connectionTimeoutMillis:1000});let pgStarted=false;let server:ReturnType<typeof spawn>|undefined;
 const projectPools:Pool[]=[];
 // Never inherit the real production DB profile or platform-IP mode from env files.
-Object.assign(env,{WEBGUARD_VERIFY:'true',DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:''});
+const archiveSecret=randomBytes(32).toString('hex');
+Object.assign(env,{WEBGUARD_VERIFY:'true',DATABASE_PROVIDER:'postgresql',VERCEL:'',PUBLIC_REGISTRATION_ENABLED:'true',GROQ_API_KEY:'',GEMINI_API_KEY:'',GEOIP_PROXY_SECRET:'',CRON_SECRET:archiveSecret});
 async function control(args:string[]){await new Promise<void>((resolve,reject)=>{const p=spawn(path.join(bin,'pg_ctl.exe'),args,{windowsHide:true,stdio:'ignore'});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(new Error('pg_ctl failed: '+code)));});}
 async function script(name:string,extra:Partial<NodeJS.ProcessEnv>={}){return exec(process.execPath,['node_modules/tsx/dist/cli.mjs',name],{env:{...env,...extra},windowsHide:true});}
 async function call(route:string,method='GET',payload?:unknown,cookie?:string){return fetch(base+route,{method,headers:{origin:base,...(payload===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{cookie}:{})},body:payload===undefined?undefined:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});}
@@ -41,7 +42,7 @@ try{
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'8');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0] .count,'9');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  // Reproduce an upstream read lasting over the general 5s client deadline.
  // Locks exist only in this disposable DB; no production writes or traffic.
@@ -96,7 +97,7 @@ try{
  const memberHistory=await (await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,newCookie)).json();assert.equal(memberHistory.runs.length,2);
  assert.equal((await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,admin)).status,404);
  assert.equal(Object.hasOwn(await (await call('/api/dashboard','GET',undefined,newCookie)).json(),'ipBlocks'),false);
- const memberPage=await (await call('/workbench/endpoint','GET',undefined,newCookie+'; wg_locale=ko')).text();assert(memberPage.includes('일반 회원'));assert(!memberPage.includes('진단은 admin/analyst'));
+ const memberPage=await (await call('/workbench/endpoint','GET',undefined,newCookie+'; wg_locale=ko')).text();assert(memberPage.includes('일반 회원'));assert(memberPage.includes('최근 30일'));assert(!memberPage.includes('진단은 admin/analyst'));
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword})).status,202);
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword})).status,429);
  console.log('PASS public signup member assessment/retest/history, admin isolation, SSRF protection, role injection rejection, hashed password, duplicate safety and rate limits');
@@ -299,6 +300,36 @@ try{
  assert.equal((await call('/api/assessments','POST',{...machInput,authorized:false},newViewer)).status,400);
  assert.equal((await call('/api/assessments','POST',machInput)).status,401);
  console.log('PASS modular HTTP assessments: general member config/file summary assessment, required consent, guest denial, owner-only assets/history/keys, redaction and immutable results');
+ // Archive validation touches only this disposable database. Backdate fixture
+ // records, verify API filtering BEFORE maintenance, then prove atomic moves.
+ const oldScan=randomUUID(),failedScan=randomUUID(),recentScan=randomUUID();
+ for(const [id,host,age] of [[oldScan,'retention-old.example',33],[failedScan,'retention-fail.example',32],[recentScan,'retention-recent.example',29]] as const)await projectAdmin.query("INSERT INTO scans(id,user_id,hostname,result,created_at) VALUES($1,$2,$3,'{\"status\":200,\"checks\":[]}',now()-$4*interval '1 day')",[id,actor,host,age]);
+ const oldAssessment=await saveAssessment((sql,values)=>projectAdmin.query(sql,values),actor,'retention-only','Retention only',phaseA.report);
+ await projectAdmin.query("UPDATE assessment_runs SET created_at=now()-interval '31 days' WHERE id=$1",[oldAssessment.id]);
+ await projectAdmin.query("UPDATE assessment_assets SET updated_at=now()-interval '31 days' WHERE id=$1",[oldAssessment.asset_id]);
+ await projectAdmin.query("INSERT INTO assessment_traffic(user_id,asset_id,window_at,requests,login_failures,probes,server_errors) VALUES($1,$2,now()-interval '31 days',1,0,0,0)",[actor,oldAssessment.asset_id]);
+ const filtered=await (await call('/api/dashboard','GET',undefined,newAdmin)).json();assert(!filtered.scans.some((s:any)=>s.id===oldScan||s.id===failedScan));assert(filtered.scans.some((s:any)=>s.id===recentScan));
+ assert.equal((await call('/api/assessments?assetId='+oldAssessment.asset_id,'GET',undefined,newAdmin)).status,404);
+ assert.equal((await call('/api/ai','POST',{scanId:oldScan},newAdmin)).status,404);
+ assert.equal((await call('/api/maintenance/archive')).status,401);
+ assert.equal((await fetch(base+'/api/maintenance/archive',{headers:{authorization:'Bearer wrong'}})).status,401);
+ const archiveRole=new Pool({connectionString:env.DATABASE_URL});
+ try{await assert.rejects(archiveRole.query('SELECT * FROM webguard_archive.diagnostic_records'),{code:'42501'});}finally{await archiveRole.end();}
+ await projectAdmin.query("CREATE FUNCTION public.retention_test_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.payload->>'hostname'='retention-fail.example' THEN RAISE EXCEPTION 'simulated archive failure'; END IF; RETURN NEW; END $$");
+ await projectAdmin.query('CREATE TRIGGER retention_test_failure BEFORE INSERT ON webguard_archive.diagnostic_records FOR EACH ROW EXECUTE FUNCTION public.retention_test_failure()');
+ await assert.rejects(projectAdmin.query('SELECT public.archive_diagnostics_30d()'));
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM scans WHERE id=ANY($1::uuid[])',[[oldScan,failedScan]])).rows[0].count,'2');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM webguard_archive.diagnostic_records')).rows[0].count,'0');
+ await projectAdmin.query('DROP TRIGGER retention_test_failure ON webguard_archive.diagnostic_records');await projectAdmin.query('DROP FUNCTION public.retention_test_failure()');
+ const maintenance=await fetch(base+'/api/maintenance/archive',{headers:{authorization:'Bearer '+archiveSecret}});assert.equal(maintenance.status,200);assert((await maintenance.json()).result.moved>=4);
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM scans WHERE id=ANY($1::uuid[])',[[oldScan,failedScan]])).rows[0].count,'0');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM webguard_archive.diagnostic_records WHERE source_id=ANY($1::text[])',[[oldScan,failedScan,oldAssessment.id]])).rows[0].count,'3');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM scans WHERE id=$1',[recentScan])).rows[0].count,'1');
+ assert.equal((await projectAdmin.query('SELECT public.archive_diagnostics_30d() AS result')).rows[0].result.moved,0);
+ const revived=await saveAssessment((sql,values)=>projectAdmin.query(sql,values),actor,'retention-only','Retention only',phaseA.report);assert.equal(revived.asset_id,oldAssessment.asset_id);
+ const revivedHistory=await (await call('/api/assessments?assetId='+revived.asset_id,'GET',undefined,newAdmin)).json();assert.equal(revivedHistory.runs.length,1);assert.equal(revivedHistory.runs[0].id,revived.id);
+ assert.equal((await call('/api/assessments?assetId='+revived.asset_id,'GET',undefined,newViewer)).status,404);
+ console.log('PASS 30-day API filtering, private backup, authenticated maintenance, atomic rollback, idempotent archive, owner isolation and stable asset revival');
  await pool.query('CREATE DATABASE webguard_copy_fixture');
  const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
  const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};
@@ -330,7 +361,11 @@ try{
   await managed.query(await readFile('sql/migrations/prisma-postgres/002_account_isolation.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/003_modular_assessments.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/004_local_file_inspection.sql','utf8'));
-  assert.equal((await managed.query('SELECT user_id FROM scans WHERE id=$1',[legacyScan])).rows[0].user_id,legacyUser);
+  await managed.query(await readFile('sql/migrations/prisma-postgres/005_diagnostic_retention.sql','utf8'));
+  await managed.query("UPDATE scans SET created_at=now()-interval '31 days' WHERE id=$1",[legacyScan]);
+  assert.equal((await managed.query('SELECT public.archive_diagnostics_30d() AS result')).rows[0].result.moved,1);
+  assert.equal((await managed.query('SELECT count(*) FROM webguard_archive.diagnostic_records WHERE source_id=$1',[legacyScan])).rows[0].count,'1');
+  assert.equal((await managed.query('SELECT user_id FROM webguard_archive.diagnostic_records WHERE source_id=$1',[legacyScan])).rows[0].user_id,legacyUser);
   assert.equal((await managed.query("SELECT user_id FROM events WHERE category='legacy_actor_unknown'")).rows[0].user_id,null);
   const managedQuery=(sql:string,values:unknown[])=>{assertManagedRuntimeSql(sql);return managed.query(sql,values);};
   const managedId=randomUUID();await managedQuery('SELECT public.register_viewer($1,$2,$3)',[managedId,'managed@example.test',newAccount.password_hash]);

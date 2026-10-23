@@ -22,7 +22,9 @@
     "db:grant:production": "tsx --env-file=.env.migration.production.local scripts/grant-runtime.ts",
     "db:copy:production": "tsx --env-file=.env.local --env-file=.env.migration.production.local scripts/copy-production-data.ts",
     "db:setup:production": "tsx --env-file=.env.migration.production.local scripts/setup-production.ts",
-    "db:migrate:production": "tsx --env-file=.env.migration.production.local scripts/migrate.ts"
+    "db:migrate:production": "tsx --env-file=.env.migration.production.local scripts/migrate.ts",
+    "db:archive": "tsx --env-file=.env.migration.local scripts/archive-diagnostics.ts",
+    "db:archive:production": "tsx --env-file=.env.migration.production.local scripts/archive-diagnostics.ts"
   },
   "dependencies": {
     "@emotion/cache": "11.14",

@@ -13,7 +13,7 @@ export const maxDuration=60;
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser();await limit('ai-attempt:'+user.id,10,60);
  const data=await body(req);if(typeof data.scanId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.scanId))throw new HttpError(400,'Invalid scan ID');
- const r=await db.query('SELECT result FROM scans WHERE id=$1 AND user_id=$2',[data.scanId,user.id]);if(!r.rowCount)throw new HttpError(404,'Scan not found');
+ const r=await db.query('SELECT result FROM scans WHERE id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\'',[data.scanId,user.id]);if(!r.rowCount)throw new HttpError(404,'Scan not found');
  const configs=providerConfigs();if(process.env.AI_ENABLED!=='true'||!configs.length)throw new HttpError(503,'AI disabled: configure server environment');
  const checks=r.rows[0].result.checks,locale=requestLocale(req.headers).locale,query=(sql:string,values:unknown[])=>db.query(sql,values);
  const codes=['AI_QUOTA_EXCEEDED','AI_RATE_LIMITED','AI_AUTH_FAILED','AI_MODEL_UNAVAILABLE','AI_CONNECTION_FAILED','AI_REQUEST_REJECTED','AI_PROVIDER_FAILED'];

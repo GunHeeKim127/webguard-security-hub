@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "installCommand": "npm ci --registry=https://registry.npmjs.org"
+  "installCommand": "npm ci --registry=https://registry.npmjs.org",
+  "crons": [{"path":"/api/maintenance/archive","schedule":"0 0 * * *"}]
 }
