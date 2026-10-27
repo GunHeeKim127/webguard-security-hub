@@ -1,0 +1,53 @@
+{
+  "recordedAt": "2026-10-27T23:42:46.603Z",
+  "code": "2c42c30",
+  "role": "viewer",
+  "emailMasked": true,
+  "profileHasRawId": false,
+  "moduleIds": [
+    "web.compare",
+    "linux.ssh",
+    "windows.policy",
+    "application.pe",
+    "application.apk",
+    "application.macho",
+    "application.package",
+    "virtualization.vmx",
+    "network.gns3"
+  ],
+  "verifiedAssetModules": [
+    "web.compare",
+    "network.gns3",
+    "virtualization.vmx",
+    "application.apk",
+    "application.package",
+    "application.macho",
+    "windows.policy",
+    "linux.ssh",
+    "application.pe"
+  ],
+  "foreignAccess": {
+    "errorCode": "SCAN_NOT_FOUND",
+    "hasAssets": false,
+    "hasRuns": false
+  },
+  "ownPeHistory": {
+    "hasRawOriginal": false,
+    "integrityStatuses": [
+      "server-recomputed",
+      "unverified-summary"
+    ],
+    "role": "viewer",
+    "runCount": 2,
+    "serverHash": "468ffe129c395abf6b21a09efdf261910a95fb98aa982ead73caa7b2b684577e"
+  },
+  "dashboardBoundary": {
+    "aiEnabled": false,
+    "emailMasked": true,
+    "hasAccountManagement": false,
+    "hasIpManagement": false,
+    "profileHasId": false,
+    "role": "viewer",
+    "scanCount": 2
+  }
+}

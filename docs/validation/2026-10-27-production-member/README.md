@@ -37,3 +37,9 @@
 ## 한계
 
 운영 공격·5회 경고/6번째 영구 차단·차단 해제·보관 기간 조작·전체 DB 권한 변경은 실행하지 않았다. 해당 회귀는 격리 DB 근거와 구분한다. 실제 macOS/모바일 기기 및 모든 패키지 변형·모든 언어/CVE 감사는 완료한 것이 아니다. R01 과거 간헐 오류의 원인은 미확정이다. Cloud/IoT/Container·작업 예약·정식 보고서·새 모듈 AI는 준비 중이다.
+
+### 2026-10-28 후속 완료
+
+기본 웹 진단 HTTP 200과 무료 기본 개선안, 진단 로그 다운로드(내용 있음·세션 쿠키 문자열 없음), 한국어→영어→한국어 전환을 실제 화면에서 확인했다. 사용자 언어는 한국어로 복원했다. 표시 수정 코드 1dcbbc0의 Vercel 배포가 success이며 health/readiness 200, 새 관리 API 비로그인 POST 401도 재확인했다. 과거 Windows demo 결과가 새 안내로 표시되는 것을 운영에서 확인했다. 접근 경계의 비밀 없는 기계 판독 근거는 boundary-observation.json이다.
+
+최종 좁은 화면 확인에서 서버 원본 해시 안내의 clientWidth=313, scrollWidth=313으로 가로 넘침이 없음을 DOM의 실제 치수로 확인했다. before/after 판정이나 안전성 결과를 바꾼 수정은 아니다. 재확인 결과는 after-fix-observation.json 및 pe-server-result.png에 보존했다.
