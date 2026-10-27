@@ -570,3 +570,9 @@ Cloud/IoT/Container는 준비 중이며 고객·관리자 모두 완성 기능�
 첫 신규 migration 시도는 제공자의 `restricted superuser cannot grant or revoke privileges` 제한(42501)으로 전체 롤백됐다. 운영에 아직 적용되지 않은 신규 관리형 007의 REVOKE를 제공자 프로필에 맞게 제외했다. 일반 PostgreSQL 011의 REVOKE는 유지했다. 이후 관리형 007·008 적용 성공을 확인했다. 재조회에서 account_blocks와 IP/계정 management_id, migration 이력 8개, account_blocks의 PUBLIC 테이블 권한 없음이 확인됐다. 이는 제공자 관리 자격 자체의 과도한 권한 문제까지 해결했다는 뜻은 아니다.
 
 기존 고객 결과 삭제·차단 해제·비밀번호 변경은 하지 않았다. 앞 절의 운영 migration 미실행 문구는 당시 상태이며 이 절로 갱신한다. 코드 업로드와 운영 배포 후 점검 결과는 아래에 후속 기록한다.
+
+### 운영 배포 결과
+
+기존 GitHub main에 코드 커밋 `5a4c521`을 정상 푸시했다. Vercel GitHub 상태가 `success / Deployment has completed`인 것을 확인했다. 배포 ID는 `DWuB6S44yRcetPLAox3yL1fJLX2r`이다. 운영 `/api/health`, `/api/ready`는 200, 새 관리 API 두 경로의 GET은 405(POST 전용), 동일 출처 비로그인 POST는 각각 401이었다. 실제 운영 차단 해제나 고객 결과 작성은 하지 않았다.
+
+운영 로그인 세션을 사용한 고객 전체 시나리오는 이 배포에서 새로 수행하지 않았다. 앞 절의 일반 회원 전체 행렬은 격리된 로컬 환경의 검증이다. R01 최초 간헐 오류 원인·R02 제공자 권한과 실제 macOS/모바일 검증도 여전히 잔여 범위다. 고객이 사용할 개발 도구 없이도 기존 설정과 Git 연동으로 migration·푸시·배포 확인까지 대행했다.

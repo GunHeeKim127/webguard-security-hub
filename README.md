@@ -1,5 +1,7 @@
 # VELTHARA · WebGuard Security Hub
 
+2026-10-27 운영 반영 완료: 코드 5a4c521의 Vercel 배포 성공, 관리형 DB migration 007·008 적용, health/readiness 200 및 새 관리 API 비로그인 POST 401을 확인했다. 아래 미배포/미적용 문구는 이전 검증 시점의 기록이다. 상세 결과는 검토 보고서 20절을 참조한다. 운영 로그인 후 고객별 전체 기능 재검증과 R01/R02 잔여 검증은 별도다.
+
 2026-10-27 추가: 파일 검사에 선택형 서버 원본 재분석(2 MiB)과 SHA-256 근거를 추가하고 미전송 요약은 미검증으로 구분합니다. 웹에는 [기술 흔적·PHP2Shell/프레임워크 권고 대조](docs/WEB_TECHNOLOGY_ADVISORIES.md)를 추가했습니다. 127개 회귀·타입·검증 빌드 통과. 전체 언어·CVE 자동 탐지나 서버 기기 원본 증명은 아니며 운영 미배포입니다.
 
 2026-10-27 현재 PC 후속: [검토 보고서 12절](docs/PROJECT_REVIEW_2026-10-27.md), [익명화 실환경 근거](docs/validation/2026-10-27-local-environment/README.md). 실제 VMX/GNS3/Windows PE와 117개 회귀를 확인했다. Linux 실효 설정·Windows 정책/서명 도구 환경 차이·실제 장비 통신은 미완료이며 2단계 진행 중이다.
