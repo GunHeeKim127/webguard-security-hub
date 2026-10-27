@@ -1,4 +1,4 @@
-import {activeBlock,recordThreat,detectThreat,normalizeIp,type GuardQuery} from './ingress-guard';
+import {activeBlock,recordThreat,detectThreat,normalizeIp,threatSessionHash,type GuardQuery} from './ingress-guard';
 import {requestLocale} from './request-locale';
 import {defenseText} from './defense-copy';
 import {ipAddress} from '@vercel/functions';
@@ -25,7 +25,7 @@ export async function vercelProtection(req:Request,query:GuardQuery,env:Readonly
    console.warn('[WebGuard protection]',{stage,reason:issue.reason,retry:1});
    block=await activeBlock(query,address);
   }
-  if(!block){const reason=detectThreat(url.pathname+url.search);if(reason){stage='threat_record';block=await recordThreat(query,address,reason);}}
+  if(!block){const reason=detectThreat(url.pathname+url.search);if(reason){stage='threat_record';block=await recordThreat(query,address,reason,threatSessionHash(req.headers.get('cookie')));}}
   if(!block)return null;
   const errorCode=block.blacklisted?'IP_BLACKLISTED':'THREAT_BLOCKED';
   return Response.json({error:defenseText(locale,block.blacklisted?'permanent':'temporary'),errorCode,locale,retryAfter:block.blacklisted?null:Math.max(1,block.retry_after),strikes:block.strikes},{status:block.blacklisted?403:429,headers:{'Cache-Control':'no-store','Content-Language':locale,...(!block.blacklisted?{'Retry-After':String(Math.max(1,block.retry_after))}:{})}});

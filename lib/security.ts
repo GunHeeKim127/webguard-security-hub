@@ -1,15 +1,14 @@
 import 'server-only';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { db } from './db';
 import {errorCode,errorText} from './errors-i18n';
 import {requestLocale} from './request-locale';
-import { tokenHash } from './password';
+import {threatSessionHash} from './ingress-guard';
 import { HttpError,roleAllowed } from './request';
 export { HttpError,sameOrigin,body } from './request';
 export async function currentUser(){
- const token=(await cookies()).get('wg_session')?.value;
- if(!token || token.length!==64) return null;
- const r=await db.query('SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[tokenHash(token)]);
+ const hash=threatSessionHash((await headers()).get('cookie'));if(!hash)return null;
+ const r=await db.query('SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND NOT EXISTS(SELECT 1 FROM public.account_blocks b WHERE b.user_id=u.id AND b.blacklisted)',[hash]);
  return r.rows[0] as {id:string,email:string,role:string}|undefined;
 }
 export async function requireUser(roles=['admin','analyst','viewer']) {

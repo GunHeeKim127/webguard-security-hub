@@ -6,8 +6,23 @@ import type {TLSSocket} from 'node:tls';
 import {assessWeb,corsProbeOrigin} from './web-assessment';
 import type {CheckResult} from './inspection';
 import {scanTarget} from './scan-policy';
+import {observeTechnology} from './web-technology';
 export function publicAddress(address:string){try{return ipaddr.parse(address).range()==='unicast';}catch{return false;}}
 export const target=scanTarget;
+// Keep cold/slow public targets bounded while allowing more than a five-second response.
+export const HEAD_RESPONSE_DEADLINE_MS=15000;
+export function scanFailureReason(error:unknown,signal?:AbortSignal){
+ if(signal?.aborted)return 'CANCELLED';
+ const message=error instanceof Error?error.message:'',code=error&&typeof error==='object'&&'code' in error?error.code:undefined;
+ if(message==='Scan deadline exceeded')return 'HEAD_RESPONSE_DEADLINE';
+ if(message==='DNS timeout')return 'DNS_TIMEOUT';
+ if(message==='Non-public DNS rejected')return 'TARGET_ADDRESS_REJECTED';
+ if(message==='Scan cancelled')return 'CANCELLED';
+ if(message==='TLS verification failed'||typeof code==='string'&&(/^(?:ERR_TLS_|ERR_SSL_|CERT_)/.test(code)||['DEPTH_ZERO_SELF_SIGNED_CERT','SELF_SIGNED_CERT_IN_CHAIN','UNABLE_TO_VERIFY_LEAF_SIGNATURE'].includes(code)))return 'TLS_REJECTED';
+ if(code==='HPE_HEADER_OVERFLOW')return 'RESPONSE_HEADERS_TOO_LARGE';
+ if(['ECONNRESET','ECONNREFUSED','ETIMEDOUT','ENOTFOUND','EAI_AGAIN','EHOSTUNREACH','ENETUNREACH'].includes(code as string))return 'TARGET_CONNECTION_FAILED';
+ return 'TARGET_REJECTED';
+}
 export function findings(headers:Record<string,string|string[]|undefined>){
  return ['content-security-policy','strict-transport-security','x-content-type-options','referrer-policy'].map(header=>({header,present:!!headers[header],severity:headers[header]?'info':'medium'}));
 }
@@ -33,11 +48,11 @@ export async function scan(raw:string,allowed?:string[],progress:(stage:Stage,st
    const checks=findings(res.headers),assessment=assessWeb(res.headers,tls),status=res.statusCode??0;
    // Unsupported HEAD and error/redirect pages do not establish the target application's policy.
    if(status<200||status>=300)for(const item of assessment)if(item.group!=='tls'){item.status='not_assessed';item.severity='info';item.issues=['response_scope'];}
-   progress('headers','success');resolve({status,checks,assessment,assessmentVersion:2});
+   progress('headers','success');resolve({status,checks,assessment,assessmentVersion:2,technology:observeTechnology(res.headers,status)});
   }catch(error){reject(error);}finally{res.destroy();}
  });
  const abort=()=>req.destroy(new Error('Scan cancelled'));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
- const timer=setTimeout(()=>req.destroy(new Error('Scan deadline exceeded')),5000);
+ const timer=setTimeout(()=>req.destroy(new Error('Scan deadline exceeded')),HEAD_RESPONSE_DEADLINE_MS);
  req.on('close',()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);});req.on('error',reject);req.end();
  });
 }

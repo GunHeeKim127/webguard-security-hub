@@ -133,7 +133,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
      {data.events.length?data.events.map(e=><Stack key={e.category} direction="row" justifyContent="space-between" gap={1} py={1}><Typography>{eventLabel(locale,e.category)}</Typography><Chip label={new Intl.NumberFormat(locale).format(e.count)}/></Stack>):<Typography>{t.noEvents}</Typography>}
      <Alert severity="info" sx={{mt:2}}>{defenseText(locale,'scope')}</Alert>
     </Paper>
-    {data.user.role==='admin'&&data.ipBlocks&&<DefensePanel locale={locale} blocks={data.ipBlocks}/>}
+    {data.user.role==='admin'&&data.ipBlocks&&<DefensePanel locale={locale} blocks={data.ipBlocks} accounts={data.accountBlocks??[]} onReleased={()=>void load(false)}/>}
    </Box>
    <Paper sx={{p:3,mt:3}}><Typography variant="h6" mb={2}>{t.history}</Typography>
     {data.scans.length===0&&<Typography color="text.secondary">{t.noScans}</Typography>}

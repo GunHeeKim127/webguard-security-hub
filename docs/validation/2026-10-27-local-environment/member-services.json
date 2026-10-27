@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-27T12:14:15.190Z",
+  "source": "e195d85 + local changes",
+  "environment": "isolated loopback service",
+  "memberRole": "viewer",
+  "profileMasked": true,
+  "ownWebHistory": true,
+  "crossAccountDenied": true,
+  "anonymousDenied": true,
+  "ownTelemetryIssuance": true,
+  "oldTokenRevoked": true,
+  "aggregatesAdded": 2,
+  "rawTokenAbsentFromHistory": true,
+  "administratorManagementDeniedToMember": true,
+  "classicScanStored": true,
+  "targetHttpStatus": 200,
+  "limits": [
+    "No production account/data writes",
+    "Only public-root HEAD requests to the project deployment",
+    "Test integration tokens kept out of this artifact",
+    "Earlier basic-scan attempt returned 400; subsequent API and direct HEAD retries returned 200; original cause not established"
+  ]
+}

@@ -1,5 +1,6 @@
 import type {AssessmentReport,AssessmentStatus} from './types';
 export function compareAssessments(previous:AssessmentReport,current:AssessmentReport){
+ if(previous.integrity?.status!==current.integrity?.status||previous.integrity?.basis!==current.integrity?.basis)return {compatible:false,changes:[]};
  if(previous.moduleId!==current.moduleId||previous.moduleVersion!==current.moduleVersion||previous.ruleVersion!==current.ruleVersion)return {compatible:false,changes:[]};
  const before=new Map(previous.findings.map(f=>[f.id,f])),after=new Map(current.findings.map(f=>[f.id,f]));
  const rank=(status:AssessmentStatus)=>status==='warning'?1:status==='pass'?0:null;

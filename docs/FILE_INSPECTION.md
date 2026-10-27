@@ -1,5 +1,7 @@
 # 실행 파일·모바일 패키지 점검
 
+최신 2026-10-27 서버 원본 검증·수신 텍스트 해시 범위는 이 문서 마지막 추가 절을 우선한다.
+
 2026-10-20. `/workbench`의 파일 모듈에서 사용합니다. 긴 설명은 화면의 두 안내 토글에 들어 있습니다.
 
 ## 사용자 절차와 읽기 허용
@@ -67,3 +69,10 @@ node executable-inspector.mjs "/Applications/Example.app" "mac-report.json" --co
 - [Apple 코드 서명](https://developer.apple.com/library/archive/technotes/tn2206/)
 - [Android application 설정](https://developer.android.com/guide/topics/manifest/application-element)
 - [Apple NSAllowsArbitraryLoads](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowsarbitraryloads)
+# 2026-10-27 추가: 파일 입력과 결과의 연결 검증
+
+실행 파일·모바일 패키지에 선택형 **서버 원본 검증** 모드를 추가했다. 별도 원본 전송 동의 후 저장할 때 최대 2 MiB 전체 바이트를 서버로 보내며 서버가 제한된 파서를 다시 실행하고 SHA-256/바이트 수를 결과에 기록한다. 원본은 앱 DB에 저장하거나 실행하지 않는다. 클라이언트 snapshot·검증 표시를 함께 보낸 요청은 거절한다. OS 서명 신뢰·악성코드 부재·기기의 다른 파일과의 동일성은 검증하지 않는다.
+
+기존 원본 미전송/로컬 JSON은 유지하되 `unverified-summary`로 표시한다. 일반 회원의 참고용 저장은 가능하지만 서버 원본 검증 결과로 승격하지 않는다. 과거 검증 메타데이터 없는 파일 결과도 미검증으로 표시한다. 검증 방식이 다르면 개선/악화를 자동 비교하지 않는다.
+
+Linux SSH·Windows 정책·VMX·GNS3 파일/붙여넣기는 기존 서버 분석에 수신 UTF-8 텍스트의 SHA-256/바이트 수를 연결한다. 텍스트 디코딩·개행·BOM에 따라 로컬 파일 바이트와 다를 수 있으므로 `received-utf8-text`로 구분한다. 기존 APK 서버 예비 점검도 수신 파일 바이트 해시를 기록한다. 모든 표시는 서버가 부여하며 요청에서 integrity 필드는 수락하지 않는다. 기존 원본 미전송 설명은 브라우저/로컬 요약 모드에 해당한다.

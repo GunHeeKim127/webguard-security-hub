@@ -1,0 +1,199 @@
+{
+  "observedAt": "2026-10-27T07:17:13.919Z",
+  "source": "e195d85",
+  "scope": "local static files; no guest execution or network reachability evidence",
+  "results": [
+    {
+      "alias": "registered-linux-vm-1",
+      "moduleId": "virtualization.vmx",
+      "bytes": 2686,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "copy",
+          "status": "not_assessed"
+        },
+        {
+          "id": "paste",
+          "status": "not_assessed"
+        },
+        {
+          "id": "dragDrop",
+          "status": "not_assessed"
+        },
+        {
+          "id": "sharedFolders",
+          "status": "not_assessed"
+        },
+        {
+          "id": "remoteConsole",
+          "status": "not_assessed"
+        },
+        {
+          "id": "networkBoundary",
+          "status": "info"
+        }
+      ]
+    },
+    {
+      "alias": "registered-linux-vm-2",
+      "moduleId": "virtualization.vmx",
+      "bytes": 3270,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "copy",
+          "status": "not_assessed"
+        },
+        {
+          "id": "paste",
+          "status": "not_assessed"
+        },
+        {
+          "id": "dragDrop",
+          "status": "not_assessed"
+        },
+        {
+          "id": "sharedFolders",
+          "status": "not_assessed"
+        },
+        {
+          "id": "remoteConsole",
+          "status": "not_assessed"
+        },
+        {
+          "id": "networkBoundary",
+          "status": "info"
+        }
+      ]
+    },
+    {
+      "alias": "registered-linux-vm-3",
+      "moduleId": "virtualization.vmx",
+      "bytes": 3492,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "copy",
+          "status": "not_assessed"
+        },
+        {
+          "id": "paste",
+          "status": "not_assessed"
+        },
+        {
+          "id": "dragDrop",
+          "status": "not_assessed"
+        },
+        {
+          "id": "sharedFolders",
+          "status": "not_assessed"
+        },
+        {
+          "id": "remoteConsole",
+          "status": "not_assessed"
+        },
+        {
+          "id": "networkBoundary",
+          "status": "info"
+        }
+      ]
+    },
+    {
+      "alias": "existing-gns3-project-1",
+      "moduleId": "network.gns3",
+      "bytes": 644,
+      "projectVersion": "2.2.55",
+      "moduleVersion": "1.0.1",
+      "findings": [
+        {
+          "id": "externalBoundary",
+          "status": "info"
+        },
+        {
+          "id": "consoleBinding",
+          "status": "not_assessed"
+        },
+        {
+          "id": "topologyInventory",
+          "status": "info"
+        },
+        {
+          "id": "devicePolicy",
+          "status": "not_assessed"
+        }
+      ]
+    },
+    {
+      "alias": "existing-gns3-project-2",
+      "moduleId": "network.gns3",
+      "bytes": 25299,
+      "projectVersion": "2.2.61",
+      "moduleVersion": "1.0.1",
+      "findings": [
+        {
+          "id": "externalBoundary",
+          "status": "info"
+        },
+        {
+          "id": "consoleBinding",
+          "status": "not_assessed"
+        },
+        {
+          "id": "topologyInventory",
+          "status": "info"
+        },
+        {
+          "id": "devicePolicy",
+          "status": "not_assessed"
+        }
+      ]
+    },
+    {
+      "alias": "Windows system PE",
+      "moduleId": "application.pe",
+      "size": 360448,
+      "architectures": [
+        {
+          "bits": 64,
+          "fileType": 0,
+          "flags": 49504,
+          "writableExecutable": 0,
+          "certificateTable": false
+        }
+      ],
+      "native": {
+        "signature": "unknown",
+        "gatekeeper": "unknown",
+        "hardenedRuntime": "unknown",
+        "debugEntitlement": "unknown"
+      },
+      "findings": [
+        {
+          "id": "arch-1:aslr",
+          "status": "info"
+        },
+        {
+          "id": "arch-1:nx",
+          "status": "info"
+        },
+        {
+          "id": "arch-1:wx",
+          "status": "info"
+        },
+        {
+          "id": "arch-1:signature-structure",
+          "status": "info"
+        },
+        {
+          "id": "local:signature",
+          "status": "not_assessed"
+        },
+        {
+          "id": "provenance",
+          "status": "info"
+        }
+      ]
+    }
+  ]
+}

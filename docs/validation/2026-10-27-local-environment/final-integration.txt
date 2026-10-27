@@ -1,0 +1,53 @@
+PASS disposable PostgreSQL cluster started on loopback; existing DB untouched
+PASS per-project setup, migrations, grants and idempotent rerun
+PASS real PostgreSQL delayed protection read: old 5s deadline fails, scoped 10s deadline succeeds; no production DB used
+PASS runtime DDL/user creation/history denied; other project role cannot connect
+PASS independent same-account device sessions, alternate entry address, and logout isolation
+PASS public signup member assessment/retest/history, admin isolation, SSRF protection, role injection rejection, hashed password, duplicate safety and rate limits
+PASS account bootstrap, login, hashed sessions, dashboard
+PASS general member scan input validation and AI ownership enforcement
+PASS metadata SSRF attempt denied by live API
+PASS streamed SSRF rejection, real stage event and no saved result
+PASS persistent advice reuse, token usage storage, concurrent generation exclusion, failed lease release and cache expiry
+PASS failed AI request refund, concurrent budget limit, non-inflating rejections and reset-window isolation
+PASS duplicate migration archive, stable-ID overwrite, updated timestamp, concurrent writes, failed-write preservation and archive isolation
+PASS account-scoped results/counts/events, same-host independent overwrite, no owner reassignment, and cross-account AI ID rejection even for admin
+PASS AI disabled without key; no external API call
+PASS public-sharing profile blocks self-registration before account creation
+PASS registered general member configured AI advice/cache and denial of another account scan; local provider only
+PASS complete AI route with local-only provider: token usage, cache avoids calls, quota fallback and cross-language cooldown
+PASS bounded decoy event persisted
+PASS account login rate limit
+PASS session expiry enforced
+PASS logout revokes session
+PASS actual peer IP blocks, forged IP headers ignored, Retry-After and no strike inflation during block
+PASS expiry unlock, concurrent violations count once per cycle, five temporary blocks and sixth-offense persistent blacklist
+PASS local administrator recovery and audited unblock
+PASS replication/RLS-bypass runtime privileges are rejected by readiness/grant checks
+PASS public-target metadata and administrator-only IP disclosure
+PASS administrator-only IP release: guest/member/cross-Origin/actor-injection rejection, atomic reset, actor/time/target-hash audit and duplicate safety
+PASS real-DB account attribution: forged/expired/duplicate identity rejected, concurrent strikes, sixth-offense ban, session revocation, login denial, admin-only release/audit/rollback and fresh-login recovery
+PASS readiness confirms migrated least-privilege runtime
+PASS button-only landing, dedicated category pages, direct-link authentication, results page, unknown route 404 and preserved classic web entry
+PASS invalid offline configuration gives input-specific guidance and preserves the previous successful run
+PASS macOS/mobile summary API persistence, self-report labels, owner isolation and raw-field rejection
+PASS modular HTTP assessments: general member config/file summary assessment, required consent, guest denial, owner-only assets/history/keys, redaction and immutable results
+PASS original upload server recomputation/hash, forged summary rejection, unchanged history, no raw persistence and account isolation
+PASS general customer VMware/GNS3 pages, assessment APIs, warning-to-pass retest, private-field redaction and owner isolation
+PASS registered general member linux.ssh linux: original/config assessment, hash, same-asset retest, own history and cross-account denial
+INFO general-member configured request budget reached; waiting one minute without changing limits
+PASS registered general member windows.policy windows: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS registered general member application.pe windows-pe: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS registered general member application.macho macos-macho: original/config assessment, hash, same-asset retest, own history and cross-account denial
+INFO general-member configured request budget reached; waiting one minute without changing limits
+PASS registered general member application.package android: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS registered general member application.package ios: original/config assessment, hash, same-asset retest, own history and cross-account denial
+INFO general-member configured request budget reached; waiting one minute without changing limits
+PASS registered general member application.apk android: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS registered general member virtualization.vmx vmware: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS registered general member network.gns3 gns3: original/config assessment, hash, same-asset retest, own history and cross-account denial
+PASS 30-day API filtering, private backup, authenticated maintenance, atomic rollback, idempotent archive, owner isolation and stable asset revival
+PASS production role setup, existing-file protection, account hash/result copy, no copied sessions and non-empty target rejection
+PASS administrative password recovery, rollback on partial failure, missing-user refusal, role/result preservation, session and login-limit invalidation
+PASS managed-provider schema, forced-viewer registration, guarded upsert and cache SQL on disposable DB (provider ACL limitations remain)
+Disposable cluster stopped; test data remains in the isolated test directory for inspection.

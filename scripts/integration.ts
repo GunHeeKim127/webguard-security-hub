@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { mkdtemp,mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import { randomBytes,randomUUID } from 'node:crypto';
+import { randomBytes,randomUUID,createHash } from 'node:crypto';
 import { Pool } from 'pg';
 import assert from 'node:assert/strict';
 import {cachedAdvice,adviceKey} from '../lib/advice-cache';
@@ -17,6 +17,7 @@ import {resetAccountPassword} from './support/reset-account-password';
 import {saveAssessment} from '../lib/assessment/store';
 import {protectionQuery} from '../lib/protection-query';
 import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
+import {vercelProtection} from '../lib/vercel-protection';
 const exec=promisify(execFile),bin=process.env.PG_BIN??'C:/Program Files/PostgreSQL/15/bin';
 // Windows PostgreSQL can reject non-ASCII checkout paths during initdb.
 // Keep disposable cluster data in the OS temp directory, separate from real DBs.
@@ -42,7 +43,7 @@ try{
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'10');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'12');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  // Reproduce an upstream read lasting over the general 5s client deadline.
  // Locks exist only in this disposable DB; no production writes or traffic.
@@ -178,13 +179,19 @@ try{
   assert.equal((await projectAdmin.query("SELECT result FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].result.status,204);
   await assert.rejects(isolatedWriter.query('UPDATE scans SET user_id=$1 WHERE id=$2',[actor,otherScanId]),{code:'42501'});
  }finally{await isolatedWriter.end();}
- await projectAdmin.query("INSERT INTO events(category,user_id) VALUES('private_a',$1),('private_b',$2),('legacy_unknown',NULL)",[actor,otherActor]);
+
+ const eventBaselineA=await (await call('/api/dashboard','GET',undefined,admin)).json(),eventBaselineB=await (await call('/api/dashboard','GET',undefined,analyst)).json();
+ const otherCount=(value:any)=>value.events.find((e:any)=>e.category==='other')?.count??0;
+ const eventTimeA=new Date(Date.now()+1000).toISOString(),eventTimeB=new Date(Date.now()+2000).toISOString(),eventTimeNull=new Date(Date.now()+3000).toISOString();
+ await projectAdmin.query("INSERT INTO events(category,user_id,created_at) VALUES('private_a',$1,$3),('private_b',$2,$4),('private_b',$2,$4),('legacy_unknown',NULL,$5)",[actor,otherActor,eventTimeA,eventTimeB,eventTimeNull]);
  const aData=await (await call('/api/dashboard','GET',undefined,admin)).json(),bData=await (await call('/api/dashboard','GET',undefined,analyst)).json(),vData=await (await call('/api/dashboard','GET',undefined,viewer)).json();
  assert.equal(aData.scans.length,3);assert.equal(aData.overview.savedCount,3);assert(!aData.scans.some((s:any)=>s.id===otherScanId||s.hostname==='private-only.example'));
  assert.equal(bData.scans.length,2);assert.equal(bData.overview.savedCount,2);assert(bData.scans.some((s:any)=>s.id===otherScanId));assert.equal(vData.scans.length,0);assert.equal(vData.overview.savedCount,0);
- assert(aData.events.some((e:any)=>e.category==='private_a'));assert(!aData.events.some((e:any)=>['private_b','legacy_unknown'].includes(e.category)));
- assert(bData.events.some((e:any)=>e.category==='private_b'));assert(!bData.events.some((e:any)=>['private_a','legacy_unknown'].includes(e.category)));
- assert(!aData.recentEvents.some((e:any)=>['private_b','legacy_unknown'].includes(e.category)));assert(!bData.recentEvents.some((e:any)=>['private_a','legacy_unknown'].includes(e.category)));
+ assert.equal(otherCount(aData),otherCount(eventBaselineA)+1);assert.equal(otherCount(bData),otherCount(eventBaselineB)+2);
+ for(const data of [aData,bData,vData])for(const value of ['private_a','private_b','legacy_unknown'])assert(!JSON.stringify(data).includes(value));
+ assert(aData.recentEvents.some((e:any)=>e.category==='other'&&e.created_at===eventTimeA));assert(!aData.recentEvents.some((e:any)=>[eventTimeB,eventTimeNull].includes(e.created_at)));
+ assert(bData.recentEvents.some((e:any)=>e.category==='other'&&e.created_at===eventTimeB));assert(!bData.recentEvents.some((e:any)=>[eventTimeA,eventTimeNull].includes(e.created_at)));
+ assert(!vData.recentEvents.some((e:any)=>[eventTimeA,eventTimeB,eventTimeNull].includes(e.created_at)));
  assert.equal((await call('/api/ai','POST',{scanId:otherScanId},admin)).status,404);
  const foreignAdminScan=(await projectAdmin.query("SELECT id FROM scans WHERE user_id=$1 AND hostname='owned.example'",[actor])).rows[0].id;
  assert.equal((await call('/api/ai','POST',{scanId:foreignAdminScan},analyst)).status,404);
@@ -212,8 +219,15 @@ try{
   const cached=await (await requestAdvice('ko')).json();assert.equal(cached.source,'cache');assert.equal(providerCalls,1);
   const foreign=await fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:admin,'Content-Type':'application/json'},body:JSON.stringify({scanId:otherScanId})});assert.equal(foreign.status,404);assert.equal(providerCalls,1);
   const otherAdvice=await fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:analyst+'; wg_locale=ko','Content-Type':'application/json'},body:JSON.stringify({scanId:otherScanId})});assert.equal(otherAdvice.status,200);assert.equal((await otherAdvice.json()).source,'ai');assert.equal(providerCalls,2);
-  quotaMode=true;const fallback=await (await requestAdvice('ja')).json();assert.equal(fallback.source,'local');assert.equal(fallback.reasonCode,'AI_QUOTA_EXCEEDED');assert(fallback.advice.length>0);assert.equal(providerCalls,3);
-  const cooldown=await (await requestAdvice('es')).json();assert.equal(cooldown.source,'local');assert.equal(cooldown.reasonCode,'AI_QUOTA_EXCEEDED');assert.equal(providerCalls,3);
+  const memberAiId=(await projectAdmin.query("SELECT id FROM users WHERE email='new@example.test'")).rows[0].id;
+  const memberAiScan=await saveScan((sql,values)=>projectAdmin.query(sql,values),memberAiId,'member-ai.example',{status:200,checks:[{header:'content-security-policy',present:true}]});
+  const memberAdvice=()=>fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:newCookie+'; wg_locale=ko','Content-Type':'application/json'},body:JSON.stringify({scanId:memberAiScan})});
+  const memberAdviceFirst=await memberAdvice();assert.equal(memberAdviceFirst.status,200);assert.equal((await memberAdviceFirst.json()).source,'ai');assert.equal(providerCalls,3);
+  assert.equal((await (await memberAdvice()).json()).source,'cache');assert.equal(providerCalls,3);
+  assert.equal((await fetch(adviceBase+'/api/ai',{method:'POST',headers:{origin:adviceBase,cookie:newCookie,'Content-Type':'application/json'},body:JSON.stringify({scanId})})).status,404);
+  console.log('PASS registered general member configured AI advice/cache and denial of another account scan; local provider only');
+  quotaMode=true;const fallback=await (await requestAdvice('ja')).json();assert.equal(fallback.source,'local');assert.equal(fallback.reasonCode,'AI_QUOTA_EXCEEDED');assert(fallback.advice.length>0);assert.equal(providerCalls,4);
+  const cooldown=await (await requestAdvice('es')).json();assert.equal(cooldown.source,'local');assert.equal(cooldown.reasonCode,'AI_QUOTA_EXCEEDED');assert.equal(providerCalls,4);
   console.log('PASS complete AI route with local-only provider: token usage, cache avoids calls, quota fallback and cross-language cooldown');
  }finally{adviceServer.kill();provider.closeAllConnections();await new Promise<void>(resolve=>provider.close(()=>resolve()));}
 
@@ -253,13 +267,73 @@ try{
  await projectAdmin.query("INSERT INTO ip_blocks(address,strikes,blacklisted,blocked_until,last_reason) VALUES('198.51.100.99',1,false,now()+interval '5 minutes','probe')");
  const newAdmin=await login('admin'),newViewer=await login('viewer');
  const adminDefense=await (await call('/api/dashboard','GET',undefined,newAdmin)).json(),viewerDefense=await (await call('/api/dashboard','GET',undefined,newViewer)).json();
- assert.equal(adminDefense.overview.targetPolicy,'public');assert(adminDefense.ipBlocks.some((block:any)=>block.address==='198.51.100.99'));
+ assert.equal(adminDefense.overview.targetPolicy,'public');assert(!JSON.stringify(adminDefense).includes('198.51.100.99'));assert(!JSON.stringify(adminDefense).includes('admin@example.test'));assert(!Object.hasOwn(adminDefense.user,'id'));assert(adminDefense.ipBlocks.every((block:any)=>block.blockId&&block.address==='***.***.***.***'));
  assert.equal(Object.hasOwn(viewerDefense,'ipBlocks'),false);console.log('PASS public-target metadata and administrator-only IP disclosure');
+ const ipReference=(await projectAdmin.query("SELECT management_id FROM ip_blocks WHERE address='198.51.100.99'")).rows[0].management_id;
+ const releaseBody={action:'release',blockId:ipReference};
+ assert.equal((await call('/api/admin/ip-blocks','POST',releaseBody)).status,401);
+ assert.equal((await call('/api/admin/ip-blocks','POST',releaseBody,newViewer)).status,403);
+ assert.equal((await fetch(base+'/api/admin/ip-blocks',{method:'POST',headers:{origin:'https://evil.example','Content-Type':'application/json',cookie:newAdmin},body:JSON.stringify(releaseBody)})).status,403);
+ assert.equal((await call('/api/admin/ip-blocks','POST',{...releaseBody,actorId:'forged'},newAdmin)).status,400);
+ assert.equal((await call('/api/admin/ip-blocks','POST',releaseBody,newAdmin)).status,200);
+ const releasedBlock=(await projectAdmin.query("SELECT strikes,blacklisted,blocked_until,last_reason FROM ip_blocks WHERE address='198.51.100.99'")).rows[0];
+ assert.deepEqual(releasedBlock,{strikes:0,blacklisted:false,blocked_until:null,last_reason:'manual_reset'});
+ const audit=(await projectAdmin.query("SELECT category,user_id,created_at FROM events WHERE category LIKE 'ip_unblocked_target:%'")).rows;assert.equal(audit.length,1);assert.equal(audit[0].user_id,actor);assert(audit[0].created_at);assert(/^ip_unblocked_target:[a-f0-9]{64}$/.test(audit[0].category));
+ assert.equal((await call('/api/admin/ip-blocks','POST',releaseBody,newAdmin)).status,404);
+ assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category LIKE 'ip_unblocked_target:%'")).rows[0].count,'1');
+ await projectAdmin.query("INSERT INTO ip_blocks(address,strikes,blacklisted,blocked_until,last_reason) VALUES('203.0.113.55',6,true,NULL,'probe')");
+ const permanentIpReference=(await projectAdmin.query("SELECT management_id FROM ip_blocks WHERE address='203.0.113.55'")).rows[0].management_id;
+ // An audit-write failure must roll back the reset, in this disposable DB only.
+ await projectAdmin.query('REVOKE INSERT ON public.events FROM webguard_hub_dev_app');
+ try{assert.equal((await call('/api/admin/ip-blocks','POST',{action:'release',blockId:permanentIpReference},newAdmin)).status,503);}finally{await projectAdmin.query('GRANT INSERT ON public.events TO webguard_hub_dev_app');}
+ assert.equal((await projectAdmin.query("SELECT blacklisted FROM ip_blocks WHERE address='203.0.113.55'")).rows[0].blacklisted,true);
+ assert.equal((await call('/api/admin/ip-blocks','POST',{action:'release',blockId:permanentIpReference},newAdmin)).status,200);
+ assert.equal((await projectAdmin.query("SELECT blacklisted FROM ip_blocks WHERE address='203.0.113.55'")).rows[0].blacklisted,false);
+ assert.equal((await call('/api/admin/ip-blocks','POST',{action:'release',address:'198.51.100.99'},newAdmin)).status,400);
+ console.log('PASS administrator-only IP release: guest/member/cross-Origin/actor-injection rejection, atomic reset, actor/time/target-hash audit and duplicate safety');
+ await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:'blockedaccount@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:'viewer'});
+ const accountCookie=await login('blockedaccount');const blockedId=(await projectAdmin.query("SELECT id FROM users WHERE email='blockedaccount@example.test'")).rows[0].id;
+ assert.equal((await call('/api/dashboard','GET',undefined,accountCookie+'; '+accountCookie)).status,401);
+ const threatPool=new Pool({connectionString:env.DATABASE_URL});projectPools.push(threatPool);
+ const simulatedThreat=(address:string,cookie?:string)=>vercelProtection(new Request('https://owned.example/.env?userId='+blockedId,{headers:{'x-real-ip':address,...(cookie?{cookie}:{})}}),(sql,values)=>threatPool.query(sql,values),{VERCEL:'1'});
+ await simulatedThreat('192.0.2.101','wg_session='+'f'.repeat(64));
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].count,'0');
+ await projectAdmin.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()-interval '1 minute')",[tokenHash('e'.repeat(64)),blockedId]);
+ await simulatedThreat('192.0.2.102','wg_session='+'e'.repeat(64));
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].count,'0');
+ await Promise.all(Array.from({length:4},()=>simulatedThreat('192.0.2.110',accountCookie)));
+ assert.equal((await projectAdmin.query('SELECT strikes FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].strikes,1);
+ for(let strike=2;strike<=6;strike++){
+  assert.equal((await simulatedThreat('192.0.2.'+(110+strike),accountCookie))?.status,429);
+  const row=(await projectAdmin.query('SELECT strikes,blacklisted FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0];assert.equal(row.strikes,strike);assert.equal(row.blacklisted,strike===6);
+ }
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM sessions WHERE user_id=$1',[blockedId])).rows[0].count,'0');
+ assert.equal((await call('/api/dashboard','GET',undefined,accountCookie)).status,401);
+ assert.equal((await call('/api/login','POST',{email:'blockedaccount@example.test',password})).status,401);
+ const accountReference=(await projectAdmin.query('SELECT management_id FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].management_id;
+ const accountAdmin=(await (await call('/api/dashboard','GET',undefined,newAdmin)).json()).accountBlocks;assert(accountAdmin.some((row:any)=>row.blockId===accountReference&&row.blacklisted));assert(!JSON.stringify(accountAdmin).includes(blockedId));assert(!JSON.stringify(accountAdmin).includes('blockedaccount@example.test'));
+ assert.equal(Object.hasOwn(await (await call('/api/dashboard','GET',undefined,newViewer)).json(),'accountBlocks'),false);
+ const accountRelease={action:'release',blockId:accountReference};
+ assert.equal((await call('/api/admin/account-blocks','POST',accountRelease)).status,401);
+ assert.equal((await call('/api/admin/account-blocks','POST',accountRelease,newViewer)).status,403);
+ assert.equal((await call('/api/admin/account-blocks','POST',{...accountRelease,actorId:'forged'},newAdmin)).status,400);
+ assert.equal((await fetch(base+'/api/admin/account-blocks',{method:'POST',headers:{origin:'https://evil.example','Content-Type':'application/json',cookie:newAdmin},body:JSON.stringify(accountRelease)})).status,403);
+ await projectAdmin.query('REVOKE INSERT ON public.events FROM webguard_hub_dev_app');
+ try{assert.equal((await call('/api/admin/account-blocks','POST',accountRelease,newAdmin)).status,503);}finally{await projectAdmin.query('GRANT INSERT ON public.events TO webguard_hub_dev_app');}
+ assert.equal((await projectAdmin.query('SELECT blacklisted FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].blacklisted,true);
+ assert.equal((await call('/api/admin/account-blocks','POST',accountRelease,newAdmin)).status,200);
+ assert.equal((await call('/api/dashboard','GET',undefined,accountCookie)).status,401);
+ const accountFresh=await login('blockedaccount');assert.equal((await call('/api/dashboard','GET',undefined,accountFresh)).status,200);
+ assert.equal((await projectAdmin.query('SELECT strikes FROM account_blocks WHERE user_id=$1',[blockedId])).rows[0].strikes,0);
+ const accountAudit=(await projectAdmin.query("SELECT user_id,created_at FROM events WHERE category LIKE 'account_unblocked_target:%'")).rows;assert.equal(accountAudit.length,1);assert.equal(accountAudit[0].user_id,actor);assert(accountAudit[0].created_at);
+ assert.equal((await call('/api/admin/account-blocks','POST',accountRelease,newAdmin)).status,404);
+ assert.equal((await call('/api/admin/account-blocks','POST',{action:'release',userId:blockedId},newAdmin)).status,400);
+ console.log('PASS real-DB account attribution: forged/expired/duplicate identity rejected, concurrent strikes, sixth-offense ban, session revocation, login denial, admin-only release/audit/rollback and fresh-login recovery');
  assert.equal((await call('/api/ready')).status,200);console.log('PASS readiness confirms migrated least-privilege runtime');
  assert.equal((await call('/workbench','GET',undefined,newAdmin)).status,200);
  const homeEntry=await fetch(base+'/',{headers:{cookie:newAdmin},redirect:'manual'});assert.equal(homeEntry.status,307);assert.equal(homeEntry.headers.get('location'),'/workbench');
  const classicEntry=await call('/?view=web','GET',undefined,newAdmin);assert.equal(classicEntry.status,200);
- const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
+ const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();assert(!platformHtml.includes('admin@example.test'));assert(!platformHtml.includes(actor));for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
  assert(!platformHtml.includes('id="asset-inspector"'));assert(!platformHtml.includes('id="assessment-results"'));
  for(const href of ['/?view=web','/workbench/mobile','/workbench/endpoint','/workbench/results'])assert(platformHtml.includes('href="'+href+'"'));
  for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare'],['virtualization','virtualization.vmx'],['network','network.gns3']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newViewer);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});assert.equal(guest.status,307);assert.equal(guest.headers.get('location'),'/');}
@@ -300,6 +374,18 @@ try{
  assert.equal((await call('/api/assessments','POST',{...machInput,authorized:false},newViewer)).status,400);
  assert.equal((await call('/api/assessments','POST',machInput)).status,401);
  console.log('PASS modular HTTP assessments: general member config/file summary assessment, required consent, guest denial, owner-only assets/history/keys, redaction and immutable results');
+ await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:'integrity@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:'viewer'});const integrityUser=await login('integrity');
+ const originalBytes=await readFile('tests/fixtures/phase2/windows-pe-vulnerable.exe');
+ const originalBody={moduleId:'application.pe',label:'Original integrity',authorized:true,originalUpload:true,base64:originalBytes.toString('base64')};
+ const originalResponse=await call('/api/assessments','POST',originalBody,integrityUser);assert.equal(originalResponse.status,200);const originalSaved=await originalResponse.json();
+ assert.equal(originalSaved.report.integrity.status,'server-recomputed');assert.equal(originalSaved.report.integrity.bytes,originalBytes.length);
+ assert.equal(originalSaved.report.integrity.sha256,(await import('node:crypto')).createHash('sha256').update(originalBytes).digest('hex'));
+ assert.equal((await call('/api/assessments','POST',{...originalBody,snapshot:{source:'local',native:{signature:'valid'}}},integrityUser)).status,400);
+ assert.equal((await call('/api/assessments','POST',{...originalBody,integrity:{status:'server-recomputed'}},integrityUser)).status,400);
+ const originalHistory=await (await call('/api/assessments?assetId='+originalSaved.asset_id,'GET',undefined,integrityUser)).json();assert.equal(originalHistory.runs.length,1);assert.deepEqual(originalHistory.runs[0].report.integrity,originalSaved.report.integrity);
+ assert.equal((await call('/api/assessments?assetId='+originalSaved.asset_id,'GET',undefined,newAdmin)).status,404);
+ assert(!JSON.stringify(originalHistory).includes(originalBody.base64));
+ console.log('PASS original upload server recomputation/hash, forged summary rejection, unchanged history, no raw persistence and account isolation');
  await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:'infra@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:'viewer'});const infraUser=await login('infra');
  const vmxText='config.version = "8"\nvirtualHW.version = "21"\nisolation.tools.copy.disable = "FALSE"\ndisplayName = "PRIVATE_VM_LABEL"';
  const vmxSaved=await call('/api/assessments','POST',{moduleId:'virtualization.vmx',label:'VM settings',text:vmxText,authorized:true},infraUser);assert.equal(vmxSaved.status,200);const vmx=await vmxSaved.json();assert(!JSON.stringify(vmx).includes('PRIVATE_VM_LABEL'));assert(vmx.report.findings.some((f:any)=>f.id==='copy'&&f.status==='warning'));
@@ -310,6 +396,29 @@ try{
  assert.equal((await call('/api/assessments','POST',{moduleId:'network.gns3',label:'bad',text:'{}',authorized:true},infraUser)).status,400);
  const vmxHistory=await (await call('/api/assessments?assetId='+vmx.asset_id,'GET',undefined,infraUser)).json();assert.equal(vmxHistory.runs.length,2);
  console.log('PASS general customer VMware/GNS3 pages, assessment APIs, warning-to-pass retest, private-field redaction and owner isolation');
+ const memberMatrixLogin=await call('/api/login','POST',{email:'new@example.test',password:signupPassword});assert.equal(memberMatrixLogin.status,200);const memberMatrixCookie=memberMatrixLogin.headers.get('set-cookie')!.split(';')[0];
+ async function memberMatrixPost(payload:Record<string,unknown>){
+  for(let attempt=0;attempt<3;attempt++){
+   const response=await call('/api/assessments','POST',payload,memberMatrixCookie);
+   if(response.status===429){assert.equal((await response.json()).errorCode,'RATE_LIMITED');console.log('INFO general-member configured request budget reached; waiting one minute without changing limits');await new Promise(resolve=>setTimeout(resolve,60000));continue;}
+   assert.equal(response.status,200,await response.clone().text());return response.json();
+  }throw new Error('General member did not recover after request-limit window');
+ }
+ const memberCases=[['linux.ssh','linux','sshd_config',5],['windows.policy','windows','json',6],['application.pe','windows-pe','exe',3],['application.macho','macos-macho','macho',3],['application.package','android','apk',3],['application.package','ios','ipa',1],['application.apk','android','apk',0],['virtualization.vmx','vmware','vmx',6],['network.gns3','gns3','gns3',2]] as const;
+ for(const [moduleId,name,extension,warnings] of memberCases){
+  let memberAsset='';
+  for(const variant of ['vulnerable','remediated']){
+   const bytes=await readFile(`tests/fixtures/phase2/${name}-${variant}.${extension}`),payload:Record<string,unknown>={moduleId,label:'Member matrix '+moduleId+' '+name,authorized:true};
+   if(moduleId.startsWith('application.')){payload.base64=bytes.toString('base64');if(moduleId!=='application.apk')payload.originalUpload=true;}else payload.text=bytes.toString('utf8');
+   const saved=await memberMatrixPost(payload);assert.equal(saved.report.integrity.status,'server-recomputed');assert.equal(saved.report.integrity.sha256,createHash('sha256').update(bytes).digest('hex'));
+   assert.equal(saved.report.findings.filter((f:any)=>f.status==='warning').length,variant==='vulnerable'?warnings:0);
+   if(memberAsset)assert.equal(saved.asset_id,memberAsset);memberAsset=saved.asset_id;
+  }
+  const history=await (await call('/api/assessments?assetId='+memberAsset,'GET',undefined,memberMatrixCookie)).json();assert.equal(history.runs.length,2);assert.equal(history.runs[0].report.findings.filter((f:any)=>f.status==='warning').length,0);
+  assert(!Object.hasOwn(history.user,'id'));assert(!JSON.stringify(history.user).includes('new@example.test'));
+  assert.equal((await call('/api/assessments?assetId='+memberAsset,'GET',undefined,newAdmin)).status,404);assert.equal((await call('/api/assessments?assetId='+memberAsset,'GET',undefined,newViewer)).status,404);
+  console.log('PASS registered general member '+moduleId+' '+name+': original/config assessment, hash, same-asset retest, own history and cross-account denial');
+ }
  // Archive validation touches only this disposable database. Backdate fixture
  // records, verify API filtering BEFORE maintenance, then prove atomic moves.
  const oldScan=randomUUID(),failedScan=randomUUID(),recentScan=randomUUID();
@@ -373,6 +482,8 @@ try{
   await managed.query(await readFile('sql/migrations/prisma-postgres/004_local_file_inspection.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/005_diagnostic_retention.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/006_infrastructure_modules.sql','utf8'));
+  await managed.query(await readFile('sql/migrations/prisma-postgres/007_account_blocks.sql','utf8'));
+  await managed.query(await readFile('sql/migrations/prisma-postgres/008_private_management_references.sql','utf8'));
   await managed.query("UPDATE scans SET created_at=now()-interval '31 days' WHERE id=$1",[legacyScan]);
   assert.equal((await managed.query('SELECT public.archive_diagnostics_30d() AS result')).rows[0].result.moved,1);
   assert.equal((await managed.query('SELECT count(*) FROM webguard_archive.diagnostic_records WHERE source_id=$1',[legacyScan])).rows[0].count,'1');

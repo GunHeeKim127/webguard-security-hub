@@ -1,6 +1,12 @@
 # VELTHARA / WebGuard Security Hub — 프로젝트 목표·진행 상태·작업 인계
 
-갱신일: 2026-10-23 (한국 시간)
+갱신일: 2026-10-27 (한국 시간)
+
+최신 후속: 파일별 서버 수신 바이트/UTF-8 텍스트 해시와 재분석 근거, 미검증 요약 구분, 본문/요청 제한, 웹 기술 관찰과 PHP2Shell 등 일부 공식 CVE 대조 추가. 127개 회귀·타입·최종 빌드 통과. docs/PROJECT_REVIEW_2026-10-27.md 13~15절 및 docs/WEB_TECHNOLOGY_ADVISORIES.md 참조. 전체 언어/CVE·기기 원본 인증·운영 배포 완료는 아니다.
+
+Linux 후속: 사용자 제공 Kali 2026.1/OpenSSH 10.3p1 콘솔 출력의 sshd -t 종료 0과 기본 유효 다섯 값을 엔진에 대조했다. 경고 3개·통과 2개 일치. 아래 결과 대기 상태 이후 갱신이며 원본 Include/조건별 -T -C·다른 기기 저장 검증은 남았다. 검토 보고서 12.4절 참조.
+
+2026-10-27 실환경 후속: 소스 e195d85에서 117개 회귀, 실제 VMX 3개·GNS3 2개·Windows PE 처리를 확인했다. VMware/GNS3/Tera Term 설치와 Kali SSH 세션을 확인했으며 Linux 실효 설정은 결과 대기 중이다. Windows 독립 서명 Valid와 로컬 도구 unknown의 환경 차이, 정책 exporter 차단은 미해결이다. 상세는 docs/PROJECT_REVIEW_2026-10-27.md 12절을 따른다.
 
 확정 보관 정책: 지원되는 진단은 모든 일반 가입 고객이 자기 계정으로 이용한다. 진단 결과·실행 이력은 최근 30일만 고객 화면/API에 표시하고, 지난 웹 결과·모듈 실행·집계·진단 이벤트는 `webguard_archive.diagnostic_records`에 소유 계정과 함께 이관한다. 영구 삭제하지 않는다. 같은 모듈 자산의 식별 ID는 유지하며 새 진단으로 다시 표시한다. 상세: docs/DATA_RETENTION.md. 운영 Prisma migration 005 적용 및 Cron 인증 설정 완료。
 

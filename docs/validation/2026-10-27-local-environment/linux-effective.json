@@ -1,0 +1,53 @@
+{
+  "recordedAt": "2026-10-27T07:20:42.917Z",
+  "source": "e195d85",
+  "provenance": "User supplied console output from existing Kali SSH session; not independently collected by agent",
+  "os": "Kali GNU/Linux Rolling 2026.1",
+  "openssh": "OpenSSH_10.3p1 Debian-1",
+  "openssl": "3.5.5 27 Jan 2026",
+  "sshdSyntaxExit": 0,
+  "effectiveValues": {
+    "maxauthtries": 6,
+    "permitrootlogin": "yes",
+    "pubkeyauthentication": "yes",
+    "passwordauthentication": "yes",
+    "permitemptypasswords": "no"
+  },
+  "includeObserved": true,
+  "matchObservedInSuppliedOutput": false,
+  "conditionalMatchFullyExcluded": false,
+  "moduleVersion": "1.0.0",
+  "findings": [
+    {
+      "id": "permitrootlogin",
+      "status": "warning"
+    },
+    {
+      "id": "passwordauthentication",
+      "status": "warning"
+    },
+    {
+      "id": "permitemptypasswords",
+      "status": "pass"
+    },
+    {
+      "id": "pubkeyauthentication",
+      "status": "pass"
+    },
+    {
+      "id": "maxauthtries",
+      "status": "warning"
+    }
+  ],
+  "includeBoundary": {
+    "kind": "constructed redacted parser boundary, not original config",
+    "allNotAssessed": true
+  },
+  "limits": [
+    "No execution timestamp supplied by guest",
+    "No full original configuration inspection",
+    "No sshd -T -C connection-specific check",
+    "No live configuration change or restart",
+    "No production upload or account workflow test"
+  ]
+}

@@ -33,6 +33,14 @@ test('missing security headers are reported without treating presence as a guara
 test('CSRF exact origin and missing origin rejection',()=>{process.env.APP_ORIGIN='http://localhost:3000';for(const origin of ['https://evil.example','null','http://localhost:3000.evil.example',''])assert.throws(()=>sameOrigin(new Request('http://localhost:3000',{headers:origin?{origin}:{}})));sameOrigin(new Request('http://localhost:3000',{headers:{origin:'http://localhost:3000'}}));});
 test('RBAC actual authorization policy fails closed',()=>{assert.equal(roleAllowed('viewer',['admin','analyst']),false);assert.equal(roleAllowed('admin',['admin','analyst']),true);assert.equal(roleAllowed('unknown',['admin','analyst','viewer']),false);});
 test('JSON limit enforces actual streamed size and parsing',async()=>{const request=(value:string,type='application/json')=>new Request('http://localhost',{method:'POST',body:value,headers:{'Content-Type':type}});await assert.rejects(body(request('x'.repeat(4097))),{status:413});await assert.rejects(body(request('{broken')),{status:400});await assert.rejects(body(request('{}','text/plain')),{status:415});assert.deepEqual(await body(request('{"ok":true}')),{ok:true});});
+
+test('JSON upload rejects invalid UTF-8 and cancels a stalled request stream',async()=>{
+ const malformed=new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:new Uint8Array([123,34,120,34,58,34,255,34,125])});
+ await assert.rejects(body(malformed),{status:400});
+ let cancelled=false;const stream=new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode('{'));},cancel(){cancelled=true;}});
+ const request=new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:stream,duplex:'half'} as RequestInit);
+ await assert.rejects(body(request,4096,20),{status:408});assert(cancelled);
+});
 test('honeypot paths detect probes without classifying normal users',()=>{for(const p of ['/.env','/.git/config','/wp-admin','/wp-login.php'])assert.equal(suspiciousPath(p),true);assert.equal(suspiciousPath('/dashboard'),false);});
 
 test('JSON media type is exact, case-insensitive and permits charset parameters',async()=>{

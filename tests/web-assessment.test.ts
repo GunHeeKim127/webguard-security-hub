@@ -62,7 +62,7 @@ test('transport uses one bounded pinned HEAD with certificate verification and r
  t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4}]);
  const transport=t.mock.method(https,'request',(_url:URL,options:any,callback:Function)=>{
   assert.equal(options.rejectUnauthorized,true);assert.equal(options.minVersion,'TLSv1.2');assert.equal(options.maxHeaderSize,16384);assert.equal(options.headers.Origin,corsProbeOrigin);assert.equal(options.headers.Cookie,undefined);assert.equal(options.headers.Authorization,undefined);
-  const req=new EventEmitter() as any;req.end=()=>{callback({statusCode:200,headers:{'set-cookie':['secret=hidden; Secure; HttpOnly; SameSite=Lax']},socket:{authorized:true,getProtocol:()=> 'TLSv1.3',getPeerCertificate:()=>({valid_to:'Jan 1 00:00:00 2030 GMT'})},destroy(){}});req.emit('close');};req.destroy=(e:Error)=>{req.emit('error',e);req.emit('close');};return req;
+  const req=new EventEmitter() as any;req.end=()=>{callback({statusCode:200,headers:{'x-powered-by':'PHP/8.4.26','set-cookie':['secret=hidden; Secure; HttpOnly; SameSite=Lax']},socket:{authorized:true,getProtocol:()=> 'TLSv1.3',getPeerCertificate:()=>({valid_to:'Jan 1 00:00:00 2030 GMT'})},destroy(){}});req.emit('close');};req.destroy=(e:Error)=>{req.emit('error',e);req.emit('close');};return req;
  });
  const result=await scan('https://owned.example',['owned.example']);assert.equal(result.assessmentVersion,2);assert.equal(result.assessment?.find(f=>f.id==='tls')?.status,'pass');assert(!JSON.stringify(result).includes('hidden'));assert.equal(transport.mock.callCount(),1);
 });
@@ -70,4 +70,46 @@ test('TLS connection failure rejects scan without insecure retry',async t=>{
  t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4}]);
  const transport=t.mock.method(https,'request',()=>{const req=new EventEmitter() as any;req.end=()=>{queueMicrotask(()=>{req.emit('error',new Error('CERT_HAS_EXPIRED'));req.emit('close');});};return req;});
  await assert.rejects(scan('https://owned.example',['owned.example']),/CERT_HAS_EXPIRED/);assert.equal(transport.mock.callCount(),1);
+});
+import {observeTechnology,technologyFindings} from '../lib/web-technology';
+import {webCompare} from '../lib/assessment/web-module';
+
+test('PHP2Shell version hints respect each fixed branch and never certify a banner',()=>{
+ for(const [version,vulnerable] of [['8.2.34',true],['8.2.35',false],['8.3.35',true],['8.3.36',false],['8.4.26',true],['8.4.27',false],['8.5.11',true],['8.5.12',false]] as const){
+  const result=technologyFindings(observeTechnology({'x-powered-by':'PHP/'+version},200),'en');
+  const cves=result.filter(f=>f.id.includes('CVE-2026-10961'));assert.equal(cves.length,2);assert(cves.every(f=>f.status===(vulnerable?'warning':'info')));assert(result.every(f=>f.status!=='pass'));
+ }
+ for(const banner of ['PHP','PHP/8.4.27-vendor1','PHP/7.4.33','PHP/8.6.0'])assert(technologyFindings(observeTechnology({'x-powered-by':banner},200),'ko').filter(f=>f.id.includes('CVE-')).every(f=>f.status==='not_assessed'));
+});
+test('technology observation keeps fixed hints only and treats hidden/error pages as unknown',()=>{
+ const headers={'x-powered-by':'PHP/8.4.26 private-token-example','set-cookie':['PRIVATE_SESSION=secret; HttpOnly'],'server':'private-host-name'};
+ const data=observeTechnology(headers,200);assert.equal(data.products[0].product,'PHP');assert(!JSON.stringify(data).includes('private'));assert(!JSON.stringify(data).includes('secret'));
+ assert.equal(observeTechnology(headers,302).products.length,0);assert.equal(observeTechnology(headers,500).products.length,0);
+ const hidden=technologyFindings(observeTechnology({},200),'en');assert.equal(hidden.length,1);assert.equal(hidden[0].status,'not_assessed');
+ assert.equal(observeTechnology({'x-powered-by':'PHP/8.4.27','server':'PHP/8.4.26'},200).products[0].version,null);
+ const next=technologyFindings(observeTechnology({'x-powered-by':'Next.js','vary':'RSC, Accept-Encoding'},200),'en');assert(next.some(f=>f.id.includes('CVE-2025-55182')&&f.status==='not_assessed'));
+});
+test('framework rules distinguish PHP, Django, Spring and incomplete language coverage',()=>{
+ const cases=[['Django/5.2.7','CVE-2025-64459','warning'],['Django/5.2.8','CVE-2025-64459','info'],['Spring/5.3.17','CVE-2022-22965','warning'],['Spring/5.3.18','CVE-2022-22965','info']] as const;
+ for(const [banner,cve,status]of cases)assert(technologyFindings(observeTechnology({'x-powered-by':banner},200),'en').some(f=>f.id.includes(cve)&&f.status===status));
+ for(const banner of ['ASP.NET','Express','Rails','Go'])assert(technologyFindings(observeTechnology({'x-powered-by':banner},200),'en').some(f=>f.id.includes('advisory:')&&f.status==='not_assessed'));
+});
+
+test('desktop/mobile comparison includes differing technology hints',async t=>{
+ t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4}]);
+ t.mock.method(https,'request',(_url:URL,options:any,callback:Function)=>{
+  const req=new EventEmitter() as any;req.end=()=>{callback({statusCode:200,headers:{'x-powered-by':options.headers['User-Agent'].includes('Mobile')?'Django/5.2.7':'PHP/8.4.26'},socket:{authorized:true,getProtocol:()=> 'TLSv1.3',getPeerCertificate:()=>({valid_to:'Jan 1 00:00:00 2030 GMT'})},destroy(){}});req.emit('close');};req.destroy=(e:Error)=>{req.emit('error',e);req.emit('close');};return req;
+ });
+ const report=await webCompare.scan({moduleId:'web.compare',label:'Mock profile comparison',url:'https://owned.example'},{locale:'en',signal:AbortSignal.timeout(2000)});
+ assert(report.findings.find(f=>f.id==='profile-comparison')?.evidence.includes('check=technology'));
+});
+
+test('legitimate delayed HEAD headers within the bounded budget can complete',async t=>{
+ t.mock.method(dns,'lookup',async()=>[{address:'8.8.8.8',family:4}]);
+ t.mock.method(https,'request',(_url:URL,_options:any,callback:Function)=>{
+  const req=new EventEmitter() as any;let responseTimer:ReturnType<typeof setTimeout>;
+  req.end=()=>{responseTimer=setTimeout(()=>{callback({statusCode:200,headers:{},socket:{authorized:true,getProtocol:()=> 'TLSv1.3',getPeerCertificate:()=>({valid_to:'Jan 1 00:00:00 2030 GMT'})},destroy(){}});req.emit('close');},6500);};
+  req.destroy=(error:Error)=>{clearTimeout(responseTimer);req.emit('error',error);req.emit('close');};return req;
+ });
+ const result=await scan('https://owned.example',['owned.example'],()=>{},AbortSignal.timeout(15000));assert.equal(result.status,200);
 });

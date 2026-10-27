@@ -1,3 +1,4 @@
+import {publicUser,publicEvents} from '../../../lib/public-identity';
 import {randomBytes} from 'node:crypto';
 import {db} from '../../../lib/db';
 import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../../lib/security';
@@ -6,6 +7,7 @@ import {tokenHash} from '../../../lib/password';
 import {assessmentInput} from '../../../lib/assessment/input';
 import {runAssessment,scannerCatalog} from '../../../lib/assessment/registry';
 import {saveAssessment,trafficSignals} from '../../../lib/assessment/store';
+import {authSourceBucket} from '../../../lib/auth-rate-identity';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=40;
@@ -19,10 +21,11 @@ export async function GET(req:Request){try{
   id?db.query("SELECT coalesce(sum(requests),0)::text requests,coalesce(sum(login_failures),0)::text login_failures,coalesce(sum(probes),0)::text probes,coalesce(sum(server_errors),0)::text server_errors FROM public.assessment_traffic WHERE user_id=$1 AND asset_id=$2 AND window_at>=date_trunc('minute',now())-interval '4 minutes'",[user.id,id]):Promise.resolve({rows:[{requests:0,login_failures:0,probes:0,server_errors:0}]}),
   db.query("SELECT category,count(*)::int count FROM public.events WHERE user_id=$1 AND created_at>now()-interval '5 minutes' GROUP BY category",[user.id]),
  ]);
- const counts=traffic.rows[0];return Response.json({user,modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:hub.rows},{headers:{'Cache-Control':'no-store'}});
+ const counts=traffic.rows[0];return Response.json({user:publicUser(user),modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:publicEvents(hub.rows)},{headers:{'Cache-Control':'no-store'}});
  }catch(error){return failure(error,req);}}
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser();await limit('assessment:'+user.id,5,60);
+ await limit(authSourceBucket('assessment',req),60,60);await limit('assessment:global',300,60);
  const data=await body(req,3*1024*1024);
  if(data.action==='rotateTelemetryToken'){
   if(!uuid(data.assetId)||Object.keys(data).some(k=>!['action','assetId'].includes(k)))throw new HttpError(400,'Invalid scan ID');

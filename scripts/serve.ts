@@ -3,7 +3,7 @@ import next from 'next';
 import nextEnv from '@next/env';
 import {Pool} from 'pg';
 import {runtimePoolConfig} from '../lib/runtime-pool-config';
-import {activeBlock,clientAddress,detectThreat,recordThreat,type IpBlock} from '../lib/ingress-guard';
+import {activeBlock,clientAddress,detectThreat,recordThreat,threatSessionHash,type IpBlock} from '../lib/ingress-guard';
 import {requestLocale} from '../lib/request-locale';
 import {defenseText} from '../lib/defense-copy';
 import {randomBytes} from 'node:crypto';
@@ -22,7 +22,7 @@ async function inspect(req:IncomingMessage):Promise<IpBlock|null>{
  const address=clientAddress(req.socket.remoteAddress,headers(req));
  if(!address)throw new Error('Client identity unavailable');
  const block=await activeBlock(query,address);if(block)return block;
- const reason=detectThreat(req.url??'/');return reason?recordThreat(query,address,reason):null;
+ const reason=detectThreat(req.url??'/');return reason?recordThreat(query,address,reason,threatSessionHash(req.headers.cookie)):null;
 }
 function deny(req:IncomingMessage,res:ServerResponse,block:IpBlock|null){
  const locale=requestLocale(headers(req)).locale,code=block?(block.blacklisted?'IP_BLACKLISTED':'THREAT_BLOCKED'):'PROTECTION_UNAVAILABLE';

@@ -1,9 +1,9 @@
 export type AssessmentStatus='pass'|'warning'|'info'|'not_assessed';
 export type Finding={id:string,title:string,status:AssessmentStatus,severity:'info'|'low'|'medium'|'high',evidence:string[],remediation:string,reference?:string};
 export type ModuleId='web.compare'|'linux.ssh'|'windows.policy'|'application.pe'|'application.apk'|'application.macho'|'application.package'|'virtualization.vmx'|'network.gns3';
-export type AssessmentInput={moduleId:ModuleId,label:string,url?:string,text?:string,base64?:string,snapshot?:unknown};
+export type AssessmentInput={moduleId:ModuleId,label:string,url?:string,text?:string,base64?:string,snapshot?:unknown,originalUpload?:true};
 export type AssessmentContext={signal:AbortSignal,locale:'ko'|'en'};
-export type AssessmentReport={schemaVersion:1,moduleId:ModuleId,moduleVersion:string,ruleVersion:string,targetKind:string,findings:Finding[],scope:string[],limitations:string[],observedAt:string};
+export type AssessmentReport={schemaVersion:1,moduleId:ModuleId,moduleVersion:string,ruleVersion:string,targetKind:string,findings:Finding[],scope:string[],limitations:string[],observedAt:string,integrity?:{status:'server-recomputed'|'unverified-summary',sha256?:string,bytes?:number,basis?:'received-file-bytes'|'received-utf8-text'}};
 export interface SecurityScanner{id:ModuleId;version:string;targetKind:string;maxBytes:number;validate(input:AssessmentInput):void;scan(input:AssessmentInput,context:AssessmentContext):Promise<AssessmentReport>;}
 export const pick=(context:AssessmentContext,ko:string,en:string)=>context.locale==='ko'?ko:en;
 export function report(module:SecurityScanner,findings:Finding[],scope:string[],limitations:string[]):AssessmentReport{return {schemaVersion:1,moduleId:module.id,moduleVersion:module.version,ruleVersion:'2026-10-19.1',targetKind:module.targetKind,findings,scope,limitations,observedAt:new Date().toISOString()};}
