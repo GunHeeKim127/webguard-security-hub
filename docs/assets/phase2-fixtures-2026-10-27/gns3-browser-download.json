@@ -1,0 +1,103 @@
+{
+  "format": "velthara-assessment-v1",
+  "asset": {
+    "label": "Review gns3",
+    "moduleId": "network.gns3"
+  },
+  "run": {
+    "id": "3517b366-68c9-4fc5-8abe-f5b2e92de814",
+    "asset_id": "fd641578-613e-46d7-b3c9-c756a4f2e5ad",
+    "report": {
+      "scope": [
+        "GNS3 2.x 프로젝트 JSON의 구조와 명시적 연결 선언"
+      ],
+      "findings": [
+        {
+          "id": "externalBoundary",
+          "title": "외부 연결 노드 선언",
+          "status": "info",
+          "evidence": [
+            "nodes=1",
+            "links=0",
+            "cloudOrNat=0"
+          ],
+          "severity": "info",
+          "remediation": "Cloud/NAT 연결은 실습망을 외부 또는 호스트에 연결할 수 있습니다. 실제 어댑터·라우팅·방화벽을 별도로 확인하세요. 노드가 없다고 격리가 증명되지는 않습니다."
+        },
+        {
+          "id": "consoleBinding",
+          "title": "콘솔 주소의 루프백 제한 선언",
+          "status": "pass",
+          "evidence": [
+            "explicitHosts=1",
+            "nonLoopback=0"
+          ],
+          "severity": "info",
+          "remediation": "콘솔 호스트가 있으면 루프백 제한을 검토하세요. 프로젝트에 없으면 GNS3 서버 설정에서 직접 확인해야 합니다. Telnet 콘솔 형식은 장비의 Telnet 서비스 취약점을 의미하지 않습니다."
+        },
+        {
+          "id": "topologyInventory",
+          "title": "연결 구성 관찰",
+          "status": "info",
+          "evidence": [
+            "nodes=1",
+            "links=0",
+            "unlinkedNodes=1"
+          ],
+          "severity": "info",
+          "remediation": "연결 유무는 구성 정보입니다. 별도 격리 실습에서 의도한 통신과 차단을 확인하세요."
+        },
+        {
+          "id": "devicePolicy",
+          "title": "장비 실효 정책·실제 통신",
+          "status": "not_assessed",
+          "evidence": [
+            "liveProbe=false",
+            "deviceConfigurationRead=false"
+          ],
+          "severity": "info",
+          "remediation": "프로젝트 파일만으로 장비 ACL·OS·암호·실제 포트·라우팅이나 취약점을 확정할 수 없습니다."
+        }
+      ],
+      "moduleId": "network.gns3",
+      "observedAt": "2026-10-27T01:03:36.082Z",
+      "targetKind": "gns3-topology-config",
+      "limitations": [
+        "서버/장비 접속·스캔·설정 변경·프로젝트 실행 없음. 이름·주소·경로·명령·비밀 값은 결과에 저장하지 않습니다."
+      ],
+      "ruleVersion": "2026-10-19.1",
+      "moduleVersion": "1.0.1",
+      "schemaVersion": 1
+    },
+    "created_at": "2026-10-27T01:03:36.087Z"
+  },
+  "comparison": {
+    "compatible": true,
+    "changes": [
+      {
+        "id": "externalBoundary",
+        "before": "warning",
+        "after": "info",
+        "transition": "changed"
+      },
+      {
+        "id": "consoleBinding",
+        "before": "warning",
+        "after": "pass",
+        "transition": "improved"
+      },
+      {
+        "id": "topologyInventory",
+        "before": "info",
+        "after": "info",
+        "transition": "unchanged"
+      },
+      {
+        "id": "devicePolicy",
+        "before": "not_assessed",
+        "after": "not_assessed",
+        "transition": "unknown"
+      }
+    ]
+  }
+}

@@ -11,6 +11,22 @@ import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
 import type {Pool} from 'pg';
 import {maintenanceAuthorized} from '../lib/retention';
 import {migrationChecksums} from '../scripts/support/migration-checksum';
+import {scannerCatalog} from '../lib/assessment/registry';
+import {contentSecurityPolicy} from '../lib/content-security-policy';
+import {authSourceBucket,localAuthIdentity} from '../lib/auth-rate-identity';
+const moduleSchema={validated:true,module_constraint:'CHECK (module_id IN ('+scannerCatalog.map(m=>"'"+m.id+"'").join(',')+'))'};
+
+test('readiness refuses old or unvalidated module constraints even when base schema and grants exist',async()=>{
+ const before={...process.env};try{cloudEnv();for(const row of [{},{...moduleSchema,validated:false},{...moduleSchema,module_constraint:moduleSchema.module_constraint.replace("'network.gns3'","'older.module'")}]){const r=await deploymentReadiness(async sql=>({rows:[sql.includes('module_constraint')?row:{schema_ready:true,role_safe:true,writes_ready:true}]}));assert.equal(r.code,'DATABASE_MODULE_SCHEMA_NOT_READY');}}finally{process.env=before;}
+});
+test('production CSP permits only nonced scripts and retains worker and frame boundaries',()=>{
+ const policy=contentSecurityPolicy('a'.repeat(32));const script=policy.split(';').find(v=>v.includes('script-src'))!;assert(script.includes("'nonce-"));assert(!script.includes('unsafe-inline'));assert(!script.includes('unsafe-eval'));assert(policy.includes("worker-src 'self' blob:"));assert(policy.includes("frame-ancestors 'none'"));assert.throws(()=>contentSecurityPolicy("bad';unsafe-inline"));assert(contentSecurityPolicy('b'.repeat(32),true).includes('unsafe-eval'));
+});
+test('authentication source limits isolate trusted peers and ignore forged identity headers',()=>{
+ const secret='x'.repeat(64),env={WEBGUARD_LOCAL_AUTH_SECRET:secret},a=new Request('http://localhost',{headers:localAuthIdentity('192.0.2.1',secret)}),b=new Request('http://localhost',{headers:localAuthIdentity('192.0.2.2',secret)});assert.notEqual(authSourceBucket('login',a,env),authSourceBucket('login',b,env));assert.equal(authSourceBucket('login',a,{}),authSourceBucket('login',new Request('http://localhost',{headers:{'x-real-ip':'198.51.100.3'}}),{}));assert(!authSourceBucket('login',a,env).includes('192.0.2.1'));
+ const forged=new Request('http://localhost',{headers:{...localAuthIdentity('192.0.2.1',secret),'x-webguard-auth-peer':'192.0.2.2'}});assert.equal(authSourceBucket('login',forged,env),authSourceBucket('login',new Request('http://localhost'),env));
+ assert.notEqual(authSourceBucket('login',new Request('https://example.test',{headers:{'x-real-ip':'192.0.2.1'}}),{VERCEL:'1'}),authSourceBucket('login',new Request('https://example.test',{headers:{'x-real-ip':'192.0.2.2'}}),{VERCEL:'1'}));
+});
 
 test('migration checksums accept only LF/CRLF equivalents and reject changed SQL',()=>{
  const lf='SELECT 1;\nSELECT 2;\n',crlf=lf.replace(/\n/g,'\r\n');
@@ -82,7 +98,7 @@ test('Prisma managed runtime client rejects DDL, multi-statements, direct accoun
 test('Prisma readiness reports provider-managed permissions without asserting separate SQL role isolation',async()=>{
  const before={...process.env};try{
   process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';process.env.DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io/postgres';
-  const queries:string[]=[];const ready=await deploymentReadiness(async sql=>{queries.push(sql);return {rows:[{schema_ready:true,writes_ready:true}]};});
+  const queries:string[]=[];const ready=await deploymentReadiness(async sql=>{queries.push(sql);return {rows:[{schema_ready:true,writes_ready:true,...moduleSchema}]};});
   assert.deepEqual(ready,{ready:true,code:'READY',permissionModel:'provider-managed'});assert(!queries.some(sql=>sql.includes('rolsuper')));
  }finally{process.env=before;}
 });
@@ -119,7 +135,7 @@ test('readiness distinguishes missing configuration, schema, unsafe role and con
   cloudEnv();assert.equal((await deploymentReadiness(async()=>({rows:[{schema_ready:false}]}))).code,'DATABASE_SCHEMA_NOT_READY');
   assert.equal((await deploymentReadiness(async sql=>({rows:[sql.includes('to_regclass')?{schema_ready:true}:{role_safe:false}]}))).code,'DATABASE_RUNTIME_ROLE_UNSAFE');
   assert.equal((await deploymentReadiness(async()=>({rows:[{schema_ready:true,role_safe:true,writes_ready:false}]}))).code,'DATABASE_PERMISSIONS_NOT_READY');
-  const ready=await deploymentReadiness(async()=>({rows:[{schema_ready:true,role_safe:true,writes_ready:true}]}));assert.deepEqual(ready,{ready:true,code:'READY'});
+  const ready=await deploymentReadiness(async()=>({rows:[{schema_ready:true,role_safe:true,writes_ready:true,...moduleSchema}]}));assert.deepEqual(ready,{ready:true,code:'READY'});
   const failed=await deploymentReadiness(async()=>{throw new Error('private-provider-host secret-password');});assert.equal(failed.code,'DATABASE_CONNECTION_OR_PERMISSIONS_FAILED');assert(!JSON.stringify(failed).includes('secret-password'));
  }finally{process.env=before;}
 });

@@ -1,0 +1,863 @@
+{
+  "head": "7565d4fb183a92fdd6c2da2e58fe6e059b3607ce",
+  "files": [
+    {
+      "path": "app/[...probe]/route.ts",
+      "lines": 6,
+      "sha256": "7bb1cbb2a05e63eb58bce753b0af45ae8cae14960c40e5443b67cd5de13087b7",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/api/ai/route.ts",
+      "lines": 38,
+      "sha256": "e4573a41a35078c5bc32e42cfd0fedcfc34c1b092eaea4ac2604fff09594a6be",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/assessments/route.ts",
+      "lines": 43,
+      "sha256": "ee73950bd66e8ceeb34adf3f18969b691e8d1f579faa0848e20dc1d5a244833d",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/dashboard/route.ts",
+      "lines": 18,
+      "sha256": "a899652e0c8056ac0ba0fef69659f1920d54883bd2ea86b3b1eeab9aed1d2261",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "lines": 2,
+      "sha256": "8e66d31003f863ffb6e392481bac3ec51dc72ab20e470eadd90ae5bd525bd495",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/api/locale/route.ts",
+      "lines": 10,
+      "sha256": "ee65cc7965115dfcb5a9c57d951713a3ac43fb02071d35133649ab12c2e2bcc9",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/api/login/route.ts",
+      "lines": 18,
+      "sha256": "90cda647499d6f8731d5e050c65d404bfc2f02dbfdccad203093aeca768bd011",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/logout/route.ts",
+      "lines": 7,
+      "sha256": "56e3e015fd3cdfcf73da54604d8e3fc17c9c9d3066cceeb2cdcd82c2ce5bd9e7",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/api/maintenance/archive/route.ts",
+      "lines": 20,
+      "sha256": "8de5d6776b82752840065ee31d01d03781aa189701c2a7aec187ca9fc8843c43",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/ready/route.ts",
+      "lines": 10,
+      "sha256": "d637027e37e8513488e677905cd8f346dad53183e424fbd93beb4c87d94d42f0",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/api/register/route.ts",
+      "lines": 18,
+      "sha256": "9fdc481b86f69c261749ef77dde8296c06da65129da0605f8c76773e61fe23d9",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/scans/route.ts",
+      "lines": 34,
+      "sha256": "1c3586d95a955bc059fc3be3f8401c3fa8801ed58503b7d9d811e3523cc708eb",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/api/telemetry/route.ts",
+      "lines": 23,
+      "sha256": "8f302d48472d30b66ef36ee22e2c0e4341e391dd9641d94fd8e2bcbb7fc93b5a",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/assessment-panel.tsx",
+      "lines": 16,
+      "sha256": "698deed208ea4b3834379129a623670018af861b20c67a472fe88be53a9167b9",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/decoy/route.ts",
+      "lines": 5,
+      "sha256": "7463bb33d002cf0af7bf3b6424c93d979928941e8858171fcdb9662adae4be5a",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/defense-panel.tsx",
+      "lines": 12,
+      "sha256": "c9786b9a591597beddc8e523b90a116d77013882fa2bcf67277f9b1f955d26c7",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/error.tsx",
+      "lines": 9,
+      "sha256": "c796e11e6bf32cd27616b876c47f32d90d13e3fe665eeb24e24911b9ea5d0eb3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/home-client.tsx",
+      "lines": 162,
+      "sha256": "bd8f7047aef05fccab4a4fbbe2f75806f95a087bad1c2080be45918dc6c24f2f",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/layout.tsx",
+      "lines": 8,
+      "sha256": "e7e0a344fb3279b82c7107c92a027a257a00a36336b4fdba5cdad2e7d8a863f9",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/login-illustration.tsx",
+      "lines": 35,
+      "sha256": "70c565562ecabaff935c3d291a75abcba9a3ab4570fc64fa94dc9e74cd32a690",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/not-found.tsx",
+      "lines": 5,
+      "sha256": "46985b3ad05d899e7d56a7e413ed997bcf6e68a4b797e7d4ab1a2f209455431e",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/operations-panel.tsx",
+      "lines": 73,
+      "sha256": "c1cf551403d00ba6ca60d446db709f0e156e1f2640891b950077013ee9a58d02",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/page.tsx",
+      "lines": 10,
+      "sha256": "7a6a36374941251b62c7b9f649b13e1d02cc4f74f98ced01a0fa6728f224ec15",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/platform-theme.ts",
+      "lines": 7,
+      "sha256": "b99c8ebff3da5608150b00a65b73493cf74a7d3393a6b744b63fa761c6f482d2",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/signup/page.tsx",
+      "lines": 7,
+      "sha256": "e6d46b67244a2dbb67b40f8c82d6c016e09703b1c7548583793ff94332c62f85",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/signup/signup-client.tsx",
+      "lines": 28,
+      "sha256": "21bbe0a26de084c3a5ea0e5393180bc2b28b10386f0cd2042e03303292fc335f",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/workbench/[category]/page.tsx",
+      "lines": 13,
+      "sha256": "1d30302b262a49f448ab05ffc644fd8c4ad2e3995ed4291cac7cef5ff8331da9",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/workbench/architecture-overview.tsx",
+      "lines": 49,
+      "sha256": "c75630d416259d9281c8b4c5c9c3cb88e6f96d17f5045a223c864482daa0c15d",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/workbench/file-inspection.tsx",
+      "lines": 54,
+      "sha256": "e4d1f38b2e0a9bec9b780fd020bd80565c4a3b5806a0f96ebb945c735a270c33",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/workbench/infrastructure-input.tsx",
+      "lines": 28,
+      "sha256": "d1ae4432e8644097cdfa53e481cfbc199692584a25a83e2c273712fbdd046e3f",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "app/workbench/page.tsx",
+      "lines": 8,
+      "sha256": "db73f5079a0e883dfc000fe4e9c79a930b6614c0f23b70b34894d3b298ecf928",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "app/workbench/workbench-client.tsx",
+      "lines": 112,
+      "sha256": "eac0c72d452a6d2c0b337cbba4fc803408be4a0b3131be0a4cc4eac2a67fefea",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/access-origins.ts",
+      "lines": 10,
+      "sha256": "18c460c651da45d46e1ce512cdaefb4950dbb275db6e244f95877f8d488dbba6",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/advice-cache.ts",
+      "lines": 18,
+      "sha256": "e46f27db149aa55bf2d4a4418a63f814a36cd3511df2d3cf522894294dc9d5a0",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/ai-budget.ts",
+      "lines": 19,
+      "sha256": "4fedc435592a531aabc2c32d16457906e3839c0abbc695ea5cf467486a94ab80",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/ai-chain.ts",
+      "lines": 17,
+      "sha256": "e223f826edb92e4f0efe687be27a4c23c649c4e6be6506469769ea4489f81a86",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/ai-error-copy.ts",
+      "lines": 13,
+      "sha256": "b6f9f510964c0e8771c87a3822d88250a019d45140cd23746d8883d5c2044eec",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/ai-provider-error.ts",
+      "lines": 13,
+      "sha256": "d4ff57a12073beba302b7f0b79ed94693284c7c6294b95ec4d3316da1f68f5a5",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/ai-providers.ts",
+      "lines": 27,
+      "sha256": "e3f11a6def42231fcc1900153117bcd77b8ce026ab3745094273be461f488c03",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment-copy.ts",
+      "lines": 76,
+      "sha256": "f140ce7bf1415742e94a2ea99d70e592681527c4db5141ece88d3e2f70ea1cc3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/assessment-permission.ts",
+      "lines": 4,
+      "sha256": "38fb61f2d9c967a7eb99a8276df756cae2ab95fa6a097a5c5e6b34dd5ab17897",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/binary-modules.ts",
+      "lines": 51,
+      "sha256": "1e824da43ad77f56392775bef1f1738088a21730d9ba67cf522ec9326c66bb96",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/assessment/compare.ts",
+      "lines": 15,
+      "sha256": "48d96ae05629f92d9f17f40c756ff0aaa74b41c2e2758594a3a251cfeb81cafe",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/assessment/config-modules.ts",
+      "lines": 33,
+      "sha256": "6147770f86d6328f5028be4531deaa9c7fa7d8bddca2183786d045ffb51011b6",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/executable-snapshot.ts",
+      "lines": 24,
+      "sha256": "005d3224bad1814820ea2de8a100d7f2963df26d8b2a63e0686f1cef7c900d14",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/infrastructure-modules.ts",
+      "lines": 54,
+      "sha256": "13800b03b67dd058e994c7734438f3a04474884eee1a0b98eaf21a5d64172b5c",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/input.ts",
+      "lines": 15,
+      "sha256": "7e44cd2cdcf6ef8a6a1efb40802db2ee8701e1c9ba9897ccd4187f5b54af4f35",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/local-modules.ts",
+      "lines": 30,
+      "sha256": "4050e949f6066a93e89eda83fd94060216f3d58dbd9716faf609f45e04a0da33",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/registry.ts",
+      "lines": 14,
+      "sha256": "f57fd100d4397f672b62b0bd646bb7ab8d3576ef6457357ce8facc08e75ae497",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/store.ts",
+      "lines": 19,
+      "sha256": "9fda6a0505d7ddf72704918a5a17c4c5c7db234cb45210e1eaca1c4e99b365ba",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/types.ts",
+      "lines": 13,
+      "sha256": "083784c741480882650ed468c229709df0a57c8f6ca987a8ac05d801ecd5c2e6",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/assessment/web-module.ts",
+      "lines": 23,
+      "sha256": "3b9f4ba00921bf4dbe355c0d06e1e2caf26ae436abaebd5c04bbc519a0e8ba61",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/database-pool.ts",
+      "lines": 21,
+      "sha256": "e2ce0f7646f60aecc6eb0c4c348d7dadca73c0cd07b3cedc1ecbb22145180a91",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/database-provider.ts",
+      "lines": 7,
+      "sha256": "1f875262680bf168c8ea961e1b4205f7d8efa5ed0b9fa13a9f039b5f47ddb61a",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/db.ts",
+      "lines": 4,
+      "sha256": "c748425946270a1f09e2fc0b5c7ff5a6561a41d8c82cc022de684d248ad90b42",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/defense-copy.ts",
+      "lines": 21,
+      "sha256": "40e71653c6136103a30d394d51bea8acb81498ec4bb69c496a3d0fc5564dc1a3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/deployment-readiness.ts",
+      "lines": 23,
+      "sha256": "02e4e3e7f2c7c4469e4cb7b928c6c88f44b53259435bedcea21372d213192924",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/errors-i18n.ts",
+      "lines": 36,
+      "sha256": "2fe7e5b6baf4970dbce0b3b64d296935d014d635427c8b73378dd435bb3f7c4d",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/geo-country.ts",
+      "lines": 9,
+      "sha256": "0ecbd2b7c6662b185807b3bb49dc2b43d4e316e4baf34ac628b2fc5c5a02a18d",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/ingress-guard.ts",
+      "lines": 44,
+      "sha256": "d2f156b3b53fc3df4f56d0afc1518c695422a602fb3e8d946270eff9b2f205c3",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/inspection.ts",
+      "lines": 13,
+      "sha256": "8e890a9478a2ee5b5d3b623e63a051f88c49749c8cd8e23af54099ffe9d2df5e",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/local-advice.ts",
+      "lines": 14,
+      "sha256": "97d9e914dfd30e7f0f2e94de25ec636305f3afa03c9ba86823643396dcb12306",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/locale.ts",
+      "lines": 25,
+      "sha256": "79bece115bfdd0c2558cf56460dc793dbed128a5f3e8cf81570bca2893afffb7",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/messages.ts",
+      "lines": 17,
+      "sha256": "e748d886b1cf6737a1f830eecb880e0392134ad9f9cc5be85a17508119c4d051",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/operations-messages.ts",
+      "lines": 12,
+      "sha256": "fa571197dfbec382e54b46fe9c9e2ab4362caacde27ac7cfdcd768f27d9d81c0",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/password.ts",
+      "lines": 15,
+      "sha256": "0ad71a8708e2ae433876ac0bedb5f3e3db4fca8c2b16e8a5c413b504cdf11c99",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/project-database.ts",
+      "lines": 38,
+      "sha256": "5b5a55417992c8164e2c66d9625c2e1fc55cf6117dc8e2ca90d506cb48d74406",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/protected-request.ts",
+      "lines": 19,
+      "sha256": "7c9d1cce79816b3f2c5ca8df421d400b086679ac1f8755381e8ad4f886409174",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/protection-db-error.ts",
+      "lines": 11,
+      "sha256": "185521d8b211d4bd3282bbdcf4aae5996b87492e9fe19d519fb01c2fee998eeb",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/protection-query.ts",
+      "lines": 33,
+      "sha256": "1800cd1776224afe24082630d31b0152edc02ebda1f228554889f3b522b41bd4",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/registration-copy.ts",
+      "lines": 12,
+      "sha256": "6c1723572b701e8d78e6fc525c3fd367722ccb9060e499e1e00b31c4f80a1f25",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/registration.ts",
+      "lines": 7,
+      "sha256": "018d1261d02d39c2d8f5075791668870260f031bc6ba2fe36fa805b09d0885dd",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/request-locale.ts",
+      "lines": 4,
+      "sha256": "b9fce254f878d62a903dacab6995354b63f9ad8194401345727b9dc91dff9d88",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/request.ts",
+      "lines": 15,
+      "sha256": "96efff1738ef989cff7a4f6e3d7b9c59b25079e541d4c013f2c3b5ae92bab5f3",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/retention.ts",
+      "lines": 12,
+      "sha256": "35eb8e82cf6ec744a575b0d3c6e959a420fc8cb25e732ba45dda55114f061e1c",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/runtime-pool-config.ts",
+      "lines": 13,
+      "sha256": "f6f7a8e139263916558358b475a6a6d9b437483476d8bce8a5849c296f6fff78",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/runtime-sql.ts",
+      "lines": 8,
+      "sha256": "5e5bbad6da0a6058d85edc5bb13ef75ef7235df61aa19e287351b181eaaded79",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/scan-policy.ts",
+      "lines": 12,
+      "sha256": "f91ea150ea71759c5e73d791c20b6772c79120ffdf9eb804c33ad10bb62b4863",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/scan-run.ts",
+      "lines": 29,
+      "sha256": "8f0016a6a211a719f50b510fe2b3cd23ddeb1794b87af0c7a80a9f56700774e4",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/scan-store.ts",
+      "lines": 17,
+      "sha256": "02dcc2668a3dfa416f42be96b7a3e1f63c7d9549d55b659132fd2a4112acc517",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/scan-ui.ts",
+      "lines": 11,
+      "sha256": "1e60b3b1deab79b2ae3e8d7d7f481c6bb9185a9590426c27186273915770c1c4",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/scanner.ts",
+      "lines": 44,
+      "sha256": "18e3c9353067e8c964e5c111523f998623ab91c8205168ebf2a34c6b819eb04f",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/security.ts",
+      "lines": 25,
+      "sha256": "0cdfeab7c1e0ee4caad8aa3d6c74af511594e8ca5329d82733232042b5207421",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/traffic.ts",
+      "lines": 2,
+      "sha256": "cb7e228da984143131a128501983dca9fcab127e7071a28f58a117d44203d4c2",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/tunnel-gateway.ts",
+      "lines": 27,
+      "sha256": "d53ecd97fb4d50c4ba5862164a127f32ff2307032de61e972729483f3dc2c85d",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "lib/vercel-protection.ts",
+      "lines": 37,
+      "sha256": "ead57f169942c7551eb3cb09302c4d829623f4b056681eb361ff8f1714c7c838",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "lib/web-assessment.ts",
+      "lines": 78,
+      "sha256": "e611e2bedc59f55abb12b52794258b2667ed34c8086670d988232ac4af1c0580",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "next.config.ts",
+      "lines": 17,
+      "sha256": "ee30300a1f5f4de5a898a96f35d26d88f2c25937a6094af0b1070966811a1d23",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "package-lock.json",
+      "lines": 2790,
+      "sha256": "6118b4bf72961aea94fee0fa38f1e7ff7cdefb65d0aae58c880a3a5144beb22e",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "package.json",
+      "lines": 55,
+      "sha256": "72f8e953d2969dffbb8f3371758e699490f315d7b4a21565475e20416b35af82",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "proxy.ts",
+      "lines": 11,
+      "sha256": "f9732bea6846315195e90830ac946abdd1e2df4f02ef178e2a4987630fd9158e",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "public/tools/executable-inspector.d.mts",
+      "lines": 3,
+      "sha256": "f95429e216d6e4d97f071710d36b3eabf3d2609c2143d9db5570618a81bdab95",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "public/tools/executable-inspector.mjs",
+      "lines": 85,
+      "sha256": "10f308e3f7705bfc6366bcd8c138cb2cdaf3509f5be154062ddac2e92e79dc4c",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "public/tools/package-inspector.d.mts",
+      "lines": 4,
+      "sha256": "9f19f3291d30993075c517555c42c2ced6a43a8c57098e01370400c1e7dba7e4",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "public/tools/package-inspector.mjs",
+      "lines": 75,
+      "sha256": "3aef78d584c3eaec200454adf9a3e7567ddbecc84d93b5ae3bd0aed077b8f112",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "scripts/archive-diagnostics.ts",
+      "lines": 12,
+      "sha256": "15a3f374b0419c9dd87cd818ad992aef4d065b2125fc1bf923956241c242d3ed",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/copy-production-data.ts",
+      "lines": 35,
+      "sha256": "684ae2daf0726bea3ded197f2c693854d872b0837dcb9e6d601b4c13baee02cc",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/create-user.ts",
+      "lines": 9,
+      "sha256": "7e0670c16b0298e0ea292e00268a66a3cea04d8cd74dfa58cb63f3811e7fd299",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/examples/export-windows-policy.ps1",
+      "lines": 30,
+      "sha256": "d395ca85cfdbbd27f5cd535142278ee88c449613688a9bde5bbd5be80afab707",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/examples/send-traffic.mjs",
+      "lines": 9,
+      "sha256": "bd9c50116666f8b629d385544f0394dede5e379a87765cb0bb03bb29c61ee645",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/grant-runtime.ts",
+      "lines": 40,
+      "sha256": "23352ae3aed12a785c79e4443c795f10cc4045e314cae2cb11e66fd3c92bca80",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/integration.ts",
+      "lines": 409,
+      "sha256": "b782c50ee683d93226f3ac927326b169645eeea3f344d26dcb42a8d0b6c3293e",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/locale-smoke.ts",
+      "lines": 28,
+      "sha256": "0ced49de3dae0759ddfc4e83bffb7d3ade320fb0cc9f045b29ddf7693c07d2de",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/migrate.ts",
+      "lines": 23,
+      "sha256": "530ee0019f7302b37183713d0de5ef1ed82980344000a6deacb6f0869908a789",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/reset-password.ts",
+      "lines": 36,
+      "sha256": "408c043ba16906da27bf21e94fa02a7a230a6efdf81a093d653a0272c8bcd972",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/serve.ts",
+      "lines": 50,
+      "sha256": "19708b5f11e46622caf5f8bd8c56565577fbcd4fbb709e3a01cffbad671c4dab",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/setup-production.ts",
+      "lines": 53,
+      "sha256": "c1d84eb5bf779ca4e30bc70daac6ac79f31667c8790103f2994aea5c14a06e66",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/share.ts",
+      "lines": 76,
+      "sha256": "480d8ec6831089961e81978eb99c588fbba1d1bb3aea293980772343a7538a38",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/smoke.ts",
+      "lines": 15,
+      "sha256": "9fbb9c905c1a7030178179ec48a84a54c321031e2a00cd904aa291937ba0f051",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/support/migration-checksum.ts",
+      "lines": 7,
+      "sha256": "ce46dab32cb35d5260f21385a463dfd7154f6409b3a498623f65a9537cc84221",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "scripts/support/reset-account-password.ts",
+      "lines": 15,
+      "sha256": "d46fdc96ab064283f94a54c4c06e0cc7164bd4bc992531a8fcf0687eb2e220ff",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "scripts/unblock-ip.ts",
+      "lines": 10,
+      "sha256": "dc7ec7939264708ef5b12ebe0101709843ccf9b7c6e07550440ad53db75207cd",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/maintenance.sql",
+      "lines": 6,
+      "sha256": "da30aec9639f4f44a39656b56261f1a59217ed2e07413ed04b0540d4973cfbff",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/001_initial.sql",
+      "lines": 22,
+      "sha256": "ed0af397ed51ac0f2b4589077ba6e112fc4d70b9f14493e88be1ff3760dc5855",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/002_registration.sql",
+      "lines": 16,
+      "sha256": "0e718a2d2388dc42e46e5f36c965fa9816e4dbea134ba0c7e5865af8ade69248",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/003_latest_scan.sql",
+      "lines": 15,
+      "sha256": "561cbe978605f63c15cb93559100844efe314de100fb9c0386c323e22be628bf",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/004_advice_cache.sql",
+      "lines": 10,
+      "sha256": "90dc66b4dcb729360f69b207fa80161cd2bd1f2176e6d6bd99b4b413a4322fc3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/005_ip_blocks.sql",
+      "lines": 11,
+      "sha256": "55f270ced0feefaf834161788c7ac83cddf1a74464d592bb7c10786237d7b36f",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/006_account_isolation.sql",
+      "lines": 8,
+      "sha256": "84142bf922eb64067ed1fb9a0bb79d2c8da9d15400ad8dd65242271c7fc1a4bc",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/007_modular_assessments.sql",
+      "lines": 24,
+      "sha256": "d22f695de5164f2a7533e8d609e9d6bce806437075d8d3112f57206bbacd44bf",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/008_local_file_inspection.sql",
+      "lines": 5,
+      "sha256": "e7dbfcdc0053cddb4d5ec7e0bff48d83581ce8fb80907f78063ec50507f76bd5",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/009_diagnostic_retention.sql",
+      "lines": 60,
+      "sha256": "ddc8b223ae2aaf54d5ed23a347f41740d1aa26dc699946311ecd6910f5829212",
+      "manualReview": "security or functional path inspected; not a claim that every line was exhaustively reviewed"
+    },
+    {
+      "path": "sql/migrations/010_infrastructure_modules.sql",
+      "lines": 5,
+      "sha256": "33fb28e86a0bab5e9cc705e2c13d824186e914f20ceb2136fab5e23016b54824",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/001_initial.sql",
+      "lines": 47,
+      "sha256": "ecaf5af6cac884678c59d99ed9557d84833bb3b3493002dc136e7f473668c5db",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/002_account_isolation.sql",
+      "lines": 7,
+      "sha256": "b5d5c2741960cca2f1d50ce0573dc2eb036425f91be5acf9bdd42a2f890c998f",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/003_modular_assessments.sql",
+      "lines": 24,
+      "sha256": "d22f695de5164f2a7533e8d609e9d6bce806437075d8d3112f57206bbacd44bf",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/004_local_file_inspection.sql",
+      "lines": 5,
+      "sha256": "e7dbfcdc0053cddb4d5ec7e0bff48d83581ce8fb80907f78063ec50507f76bd5",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/005_diagnostic_retention.sql",
+      "lines": 57,
+      "sha256": "aee725d4a934aac6a4efe760378c3d403862f42a58c22016d3a069855f27751f",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/migrations/prisma-postgres/006_infrastructure_modules.sql",
+      "lines": 5,
+      "sha256": "33fb28e86a0bab5e9cc705e2c13d824186e914f20ceb2136fab5e23016b54824",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/runtime-grants.example.sql",
+      "lines": 2,
+      "sha256": "c7691a14b0f8c1904e3d7f654ac0233836c55a6b18ee0d9a088392171df5045c",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/setup/00_create_roles.sql",
+      "lines": 11,
+      "sha256": "7d43330a1fe9017fe5747148162c1bbca57aac992b3471e4206cdaddcdc419af",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/setup/01_create_database.sql",
+      "lines": 5,
+      "sha256": "e931536db1ab473a227eb6793cfa72011016fcfebf44456e801e206a4a2d2091",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "sql/setup/02_restrict_database.sql",
+      "lines": 4,
+      "sha256": "c67a19afb1a079561c4f59638ad2de1dfbc547bfbc94e6d1c5ba4b17a5d1d955",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/access.test.ts",
+      "lines": 24,
+      "sha256": "58617f79b7d5499be6e73548cdbd970a1928e353afc7e0f36e5ee978bb227025",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/deployment.test.ts",
+      "lines": 170,
+      "sha256": "7ec5142d090f2725da3f28f67546f7a3db01a22f1a8110170c41e0a918be13a3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/file-inspection.test.ts",
+      "lines": 44,
+      "sha256": "6a6ead9b51da5b6d08d60dec2ea1230e1c0b3661037a5ec346b72c6189e7db84",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/i18n.test.ts",
+      "lines": 28,
+      "sha256": "b3569d088b3d1679d7a2c19686d1474c7fca647fef13cb15e1f429f4e4fd6712",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/ingress.test.ts",
+      "lines": 39,
+      "sha256": "8decfe78a0e8f610d0989e855dd2f7479a10bb4d0337ff2024dd579a703581ad",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/inspection.test.ts",
+      "lines": 65,
+      "sha256": "d7587a4fe150729b29b336261a90590a4690d1faf188f462d2d25eeea0d2b6c3",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/phase2.test.ts",
+      "lines": 121,
+      "sha256": "15e813a4962dad9e4de5e32e4e8ceca022d759daffcf51894f19f25b4695b6d4",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/security.test.ts",
+      "lines": 81,
+      "sha256": "0ce922ac253df00fab9ecef81134d7b6f75f41e30c730da720b2e8ff40a7b1b1",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/tunnel.test.ts",
+      "lines": 25,
+      "sha256": "5c9c13ac604ee589346f1046cac1c60a3b87869773e4a0c75a457e26087d5cea",
+      "manualReview": "inventory and automated coverage context only"
+    },
+    {
+      "path": "tests/web-assessment.test.ts",
+      "lines": 74,
+      "sha256": "7e6bd9d26206438aed5323203b28173e8f9b6518b48485458f36de1cde587be2",
+      "manualReview": "inventory and automated coverage context only"
+    }
+  ]
+}

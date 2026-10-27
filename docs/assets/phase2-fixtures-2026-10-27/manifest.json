@@ -1,0 +1,126 @@
+{
+  "atUTC": "2026-10-27T01:06:34.763Z",
+  "screenshots": 18,
+  "files": [
+    {
+      "filename": "01-file-consent-before.jpg",
+      "bytes": 57528,
+      "sha256": "2e6cf4ceea9162f889ff5840d57191f69c859fe36437ee04ede6f9fccd2cdc65"
+    },
+    {
+      "filename": "02-pe-vulnerable.jpg",
+      "bytes": 72970,
+      "sha256": "c274fb85bfff403ed10cd3f6226db9a460f0e29be567d7f749b1af8fe6ee9976"
+    },
+    {
+      "filename": "03-pe-remediated.jpg",
+      "bytes": 67802,
+      "sha256": "49f70a888ce8bd3b98d694885d29433e585b7574b1bf16155c4449719d159188"
+    },
+    {
+      "filename": "04-linux-vulnerable.jpg",
+      "bytes": 78568,
+      "sha256": "793682982c586798cc4ac29900fd94620ba4466ae9145d4744be19dd92bf0f13"
+    },
+    {
+      "filename": "05-linux-remediated.jpg",
+      "bytes": 69831,
+      "sha256": "6cf9ea6e3d25f574c16a3ecefdc84d2fc232819cd45ddff5910e9a0cb457afb4"
+    },
+    {
+      "filename": "06-windows-vulnerable.jpg",
+      "bytes": 59357,
+      "sha256": "915aeb1846a994512e7801a12d869564fd2995b360f5d7d133ab98234ece96bb"
+    },
+    {
+      "filename": "07-windows-remediated.jpg",
+      "bytes": 72413,
+      "sha256": "c7fc8b023a80132c6f51b258b6d7e6b4c72b68cec9d047a09272cd4e5204c7ea"
+    },
+    {
+      "filename": "08-macos-vulnerable.jpg",
+      "bytes": 71843,
+      "sha256": "67a58e9a4bed0633d52433dd053ac1a3e568c0706d2830c0c976b43b84964da9"
+    },
+    {
+      "filename": "09-macos-remediated.jpg",
+      "bytes": 66703,
+      "sha256": "224c4fdab5d8114c5ccb904e7c08eb86097e558141b71cee29d9db20c1f5d89e"
+    },
+    {
+      "filename": "10-android-vulnerable.jpg",
+      "bytes": 73737,
+      "sha256": "fb3dd3f4ab33cc45f329236be16070b208c3416417661b86c57c8a0912a04e33"
+    },
+    {
+      "filename": "11-android-remediated.jpg",
+      "bytes": 70198,
+      "sha256": "506cb2b682b7989067d34c6a69b7e037463cc5290a4764770b2addd073fc309f"
+    },
+    {
+      "filename": "12-ios-vulnerable.jpg",
+      "bytes": 73305,
+      "sha256": "e74f6e13b7fc45f2a97dd273abf648e595e293b772a733c406c841c73a384bfa"
+    },
+    {
+      "filename": "13-ios-remediated.jpg",
+      "bytes": 69625,
+      "sha256": "29f68e34a78ada4281bcd7633d79b81341566e756ddb0108d92d94d04b489f36"
+    },
+    {
+      "filename": "14-vmx-vulnerable.jpg",
+      "bytes": 78440,
+      "sha256": "7d9e044392956d093d98ec5f869c581fd476b6a277f68264844df0c84c8fe4ca"
+    },
+    {
+      "filename": "15-vmx-remediated.jpg",
+      "bytes": 71411,
+      "sha256": "95059fa195214f3ad36b50787f500aafae79f70b8ce6c6da534285f740a76f16"
+    },
+    {
+      "filename": "16-gns3-vulnerable.jpg",
+      "bytes": 74920,
+      "sha256": "9d2ae84c7147ee1d6ab1b585866357a6ca308403b6390b818049210c958c1428"
+    },
+    {
+      "filename": "17-gns3-remediated.jpg",
+      "bytes": 67774,
+      "sha256": "b8e8fb80606a095881f7bfef68b1cf572632a6422a4571dee6587b613cd78d49"
+    },
+    {
+      "filename": "18-gns3-unsupported-rejected.jpg",
+      "bytes": 66446,
+      "sha256": "8b50513ad3a61603fe0c7723138d6d6ea6a863bb7910f30798cc687740041fec"
+    },
+    {
+      "filename": "browser-results.json",
+      "bytes": 2680,
+      "sha256": "9136ed5a784c4e0748651c5243b0f8e66fed0fffe2697e9c75db03bea2013a74"
+    },
+    {
+      "filename": "cross-check.json",
+      "bytes": 424,
+      "sha256": "ab3e5d06186e069a4916bbfc34b50334499b7318972bcbcf08ce017a0858dba8"
+    },
+    {
+      "filename": "fixture-results.json",
+      "bytes": 73958,
+      "sha256": "4f07184bb38acfa7682c0f1bb6ad836a31f555376d1ef395948a4f7ea52fe044"
+    },
+    {
+      "filename": "gns3-browser-download.json",
+      "bytes": 3391,
+      "sha256": "b048a15438efafdee2a7ee5b8753c117d21fc60fd3ea38050f9be3c411da3dd5"
+    },
+    {
+      "filename": "r01-observation.json",
+      "bytes": 1361,
+      "sha256": "60f893ec52eed017863d7db263bc7d6c397b080dbf1c388a49f8381235327d1a"
+    },
+    {
+      "filename": "r01-request-correlation.json",
+      "bytes": 3039,
+      "sha256": "a289b1a028bbb520fccb132ff6875d8eef9a2140a31c00fd55cdbca81c96e037"
+    }
+  ]
+}

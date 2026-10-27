@@ -1,0 +1,1897 @@
+{
+  "generatedAt": "2026-10-27T00:38:25.494Z",
+  "synthetic": true,
+  "originalsExecuted": false,
+  "pairs": [
+    {
+      "name": "linux",
+      "moduleId": "linux.ssh",
+      "runs": [
+        {
+          "filename": "linux-vulnerable.sshd_config",
+          "sha256": "22f1a05e369f80a46b1513c716ef865d914d5fa47aaef48572d2b318d59bf927",
+          "bytes": 151,
+          "counts": {
+            "warning": 5,
+            "pass": 0,
+            "info": 0,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "linux.ssh",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "linux-sshd-config",
+            "findings": [
+              {
+                "id": "permitrootlogin",
+                "title": "root 비밀번호 로그인 제한",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "line=2",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "PermitRootLogin과 실제 적용값을 확인하고 운영 정책에 따라 root 직접 접속을 제한하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "passwordauthentication",
+                "title": "SSH 비밀번호 인증",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "line=3",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "키 인증과 복구 접속을 먼저 검증한 뒤 비밀번호 인증을 제한하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "permitemptypasswords",
+                "title": "빈 비밀번호 허용",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "line=4",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "PermitEmptyPasswords를 no로 설정하고 실제 인증 정책을 확인하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "pubkeyauthentication",
+                "title": "공개키 인증",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "line=5",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "승인된 키와 파일 권한을 확인하고 공개키 인증을 검토하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "maxauthtries",
+                "title": "인증 시도 제한",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "line=6",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "MaxAuthTries 4 이하는 이 모듈의 검토 기준입니다. 운영 접근과 영향도를 확인하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              }
+            ],
+            "scope": [
+              "제공된 sshd_config의 명시적 전역 설정만 검사"
+            ],
+            "limitations": [
+              "Include/Match가 있으면 유효 설정을 확정하지 않습니다. 기본값·실제 장비·키·서버 버전·접근 가능성은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.699Z"
+          }
+        },
+        {
+          "filename": "linux-remediated.sshd_config",
+          "sha256": "f5c6be88c19d01f1196b3fb2242936aac870a07d30a3d47969ed7934ce9b305b",
+          "bytes": 148,
+          "counts": {
+            "warning": 0,
+            "pass": 5,
+            "info": 0,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "linux.ssh",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "linux-sshd-config",
+            "findings": [
+              {
+                "id": "permitrootlogin",
+                "title": "root 비밀번호 로그인 제한",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "line=2",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "PermitRootLogin과 실제 적용값을 확인하고 운영 정책에 따라 root 직접 접속을 제한하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "passwordauthentication",
+                "title": "SSH 비밀번호 인증",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "line=3",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "키 인증과 복구 접속을 먼저 검증한 뒤 비밀번호 인증을 제한하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "permitemptypasswords",
+                "title": "빈 비밀번호 허용",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "line=4",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "PermitEmptyPasswords를 no로 설정하고 실제 인증 정책을 확인하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "pubkeyauthentication",
+                "title": "공개키 인증",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "line=5",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "승인된 키와 파일 권한을 확인하고 공개키 인증을 검토하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              },
+              {
+                "id": "maxauthtries",
+                "title": "인증 시도 제한",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "line=6",
+                  "conditionalOrInclude=false"
+                ],
+                "remediation": "MaxAuthTries 4 이하는 이 모듈의 검토 기준입니다. 운영 접근과 영향도를 확인하세요.",
+                "reference": "https://man.openbsd.org/sshd_config"
+              }
+            ],
+            "scope": [
+              "제공된 sshd_config의 명시적 전역 설정만 검사"
+            ],
+            "limitations": [
+              "Include/Match가 있으면 유효 설정을 확정하지 않습니다. 기본값·실제 장비·키·서버 버전·접근 가능성은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.767Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "permitrootlogin",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "passwordauthentication",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "permitemptypasswords",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "pubkeyauthentication",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "maxauthtries",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "windows",
+      "moduleId": "windows.policy",
+      "runs": [
+        {
+          "filename": "windows-vulnerable.json",
+          "sha256": "8418ac0f7cf76f6229ac2f8f382676ba61f7ddd0c8a8e3b1f910a56cc24af7e0",
+          "bytes": 229,
+          "counts": {
+            "warning": 6,
+            "pass": 0,
+            "info": 0,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "windows.policy",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "windows-policy-export",
+            "findings": [
+              {
+                "id": "firewall.domain",
+                "title": "도메인 방화벽",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "도메인 프로필 방화벽과 허용 규칙을 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "firewall.private",
+                "title": "개인 방화벽",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "개인 프로필 방화벽과 허용 규칙을 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "firewall.public",
+                "title": "공용 방화벽",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "공용 프로필 방화벽을 활성화하고 노출 서비스를 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "defender.antivirus",
+                "title": "백신 활성 상태",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "다른 백신을 사용하는 경우도 포함하여 보호 상태를 운영자가 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "defender.realtime",
+                "title": "실시간 보호",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "보호 공급자와 실시간 보호 정책을 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "rdp.nla",
+                "title": "원격 데스크톱 NLA",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "reported=false"
+                ],
+                "remediation": "RDP 사용 여부와 NLA·방화벽·승인된 접근 경로를 함께 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              }
+            ],
+            "scope": [
+              "버전 1 JSON 내보내기의 선택된 상태값 검사"
+            ],
+            "limitations": [
+              "제공자가 작성한 스냅샷이며 현재 장비 상태·GPO 우선순위·예외 규칙·타사 백신은 검증하지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.852Z"
+          }
+        },
+        {
+          "filename": "windows-remediated.json",
+          "sha256": "14b58be21bcf2ec65ab932aae541c9f7db21804f8628b81e7717115023b1c8a1",
+          "bytes": 223,
+          "counts": {
+            "warning": 0,
+            "pass": 6,
+            "info": 0,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "windows.policy",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "windows-policy-export",
+            "findings": [
+              {
+                "id": "firewall.domain",
+                "title": "도메인 방화벽",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "도메인 프로필 방화벽과 허용 규칙을 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "firewall.private",
+                "title": "개인 방화벽",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "개인 프로필 방화벽과 허용 규칙을 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "firewall.public",
+                "title": "공용 방화벽",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "공용 프로필 방화벽을 활성화하고 노출 서비스를 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "defender.antivirus",
+                "title": "백신 활성 상태",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "다른 백신을 사용하는 경우도 포함하여 보호 상태를 운영자가 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "defender.realtime",
+                "title": "실시간 보호",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "보호 공급자와 실시간 보호 정책을 확인하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              },
+              {
+                "id": "rdp.nla",
+                "title": "원격 데스크톱 NLA",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "reported=true"
+                ],
+                "remediation": "RDP 사용 여부와 NLA·방화벽·승인된 접근 경로를 함께 검토하세요.",
+                "reference": "https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/"
+              }
+            ],
+            "scope": [
+              "버전 1 JSON 내보내기의 선택된 상태값 검사"
+            ],
+            "limitations": [
+              "제공자가 작성한 스냅샷이며 현재 장비 상태·GPO 우선순위·예외 규칙·타사 백신은 검증하지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.923Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "firewall.domain",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "firewall.private",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "firewall.public",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "defender.antivirus",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "defender.realtime",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "rdp.nla",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vmware",
+      "moduleId": "virtualization.vmx",
+      "runs": [
+        {
+          "filename": "vmware-vulnerable.vmx",
+          "sha256": "1d85315b581ab40e8b06fbd0be8116108302da2440e83c67f59c7c350edd99ad",
+          "bytes": 301,
+          "counts": {
+            "warning": 6,
+            "pass": 0,
+            "info": 0,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "virtualization.vmx",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "vmware-vmx-config",
+            "findings": [
+              {
+                "id": "copy",
+                "title": "게스트 복사 격리 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=false"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "paste",
+                "title": "게스트 붙여넣기 격리 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=false"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "dragDrop",
+                "title": "드래그 앤 드롭 격리 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=false"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "sharedFolders",
+                "title": "공유 폴더 격리 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=false"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "remoteConsole",
+                "title": "원격 VNC 비활성 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=false"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "networkBoundary",
+                "title": "가상 NIC의 네트워크 경계",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "declaredAdapters=1",
+                  "bridged=1",
+                  "unknown=0"
+                ],
+                "remediation": "브리지는 실제 LAN에 연결될 수 있으므로 격리 목적과 방화벽을 확인하세요. NAT·Host-only·Custom도 외부 차단이나 안전을 증명하지 않습니다."
+              }
+            ],
+            "scope": [
+              "사용자가 제공한 VMX의 명시적 설정만 점검"
+            ],
+            "limitations": [
+              "VM 실행·변경·게스트 접속 없음. 기본값·실효 정책·VMware 취약점·게스트 OS·암호화·네트워크 도달성은 미검사. 경로·UUID·이름·비밀 값은 결과에 넣지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.958Z"
+          }
+        },
+        {
+          "filename": "vmware-remediated.vmx",
+          "sha256": "31c0f5645dd96ac5f113781f5c64467c994cc71eace211c6803c06d0f4af3257",
+          "bytes": 299,
+          "counts": {
+            "warning": 0,
+            "pass": 5,
+            "info": 1,
+            "not_assessed": 0
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "virtualization.vmx",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "vmware-vmx-config",
+            "findings": [
+              {
+                "id": "copy",
+                "title": "게스트 복사 격리 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=true"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "paste",
+                "title": "게스트 붙여넣기 격리 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=true"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "dragDrop",
+                "title": "드래그 앤 드롭 격리 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=true"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "sharedFolders",
+                "title": "공유 폴더 격리 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=true"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "remoteConsole",
+                "title": "원격 VNC 비활성 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicit=true",
+                  "safeDeclaration=true"
+                ],
+                "remediation": "업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다."
+              },
+              {
+                "id": "networkBoundary",
+                "title": "가상 NIC의 네트워크 경계",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "declaredAdapters=1",
+                  "bridged=0",
+                  "unknown=0"
+                ],
+                "remediation": "브리지는 실제 LAN에 연결될 수 있으므로 격리 목적과 방화벽을 확인하세요. NAT·Host-only·Custom도 외부 차단이나 안전을 증명하지 않습니다."
+              }
+            ],
+            "scope": [
+              "사용자가 제공한 VMX의 명시적 설정만 점검"
+            ],
+            "limitations": [
+              "VM 실행·변경·게스트 접속 없음. 기본값·실효 정책·VMware 취약점·게스트 OS·암호화·네트워크 도달성은 미검사. 경로·UUID·이름·비밀 값은 결과에 넣지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:24.993Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "copy",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "paste",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "dragDrop",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "sharedFolders",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "remoteConsole",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "networkBoundary",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "gns3",
+      "moduleId": "network.gns3",
+      "runs": [
+        {
+          "filename": "gns3-vulnerable.gns3",
+          "sha256": "2f207b75870b8abdfb9ef5667359d0f63dc3c55db084043bbd2ec386d2104b54",
+          "bytes": 220,
+          "counts": {
+            "warning": 2,
+            "pass": 0,
+            "info": 1,
+            "not_assessed": 1
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "network.gns3",
+            "moduleVersion": "1.0.1",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "gns3-topology-config",
+            "findings": [
+              {
+                "id": "externalBoundary",
+                "title": "외부 연결 노드 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "nodes=1",
+                  "links=0",
+                  "cloudOrNat=1"
+                ],
+                "remediation": "Cloud/NAT 연결은 실습망을 외부 또는 호스트에 연결할 수 있습니다. 실제 어댑터·라우팅·방화벽을 별도로 확인하세요. 노드가 없다고 격리가 증명되지는 않습니다."
+              },
+              {
+                "id": "consoleBinding",
+                "title": "콘솔 주소의 루프백 제한 선언",
+                "status": "warning",
+                "severity": "high",
+                "evidence": [
+                  "explicitHosts=1",
+                  "nonLoopback=1"
+                ],
+                "remediation": "콘솔 호스트가 있으면 루프백 제한을 검토하세요. 프로젝트에 없으면 GNS3 서버 설정에서 직접 확인해야 합니다. Telnet 콘솔 형식은 장비의 Telnet 서비스 취약점을 의미하지 않습니다."
+              },
+              {
+                "id": "topologyInventory",
+                "title": "연결 구성 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "nodes=1",
+                  "links=0",
+                  "unlinkedNodes=1"
+                ],
+                "remediation": "연결 유무는 구성 정보입니다. 별도 격리 실습에서 의도한 통신과 차단을 확인하세요."
+              },
+              {
+                "id": "devicePolicy",
+                "title": "장비 실효 정책·실제 통신",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "liveProbe=false",
+                  "deviceConfigurationRead=false"
+                ],
+                "remediation": "프로젝트 파일만으로 장비 ACL·OS·암호·실제 포트·라우팅이나 취약점을 확정할 수 없습니다."
+              }
+            ],
+            "scope": [
+              "GNS3 2.x 프로젝트 JSON의 구조와 명시적 연결 선언"
+            ],
+            "limitations": [
+              "서버/장비 접속·스캔·설정 변경·프로젝트 실행 없음. 이름·주소·경로·명령·비밀 값은 결과에 저장하지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.035Z"
+          }
+        },
+        {
+          "filename": "gns3-remediated.gns3",
+          "sha256": "bba84fb1fcba80ec816fbbee00c948eb693944c0ad79a00c0b5e1566f3cf69dc",
+          "bytes": 221,
+          "counts": {
+            "warning": 0,
+            "pass": 1,
+            "info": 2,
+            "not_assessed": 1
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "network.gns3",
+            "moduleVersion": "1.0.1",
+            "ruleVersion": "2026-10-19.1",
+            "targetKind": "gns3-topology-config",
+            "findings": [
+              {
+                "id": "externalBoundary",
+                "title": "외부 연결 노드 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "nodes=1",
+                  "links=0",
+                  "cloudOrNat=0"
+                ],
+                "remediation": "Cloud/NAT 연결은 실습망을 외부 또는 호스트에 연결할 수 있습니다. 실제 어댑터·라우팅·방화벽을 별도로 확인하세요. 노드가 없다고 격리가 증명되지는 않습니다."
+              },
+              {
+                "id": "consoleBinding",
+                "title": "콘솔 주소의 루프백 제한 선언",
+                "status": "pass",
+                "severity": "info",
+                "evidence": [
+                  "explicitHosts=1",
+                  "nonLoopback=0"
+                ],
+                "remediation": "콘솔 호스트가 있으면 루프백 제한을 검토하세요. 프로젝트에 없으면 GNS3 서버 설정에서 직접 확인해야 합니다. Telnet 콘솔 형식은 장비의 Telnet 서비스 취약점을 의미하지 않습니다."
+              },
+              {
+                "id": "topologyInventory",
+                "title": "연결 구성 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "nodes=1",
+                  "links=0",
+                  "unlinkedNodes=1"
+                ],
+                "remediation": "연결 유무는 구성 정보입니다. 별도 격리 실습에서 의도한 통신과 차단을 확인하세요."
+              },
+              {
+                "id": "devicePolicy",
+                "title": "장비 실효 정책·실제 통신",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "liveProbe=false",
+                  "deviceConfigurationRead=false"
+                ],
+                "remediation": "프로젝트 파일만으로 장비 ACL·OS·암호·실제 포트·라우팅이나 취약점을 확정할 수 없습니다."
+              }
+            ],
+            "scope": [
+              "GNS3 2.x 프로젝트 JSON의 구조와 명시적 연결 선언"
+            ],
+            "limitations": [
+              "서버/장비 접속·스캔·설정 변경·프로젝트 실행 없음. 이름·주소·경로·명령·비밀 값은 결과에 저장하지 않습니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.073Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "externalBoundary",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "consoleBinding",
+            "before": "warning",
+            "after": "pass",
+            "transition": "improved"
+          },
+          {
+            "id": "topologyInventory",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          },
+          {
+            "id": "devicePolicy",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          }
+        ]
+      }
+    },
+    {
+      "name": "windows-pe",
+      "moduleId": "application.pe",
+      "runs": [
+        {
+          "filename": "windows-pe-vulnerable.exe",
+          "sha256": "05c1292304e48bd7d851442852fb46d0f4ba09bd9df16fe34356272fb8d623a7",
+          "bytes": 1024,
+          "counts": {
+            "warning": 3,
+            "pass": 0,
+            "info": 2,
+            "not_assessed": 1
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.pe",
+            "moduleVersion": "2.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "windows-pe-file",
+            "findings": [
+              {
+                "id": "arch-1:aslr",
+                "title": "ASLR 선언 플래그",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "bits=64",
+                  "declared=false"
+                ],
+                "remediation": "빌드 옵션과 실제 로더 적용을 검토하세요. 헤더 선언은 런타임 보호를 증명하지 않습니다."
+              },
+              {
+                "id": "arch-1:nx",
+                "title": "DEP/NX 선언 플래그",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "declared=false"
+                ],
+                "remediation": "DEP/NX 빌드 옵션을 검토하세요."
+              },
+              {
+                "id": "arch-1:wx",
+                "title": "쓰기·실행 동시 권한 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "count=1"
+                ],
+                "remediation": "섹션·세그먼트 권한과 JIT/패커 요구사항을 검토하세요."
+              },
+              {
+                "id": "arch-1:signature-structure",
+                "title": "서명 구조 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "observed=false"
+                ],
+                "remediation": "서명 데이터의 존재는 유효한 서명이나 안전성을 뜻하지 않습니다."
+              },
+              {
+                "id": "local:signature",
+                "title": "OS 서명 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "provenance",
+                "title": "분석 출처·검증 한계",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "source=browser",
+                  "bytes=1024",
+                  "fullFileHashNotComputed=true"
+                ],
+                "remediation": "원본 파일은 업로드되지 않았습니다. 요약은 변경될 수 있는 자기 보고이며 서버가 원본·서명을 독립 검증하지 않았습니다."
+              }
+            ],
+            "scope": [
+              "브라우저 부분 읽기 또는 로컬 도구의 PE 헤더 요약"
+            ],
+            "limitations": [
+              "요약은 자기 보고이며 원본·서명을 서버가 검증하지 않습니다. 파일 미전송·미실행, 악성코드·전체 앱·MSI는 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.223Z"
+          }
+        },
+        {
+          "filename": "windows-pe-remediated.exe",
+          "sha256": "f1ddef633ddb725345c40eb8ecf31e90b0ee685d8da01adff9aa65f81f19bc6c",
+          "bytes": 1024,
+          "counts": {
+            "warning": 0,
+            "pass": 0,
+            "info": 5,
+            "not_assessed": 1
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.pe",
+            "moduleVersion": "2.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "windows-pe-file",
+            "findings": [
+              {
+                "id": "arch-1:aslr",
+                "title": "ASLR 선언 플래그",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "bits=64",
+                  "declared=true"
+                ],
+                "remediation": "빌드 옵션과 실제 로더 적용을 검토하세요. 헤더 선언은 런타임 보호를 증명하지 않습니다."
+              },
+              {
+                "id": "arch-1:nx",
+                "title": "DEP/NX 선언 플래그",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "declared=true"
+                ],
+                "remediation": "DEP/NX 빌드 옵션을 검토하세요."
+              },
+              {
+                "id": "arch-1:wx",
+                "title": "쓰기·실행 동시 권한 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "count=0"
+                ],
+                "remediation": "섹션·세그먼트 권한과 JIT/패커 요구사항을 검토하세요."
+              },
+              {
+                "id": "arch-1:signature-structure",
+                "title": "서명 구조 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "observed=false"
+                ],
+                "remediation": "서명 데이터의 존재는 유효한 서명이나 안전성을 뜻하지 않습니다."
+              },
+              {
+                "id": "local:signature",
+                "title": "OS 서명 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "provenance",
+                "title": "분석 출처·검증 한계",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "source=browser",
+                  "bytes=1024",
+                  "fullFileHashNotComputed=true"
+                ],
+                "remediation": "원본 파일은 업로드되지 않았습니다. 요약은 변경될 수 있는 자기 보고이며 서버가 원본·서명을 독립 검증하지 않았습니다."
+              }
+            ],
+            "scope": [
+              "브라우저 부분 읽기 또는 로컬 도구의 PE 헤더 요약"
+            ],
+            "limitations": [
+              "요약은 자기 보고이며 원본·서명을 서버가 검증하지 않습니다. 파일 미전송·미실행, 악성코드·전체 앱·MSI는 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.316Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "arch-1:aslr",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:nx",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:wx",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:signature-structure",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          },
+          {
+            "id": "local:signature",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "provenance",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          }
+        ]
+      }
+    },
+    {
+      "name": "macos-macho",
+      "moduleId": "application.macho",
+      "runs": [
+        {
+          "filename": "macos-macho-vulnerable.macho",
+          "sha256": "4afb2c982112c107ff1f33b494b5cc83b4bbe6df435a40d3fc68f66b816a94aa",
+          "bytes": 104,
+          "counts": {
+            "warning": 3,
+            "pass": 0,
+            "info": 2,
+            "not_assessed": 4
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.macho",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "macos-mach-o",
+            "findings": [
+              {
+                "id": "arch-1:aslr",
+                "title": "PIE 선언 플래그",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "bits=64",
+                  "declared=false"
+                ],
+                "remediation": "빌드 옵션과 실제 로더 적용을 검토하세요. 헤더 선언은 런타임 보호를 증명하지 않습니다."
+              },
+              {
+                "id": "arch-1:stack",
+                "title": "실행 가능 스택 요청",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "requested=true"
+                ],
+                "remediation": "실행 가능 스택이 필요한지 확인하고 지원 환경의 실제 정책과 대조하세요."
+              },
+              {
+                "id": "arch-1:wx",
+                "title": "쓰기·실행 동시 권한 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "count=1"
+                ],
+                "remediation": "섹션·세그먼트 권한과 JIT/패커 요구사항을 검토하세요."
+              },
+              {
+                "id": "arch-1:signature-structure",
+                "title": "서명 구조 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "observed=false"
+                ],
+                "remediation": "서명 데이터의 존재는 유효한 서명이나 안전성을 뜻하지 않습니다."
+              },
+              {
+                "id": "local:signature",
+                "title": "OS 서명 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:gatekeeper",
+                "title": "Gatekeeper 정책 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:hardenedRuntime",
+                "title": "Hardened Runtime 선언",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:debugEntitlement",
+                "title": "디버깅 허용 권한",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "provenance",
+                "title": "분석 출처·검증 한계",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "source=browser",
+                  "bytes=104",
+                  "fullFileHashNotComputed=true"
+                ],
+                "remediation": "원본 파일은 업로드되지 않았습니다. 요약은 변경될 수 있는 자기 보고이며 서버가 원본·서명을 독립 검증하지 않았습니다."
+              }
+            ],
+            "scope": [
+              "브라우저 부분 읽기 또는 로컬 도구의 Mach-O/Universal 요약"
+            ],
+            "limitations": [
+              "원본 미전송·미실행. 앱 전체·악성코드·의존성·공증 독립 검증·DMG/PKG는 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.348Z"
+          }
+        },
+        {
+          "filename": "macos-macho-remediated.macho",
+          "sha256": "4bc1ec6482a056153df2f662302aca7ab5e9d8385cd5a2f7a9eb0ba3f1caa889",
+          "bytes": 104,
+          "counts": {
+            "warning": 0,
+            "pass": 0,
+            "info": 5,
+            "not_assessed": 4
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.macho",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "macos-mach-o",
+            "findings": [
+              {
+                "id": "arch-1:aslr",
+                "title": "PIE 선언 플래그",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "bits=64",
+                  "declared=true"
+                ],
+                "remediation": "빌드 옵션과 실제 로더 적용을 검토하세요. 헤더 선언은 런타임 보호를 증명하지 않습니다."
+              },
+              {
+                "id": "arch-1:stack",
+                "title": "실행 가능 스택 요청",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "requested=false"
+                ],
+                "remediation": "실행 가능 스택이 필요한지 확인하고 지원 환경의 실제 정책과 대조하세요."
+              },
+              {
+                "id": "arch-1:wx",
+                "title": "쓰기·실행 동시 권한 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "count=0"
+                ],
+                "remediation": "섹션·세그먼트 권한과 JIT/패커 요구사항을 검토하세요."
+              },
+              {
+                "id": "arch-1:signature-structure",
+                "title": "서명 구조 관찰",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "observed=false"
+                ],
+                "remediation": "서명 데이터의 존재는 유효한 서명이나 안전성을 뜻하지 않습니다."
+              },
+              {
+                "id": "local:signature",
+                "title": "OS 서명 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:gatekeeper",
+                "title": "Gatekeeper 정책 검사",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:hardenedRuntime",
+                "title": "Hardened Runtime 선언",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "local:debugEntitlement",
+                "title": "디버깅 허용 권한",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "reported=unknown"
+                ],
+                "remediation": "사용자가 제공한 로컬 결과입니다. 해당 OS에서 다시 확인하세요. 서명 유효·정책 허용은 악성코드가 없다는 보증이나 공증 판정이 아닙니다."
+              },
+              {
+                "id": "provenance",
+                "title": "분석 출처·검증 한계",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "source=browser",
+                  "bytes=104",
+                  "fullFileHashNotComputed=true"
+                ],
+                "remediation": "원본 파일은 업로드되지 않았습니다. 요약은 변경될 수 있는 자기 보고이며 서버가 원본·서명을 독립 검증하지 않았습니다."
+              }
+            ],
+            "scope": [
+              "브라우저 부분 읽기 또는 로컬 도구의 Mach-O/Universal 요약"
+            ],
+            "limitations": [
+              "원본 미전송·미실행. 앱 전체·악성코드·의존성·공증 독립 검증·DMG/PKG는 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.381Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "arch-1:aslr",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:stack",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:wx",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arch-1:signature-structure",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          },
+          {
+            "id": "local:signature",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "local:gatekeeper",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "local:hardenedRuntime",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "local:debugEntitlement",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "provenance",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          }
+        ]
+      }
+    },
+    {
+      "name": "android",
+      "moduleId": "application.package",
+      "runs": [
+        {
+          "filename": "android-vulnerable.apk",
+          "sha256": "e7dae1e5dd0d94aa34240daa135dd08584a6578a7667fd54d0f580e797cdbcc6",
+          "bytes": 530,
+          "counts": {
+            "warning": 3,
+            "pass": 0,
+            "info": 2,
+            "not_assessed": 3
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.package",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "mobile-package",
+            "findings": [
+              {
+                "id": "package-inventory",
+                "title": "모바일 패키지 구조",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "format=apk",
+                  "bytes=530",
+                  "entries=2",
+                  "nestedPackages=0",
+                  "source=browser"
+                ],
+                "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+              },
+              {
+                "id": "debuggable",
+                "title": "앱 디버그 허용 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "allowBackup",
+                "title": "앱 백업 허용 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "cleartext",
+                "title": "평문 통신 허용 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "permissions",
+                "title": "요청 권한 수",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "count=0"
+                ],
+                "remediation": "권한 수만 관찰하며 필요성·런타임 승인·컴포넌트 노출은 판단하지 않습니다."
+              },
+              {
+                "id": "signature-trust",
+                "title": "서명 신뢰",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "code-vulnerabilities",
+                "title": "코드·의존성 취약점",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "nested-packages",
+                "title": "중첩 패키지 분석",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              }
+            ],
+            "scope": [
+              "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+            ],
+            "limitations": [
+              "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.405Z"
+          }
+        },
+        {
+          "filename": "android-remediated.apk",
+          "sha256": "9a105dde6698be02cc49a0af1f0b9774cd2e6a38c06ba611508c3f5639319f81",
+          "bytes": 530,
+          "counts": {
+            "warning": 0,
+            "pass": 0,
+            "info": 5,
+            "not_assessed": 3
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.package",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "mobile-package",
+            "findings": [
+              {
+                "id": "package-inventory",
+                "title": "모바일 패키지 구조",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "format=apk",
+                  "bytes=530",
+                  "entries=2",
+                  "nestedPackages=0",
+                  "source=browser"
+                ],
+                "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+              },
+              {
+                "id": "debuggable",
+                "title": "앱 디버그 허용 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "explicit=false"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "allowBackup",
+                "title": "앱 백업 허용 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "explicit=false"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "cleartext",
+                "title": "평문 통신 허용 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "explicit=false"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "permissions",
+                "title": "요청 권한 수",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "count=0"
+                ],
+                "remediation": "권한 수만 관찰하며 필요성·런타임 승인·컴포넌트 노출은 판단하지 않습니다."
+              },
+              {
+                "id": "signature-trust",
+                "title": "서명 신뢰",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "code-vulnerabilities",
+                "title": "코드·의존성 취약점",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "nested-packages",
+                "title": "중첩 패키지 분석",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              }
+            ],
+            "scope": [
+              "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+            ],
+            "limitations": [
+              "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.422Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "package-inventory",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          },
+          {
+            "id": "debuggable",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "allowBackup",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "cleartext",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "permissions",
+            "before": "info",
+            "after": "info",
+            "transition": "unchanged"
+          },
+          {
+            "id": "signature-trust",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "code-vulnerabilities",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "nested-packages",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ios",
+      "moduleId": "application.package",
+      "runs": [
+        {
+          "filename": "ios-vulnerable.ipa",
+          "sha256": "17d2866599464ce1c90fd1b3c5fa90dd58e8e8ce00a16ed0f92457bf5c60e56f",
+          "bytes": 305,
+          "counts": {
+            "warning": 1,
+            "pass": 0,
+            "info": 1,
+            "not_assessed": 3
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.package",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "mobile-package",
+            "findings": [
+              {
+                "id": "package-inventory",
+                "title": "모바일 패키지 구조",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "format=ipa",
+                  "bytes=305",
+                  "entries=1",
+                  "nestedPackages=0",
+                  "source=browser"
+                ],
+                "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+              },
+              {
+                "id": "arbitraryLoads",
+                "title": "광범위 HTTP 허용 선언",
+                "status": "warning",
+                "severity": "medium",
+                "evidence": [
+                  "explicit=true"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "signature-trust",
+                "title": "서명 신뢰",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "code-vulnerabilities",
+                "title": "코드·의존성 취약점",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "nested-packages",
+                "title": "중첩 패키지 분석",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              }
+            ],
+            "scope": [
+              "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+            ],
+            "limitations": [
+              "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.469Z"
+          }
+        },
+        {
+          "filename": "ios-remediated.ipa",
+          "sha256": "0c98fd954d556050e992ba8f32b0872f735458645fdbd6c47564ebb9c91828b8",
+          "bytes": 306,
+          "counts": {
+            "warning": 0,
+            "pass": 0,
+            "info": 2,
+            "not_assessed": 3
+          },
+          "result": {
+            "schemaVersion": 1,
+            "moduleId": "application.package",
+            "moduleVersion": "1.0.0",
+            "ruleVersion": "2026-10-20.1",
+            "targetKind": "mobile-package",
+            "findings": [
+              {
+                "id": "package-inventory",
+                "title": "모바일 패키지 구조",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "format=ipa",
+                  "bytes=306",
+                  "entries=1",
+                  "nestedPackages=0",
+                  "source=browser"
+                ],
+                "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+              },
+              {
+                "id": "arbitraryLoads",
+                "title": "광범위 HTTP 허용 선언",
+                "status": "info",
+                "severity": "info",
+                "evidence": [
+                  "explicit=false"
+                ],
+                "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+              },
+              {
+                "id": "signature-trust",
+                "title": "서명 신뢰",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "code-vulnerabilities",
+                "title": "코드·의존성 취약점",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              },
+              {
+                "id": "nested-packages",
+                "title": "중첩 패키지 분석",
+                "status": "not_assessed",
+                "severity": "info",
+                "evidence": [
+                  "notIndependentlyVerified=true"
+                ],
+                "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+              }
+            ],
+            "scope": [
+              "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+            ],
+            "limitations": [
+              "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+            ],
+            "observedAt": "2026-10-27T00:38:25.493Z"
+          }
+        }
+      ],
+      "comparison": {
+        "compatible": true,
+        "changes": [
+          {
+            "id": "package-inventory",
+            "before": "info",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "arbitraryLoads",
+            "before": "warning",
+            "after": "info",
+            "transition": "changed"
+          },
+          {
+            "id": "signature-trust",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "code-vulnerabilities",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          },
+          {
+            "id": "nested-packages",
+            "before": "not_assessed",
+            "after": "not_assessed",
+            "transition": "unknown"
+          }
+        ]
+      }
+    }
+  ]
+}

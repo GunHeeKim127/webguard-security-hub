@@ -31,14 +31,14 @@ export const vmwareConfig:SecurityScanner={id:'virtualization.vmx',version:'1.0.
 type LabNode={node_id:string,node_type:string,console_host?:string};
 export function parseGns3(input:AssessmentInput){
  const value=JSON.parse(textInput(input));
- if(!value||typeof value!=='object'||value.type!=='topology'||typeof value.version!=='string'||!value.topology||!Array.isArray(value.topology.nodes)||!Array.isArray(value.topology.links))throw new Error('GNS3_INVALID');
+ if(!value||typeof value!=='object'||value.type!=='topology'||typeof value.version!=='string'||!/^2\.\d{1,4}(?:\.\d{1,4})?(?:[-+][A-Za-z0-9.-]{1,32})?$/.test(value.version)||!value.topology||!Array.isArray(value.topology.nodes)||!Array.isArray(value.topology.links))throw new Error('GNS3_INVALID');
  const {nodes,links}=value.topology;if(nodes.length>200||links.length>400)throw new Error('GNS3_LIMIT');
  const ids=new Set<string>();
  for(const node of nodes){if(!node||typeof node.node_id!=='string'||!node.node_id||node.node_id.length>128||ids.has(node.node_id)||typeof node.node_type!=='string'||!node.node_type||node.node_type.length>80||node.console_host!==undefined&&typeof node.console_host!=='string')throw new Error('GNS3_NODE_INVALID');ids.add(node.node_id);}
  for(const link of links)if(!link||!Array.isArray(link.nodes)||link.nodes.length!==2||link.nodes.some((end:any)=>!end||!ids.has(end.node_id)))throw new Error('GNS3_LINK_INVALID');
  return {nodes:nodes as LabNode[],links:links as {nodes:{node_id:string}[]}[]};
 }
-export const gns3Topology:SecurityScanner={id:'network.gns3',version:'1.0.0',targetKind:'gns3-topology-config',maxBytes:65536,
+export const gns3Topology:SecurityScanner={id:'network.gns3',version:'1.0.1',targetKind:'gns3-topology-config',maxBytes:65536,
  validate(input){parseGns3(input);},async scan(input,ctx){checkpoint(ctx);const {nodes,links}=parseGns3(input);
  const external=nodes.filter(n=>['cloud','nat'].includes(n.node_type.toLowerCase())).length;
  const knownHosts=nodes.filter(n=>n.console_host!==undefined),exposed=knownHosts.filter(n=>!['127.0.0.1','::1','localhost'].includes(n.console_host!.toLowerCase())).length;

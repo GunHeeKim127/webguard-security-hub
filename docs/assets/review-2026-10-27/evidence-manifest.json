@@ -1,0 +1,116 @@
+{
+  "reviewDateKST": "2026-10-27",
+  "repositoryHead": "7565d4fb183a92fdd6c2da2e58fe6e059b3607ce",
+  "productSourceModified": false,
+  "productionDatabaseWritten": false,
+  "productionDeployPerformed": false,
+  "registeredAssessmentModules": 9,
+  "gitCommits": 31,
+  "scope": "Focused source review, current regression tests, isolated PostgreSQL API tests and actual UI screenshots. No full penetration/dependency-CVE/native-device audit.",
+  "verification": {
+    "unitRegression": {
+      "status": "passed",
+      "tests": 105,
+      "failures": 0
+    },
+    "productionBuild": {
+      "status": "passed",
+      "directory": ".next-verify",
+      "includesTypeScript": true
+    },
+    "isolatedIntegration": {
+      "status": "passed",
+      "postgresMigration": 10,
+      "prismaMigration": 6,
+      "checks": [
+        "ordinary customer access",
+        "owner isolation including admin",
+        "CSRF/SSRF",
+        "consent and redaction",
+        "VMX/GNS3 retests",
+        "30-day filtering",
+        "archive authentication and rollback",
+        "AI mock budgets/cache",
+        "IP enforcement and delayed protection lookup"
+      ]
+    },
+    "httpSmoke": "passed",
+    "sixLocaleSmoke": "passed",
+    "offlineGns3VersionProbe": "unsupported version accepted; unresolved review finding",
+    "productionObservation": "login rendered; signup returned PROTECTION_UNAVAILABLE; no root cause or production-wide availability claim"
+  },
+  "screenshots": [
+    {
+      "file": "01-production-login.jpg",
+      "bytes": 47407,
+      "sha256": "049e5d4cf057c82e05e683178dd5893763de8c98ad6da802735e98a09524b07a",
+      "caption": "production login; no authenticated customer data"
+    },
+    {
+      "file": "02-local-rooms.jpg",
+      "bytes": 38319,
+      "sha256": "4ada6f14da8a822242585d2d8cc3b81d5b884d1a5690aec2d782f2449c23faae",
+      "caption": "local demo room selection; current HEAD"
+    },
+    {
+      "file": "03-local-file-consent-error.jpg",
+      "bytes": 57309,
+      "sha256": "4e09f422a382ef2520e0a8677b659db3d6e1979aaeb4a349dc5e233861a6ce9e",
+      "caption": "local no-file warning; no original uploaded"
+    },
+    {
+      "file": "04-local-endpoint.jpg",
+      "bytes": 63189,
+      "sha256": "4a59a899eece5abdf4784c26914eeff3f210499b0e9c9c1b0d0ef9e6b9723240",
+      "caption": "local executable and system form"
+    },
+    {
+      "file": "05-local-linux-warning.jpg",
+      "bytes": 78315,
+      "sha256": "8dc443ae6826cc96442ce43ba2b0a8130bd1fca91db738573ee630c5008c48d8",
+      "caption": "local synthetic SSH warning x5"
+    },
+    {
+      "file": "06-local-linux-retest.jpg",
+      "bytes": 79221,
+      "sha256": "75ca3545ce7601b455422a2b3d02a15af7d55c9d19628c895454ee73d1a637ff",
+      "caption": "local synthetic SSH improvement x5"
+    },
+    {
+      "file": "07-local-vmware.jpg",
+      "bytes": 79564,
+      "sha256": "c9236b6f9031df60858b173653565112e121c8d5b9b6477b8a73075a1a84ef89",
+      "caption": "local synthetic VMX warnings x2, unassessed x4"
+    },
+    {
+      "file": "08-local-gns3.jpg",
+      "bytes": 77594,
+      "sha256": "4654a4b869eae1a7362da9d61a947ba06c476425f163994d79282c2d6526f1f6",
+      "caption": "local synthetic topology warnings x2, unassessed x1"
+    },
+    {
+      "file": "09-local-history.jpg",
+      "bytes": 64799,
+      "sha256": "8f7edfd79f961db1eae32338c23004c21736a77e9669b9497cb9a9f91bfb844f",
+      "caption": "local demo result history and 30-day UI"
+    },
+    {
+      "file": "10-local-web-room.jpg",
+      "bytes": 60559,
+      "sha256": "a2ab23c9d0d81c3f295eaaed0b231bfe4d531473ff5792b2e10e7eb77a010d71",
+      "caption": "local baseline web UI; no external scan sent"
+    },
+    {
+      "file": "11-production-protection-error.jpg",
+      "bytes": 15262,
+      "sha256": "4039f407daba5ea8a186a9b60b1922bfdf72f67dde5cd9849e35e18f2807ee65",
+      "caption": "production signup observed PROTECTION_UNAVAILABLE; root cause unconfirmed"
+    },
+    {
+      "file": "12-local-signup.jpg",
+      "bytes": 33062,
+      "sha256": "a4a671d709cdaf6e355d5e91df656341ea20b02bd2832d4dbf30f32e721de20f",
+      "caption": "local registration form; no account submitted"
+    }
+  ]
+}

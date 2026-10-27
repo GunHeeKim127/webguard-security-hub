@@ -1,5 +1,6 @@
 import {DatabaseConfigurationError,projectDatabase} from './project-database';
 import {databaseProvider} from './database-provider';
+import {scannerCatalog} from './assessment/registry';
 type Query=(sql:string)=>Promise<{rows:Record<string,unknown>[]}>;
 export async function deploymentReadiness(query:Query){
  try{projectDatabase('runtime');}catch(error){return {ready:false,code:error instanceof DatabaseConfigurationError?error.code:'DATABASE_IDENTITY_MISMATCH'};}
@@ -12,6 +13,9 @@ export async function deploymentReadiness(query:Query){
   }
   const writes=await query("SELECT has_table_privilege('public.sessions','INSERT') AND has_table_privilege('public.sessions','DELETE') AND has_table_privilege('public.scans','INSERT') AND has_column_privilege('public.scans','result','UPDATE') AND has_table_privilege('public.events','INSERT') AND has_table_privilege('public.rate_limits','UPDATE') AND has_table_privilege('public.ip_blocks','UPDATE') AND has_table_privilege('public.ai_advice_cache','UPDATE') AND has_sequence_privilege('public.events_id_seq','USAGE') AND has_function_privilege('public.register_viewer(uuid,text,text)','EXECUTE') AS writes_ready");
   if(writes.rows[0]?.writes_ready!==true)return {ready:false,code:'DATABASE_PERMISSIONS_NOT_READY'};
+  const constraints=await query("SELECT pg_get_constraintdef(oid) AS module_constraint,convalidated AS validated FROM pg_catalog.pg_constraint WHERE conrelid='public.assessment_assets'::regclass AND conname='assessment_assets_module_id_check' AND contype='c'");
+  const constraint=constraints.rows[0],allowed=new Set(typeof constraint?.module_constraint==='string'?[...constraint.module_constraint.matchAll(/'((?:[^']|'')*)'/g)].map(m=>m[1].replace(/''/g,"'")):[]);
+  if(constraint?.validated!==true||scannerCatalog.some(module=>!allowed.has(module.id)))return {ready:false,code:'DATABASE_MODULE_SCHEMA_NOT_READY'};
   await query('SELECT 1 FROM public.users LIMIT 1');
   await query('SELECT 1 FROM public.ip_blocks LIMIT 1');
   await query('SELECT 1 FROM public.assessment_assets LIMIT 1');

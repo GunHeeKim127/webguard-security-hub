@@ -1,0 +1,65 @@
+{
+  "reviewDate": "2026-10-27",
+  "scope": "offline synthetic input; no production or device access",
+  "gns3UnsupportedVersion": {
+    "inputVersion": "999.0",
+    "accepted": true,
+    "meaning": "Compatibility validation gap; no code execution demonstrated"
+  },
+  "registeredModules": [
+    {
+      "id": "web.compare",
+      "version": "1.0.0",
+      "targetKind": "public-https",
+      "maxBytes": 300
+    },
+    {
+      "id": "linux.ssh",
+      "version": "1.0.0",
+      "targetKind": "linux-sshd-config",
+      "maxBytes": 65536
+    },
+    {
+      "id": "windows.policy",
+      "version": "1.0.0",
+      "targetKind": "windows-policy-export",
+      "maxBytes": 65536
+    },
+    {
+      "id": "application.pe",
+      "version": "2.0.0",
+      "targetKind": "windows-pe-file",
+      "maxBytes": 2097152
+    },
+    {
+      "id": "application.apk",
+      "version": "1.0.0",
+      "targetKind": "android-apk-file",
+      "maxBytes": 2097152
+    },
+    {
+      "id": "application.macho",
+      "version": "1.0.0",
+      "targetKind": "macos-mach-o",
+      "maxBytes": 65536
+    },
+    {
+      "id": "application.package",
+      "version": "1.0.0",
+      "targetKind": "mobile-package",
+      "maxBytes": 65536
+    },
+    {
+      "id": "virtualization.vmx",
+      "version": "1.0.0",
+      "targetKind": "vmware-vmx-config",
+      "maxBytes": 65536
+    },
+    {
+      "id": "network.gns3",
+      "version": "1.0.0",
+      "targetKind": "gns3-topology-config",
+      "maxBytes": 65536
+    }
+  ]
+}

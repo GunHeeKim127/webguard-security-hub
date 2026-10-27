@@ -1,0 +1,66 @@
+[
+  {
+    "filename": "10-android-vulnerable.jpg",
+    "atUTC": "2026-10-27T00:53:38.809Z",
+    "summary": "76 text 개선·검토가 필요한 항목이 3개 있습니다. 아래의 검토 필요 항목과 개선 방법을 확인하세요. 미검사: 3개",
+    "comparison": []
+  },
+  {
+    "filename": "11-android-remediated.jpg",
+    "atUTC": "2026-10-27T00:54:48.897Z",
+    "summary": "76 text 이번 검사 범위에서 경고가 관찰되지 않았습니다. 전체 안전성을 보장하지 않습니다. 미검사: 3개",
+    "comparison": [
+      "\t\t\t148 text 개선 관찰: 0",
+      "\t\t\t150 text 변경: 3",
+      "\t\t\t151 text 비교 불가: 3"
+    ]
+  },
+  {
+    "filename": "12-ios-vulnerable.jpg",
+    "atUTC": "2026-10-27T00:59:46.783Z",
+    "summary": "76 text 개선·검토가 필요한 항목이 1개 있습니다. 아래의 검토 필요 항목과 개선 방법을 확인하세요. 미검사: 3개",
+    "comparison": []
+  },
+  {
+    "filename": "13-ios-remediated.jpg",
+    "atUTC": "2026-10-27T01:00:31.841Z",
+    "summary": "76 text 이번 검사 범위에서 경고가 관찰되지 않았습니다. 전체 안전성을 보장하지 않습니다. 미검사: 3개",
+    "comparison": [
+      "\t\t\t168 text 개선 관찰: 0",
+      "\t\t\t170 text 변경: 2",
+      "\t\t\t171 text 비교 불가: 3"
+    ]
+  },
+  {
+    "filename": "14-vmx-vulnerable.jpg",
+    "atUTC": "2026-10-27T01:01:15.927Z",
+    "summary": "78 text 개선·검토가 필요한 항목이 6개 있습니다. 아래의 검토 필요 항목과 개선 방법을 확인하세요. 미검사: 0개",
+    "comparison": []
+  },
+  {
+    "filename": "15-vmx-remediated.jpg",
+    "atUTC": "2026-10-27T01:01:27.864Z",
+    "summary": "78 text 이번 검사 범위에서 경고가 관찰되지 않았습니다. 전체 안전성을 보장하지 않습니다. 미검사: 0개",
+    "comparison": [
+      "\t\t\t135 text 개선 관찰: 5",
+      "\t\t\t137 text 변경: 1",
+      "\t\t\t138 text 비교 불가: 0"
+    ]
+  },
+  {
+    "filename": "16-gns3-vulnerable.jpg",
+    "atUTC": "2026-10-27T01:03:26.212Z",
+    "summary": "78 text 개선·검토가 필요한 항목이 2개 있습니다. 아래의 검토 필요 항목과 개선 방법을 확인하세요. 미검사: 1개",
+    "comparison": []
+  },
+  {
+    "filename": "17-gns3-remediated.jpg",
+    "atUTC": "2026-10-27T01:03:37.264Z",
+    "summary": "78 text 이번 검사 범위에서 경고가 관찰되지 않았습니다. 전체 안전성을 보장하지 않습니다. 미검사: 1개",
+    "comparison": [
+      "\t\t\t123 text 개선 관찰: 1",
+      "\t\t\t125 text 변경: 1",
+      "\t\t\t126 text 비교 불가: 1"
+    ]
+  }
+]

@@ -9,6 +9,12 @@ import {compareAssessments} from '../lib/assessment/compare';
 import {peMetadata,apkMetadata} from '../lib/assessment/binary-modules';
 import {trafficSignals} from '../lib/assessment/store';
 import {body} from '../lib/request';
+
+test('GNS3 version gate rejects unsupported majors and malformed versions before analysis',async()=>{
+ const context={locale:'en' as const,signal:new AbortController().signal},input=(version:unknown)=>({moduleId:'network.gns3',label:'Version boundary',authorized:true,text:JSON.stringify({type:'topology',version,topology:{nodes:[],links:[]}})});
+ for(const version of ['999.0','3.0.0','1.5','2','2.x','2.2.61<script>',null])assert.throws(()=>assessmentInput(input(version)));
+ for(const version of ['2.2','2.2.61','2.2.61-beta.1'])assert.equal((await runAssessment(assessmentInput(input(version)),context)).moduleId,'network.gns3');
+});
 import {protectedRequest} from '../lib/protected-request';
 import {parseVmx,parseGns3} from '../lib/assessment/infrastructure-modules';
 

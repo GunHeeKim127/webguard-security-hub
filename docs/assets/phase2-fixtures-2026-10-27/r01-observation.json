@@ -1,0 +1,57 @@
+{
+  "probes": [
+    {
+      "atUTC": "2026-10-27T00:32:05.111Z",
+      "path": "/api/health",
+      "status": 200,
+      "milliseconds": 2057,
+      "trace": "icn1::iad1::x9br9-1793061124481-4320e18df5a5"
+    },
+    {
+      "atUTC": "2026-10-27T00:32:07.168Z",
+      "path": "/api/ready",
+      "status": 200,
+      "milliseconds": 1459,
+      "code": "READY",
+      "trace": "icn1::iad1::hwcnl-1793061126235-9c712237f9f1"
+    },
+    {
+      "atUTC": "2026-10-27T00:32:08.627Z",
+      "path": "/signup",
+      "status": 200,
+      "milliseconds": 2920,
+      "trace": "icn1::iad1::hwcnl-1793061127700-954794c6620f"
+    },
+    {
+      "atUTC": "2026-10-27T00:32:11.547Z",
+      "path": "/",
+      "status": 200,
+      "milliseconds": 621,
+      "trace": "icn1::iad1::vk2pb-1793061130615-4a560862e3e8"
+    }
+  ],
+  "logs": [
+    {
+      "source": "runtime",
+      "available": false,
+      "reason": "Vercel Hobby runtime log retention does not cover requested 2h window (HTTP 400). Failure-era runtime evidence cannot be recovered through this query."
+    },
+    {
+      "source": "requests",
+      "available": true,
+      "records": 18,
+      "topLevelKeys": [
+        [
+          "type",
+          "data"
+        ],
+        [
+          "type",
+          "data"
+        ]
+      ]
+    }
+  ],
+  "providerMetricsAvailable": false,
+  "rootCauseConfirmed": false
+}

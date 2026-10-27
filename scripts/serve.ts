@@ -6,8 +6,11 @@ import {runtimePoolConfig} from '../lib/runtime-pool-config';
 import {activeBlock,clientAddress,detectThreat,recordThreat,type IpBlock} from '../lib/ingress-guard';
 import {requestLocale} from '../lib/request-locale';
 import {defenseText} from '../lib/defense-copy';
+import {randomBytes} from 'node:crypto';
+import {localAuthIdentity} from '../lib/auth-rate-identity';
 const dev=process.argv.includes('--dev');Object.assign(process.env,{NODE_ENV:dev?'development':'production'});
 nextEnv.loadEnvConfig(process.cwd(),dev);
+process.env.WEBGUARD_LOCAL_AUTH_SECRET=randomBytes(32).toString('hex');
 const option=(name:string,fallback:string)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1]??fallback;};
 const port=Number(option('--port',process.env.PORT??'3000')),hostname=option('--hostname','127.0.0.1');
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('Invalid port');
@@ -37,6 +40,8 @@ const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeo
   // A liveness endpoint carries no application data and remains available for operations.
   if(req.url!=='/api/health'&&req.url!=='/api/ready'){const block=await inspect(req);if(block){deny(req,res,block);return;}}
   // Never forward a gateway credential into the application or its logs.
+  const peer=clientAddress(req.socket.remoteAddress,headers(req));if(!peer)throw new Error('Client identity unavailable');
+  Object.assign(req.headers,localAuthIdentity(peer,process.env.WEBGUARD_LOCAL_AUTH_SECRET!));
   delete req.headers['x-webguard-proxy-token'];delete req.headers['x-webguard-client-ip'];
   await handle(req,res);
  }catch{if(!res.headersSent)deny(req,res,null);else res.destroy();}

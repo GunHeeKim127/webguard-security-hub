@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-10-27T01:06:34.728Z",
+  "check": "Browser-downloaded persisted GNS3 report findings and module version exactly equal independent real-file parser/engine report",
+  "passed": true,
+  "scope": "Synthetic local fixture; different observation times and generated IDs intentionally excluded",
+  "unitTests": 117,
+  "build": true,
+  "isolatedIntegration": true,
+  "securitySmoke": true,
+  "localeSmoke": true
+}

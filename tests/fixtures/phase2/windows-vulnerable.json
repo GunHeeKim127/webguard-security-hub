@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "firewall": {
+    "domain": false,
+    "private": false,
+    "public": false
+  },
+  "defender": {
+    "antivirus": false,
+    "realtime": false
+  },
+  "rdp": {
+    "enabled": true,
+    "nla": false
+  }
+}

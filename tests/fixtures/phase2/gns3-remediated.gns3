@@ -1,0 +1,14 @@
+{
+  "type": "topology",
+  "version": "2.2.61",
+  "topology": {
+    "nodes": [
+      {
+        "node_id": "review-node",
+        "node_type": "vpcs",
+        "console_host": "127.0.0.1"
+      }
+    ],
+    "links": []
+  }
+}

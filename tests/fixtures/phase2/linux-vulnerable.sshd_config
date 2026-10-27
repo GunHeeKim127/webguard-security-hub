@@ -1,0 +1,6 @@
+# SYNTHETIC REVIEW COPY - DO NOT APPLY
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords yes
+PubkeyAuthentication no
+MaxAuthTries 10
