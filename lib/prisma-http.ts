@@ -10,6 +10,7 @@ function parameter(value:unknown,depth=0):unknown{
 }
 export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(task:Promise<unknown>)=>void=()=>{}){
  return {async query<R extends QueryResultRow=any>(text:string,values:unknown[]=[],timeoutMs=5000):Promise<QueryResult<R>>{
+  const started=performance.now();
   const structure=text.replace(/'(?:''|[^'])*'/g,"''"),returnsRows=/^\s*(SELECT|WITH)\b/i.test(structure)||/\bRETURNING\b/i.test(structure);
   const args=values.map(v=>parameter(v));
   const task=(async():Promise<QueryResult<R>>=>{
@@ -21,7 +22,7 @@ export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(t
   // The SDK has no cancellation API. A deadline bounds the caller's wait only;
   // keep the original operation draining and never retry an ambiguous write.
   let timer:ReturnType<typeof setTimeout>|undefined;
-  try{return await Promise.race([task,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{try{onPending(task);}catch{}reject(new Error('Query read timeout'));},timeoutMs);})]);}
+  try{return await Promise.race([task,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{const pending=task.then(()=>{console.warn('[WebGuard managed HTTPS settlement]',{outcome:'completed',elapsedMs:Math.round(performance.now()-started),deadlineMs:timeoutMs});},()=>{console.warn('[WebGuard managed HTTPS settlement]',{outcome:'failed',elapsedMs:Math.round(performance.now()-started),deadlineMs:timeoutMs});});try{onPending(pending);}catch{}reject(new Error('Query read timeout'));},timeoutMs);})]);}
   finally{clearTimeout(timer);}
  }};
 }
