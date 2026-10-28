@@ -1,23 +1,21 @@
 import test from 'node:test';
-import {providerPreflight} from '../lib/provider-preflight';
+import {httpQueryAdapter,prismaHttp} from '../lib/prisma-http';
 
-test('provider preflight keeps the first read pending while one side read releases a held reply',async()=>{
- let release!:()=>void,closed=0;const queries:string[]=[];
- const held=new Promise<void>(resolve=>{release=resolve;});
- const client={query:async(config:any)=>{queries.push(config.text);await held;return {rows:[]};}} as any;
- await providerPreflight(client,()=>({run:async()=>{queries.push('SELECT 1');release();},close:async()=>{closed++;}}),1);
- assert.deepEqual(queries,['SELECT 1','SELECT 1']);assert.equal(closed,1);
+test('HTTP adapter preserves named rows, bound values and row counts without reissuing SQL',async()=>{
+ const calls:any[]=[];const driver={query:async(sql:string,...values:unknown[])=>{calls.push({kind:'query',sql,values});return {columns:[{name:'id',oid:23}],rows:{collect:async()=>[{values:[7]}]}};},exec:async(sql:string,...values:unknown[])=>{calls.push({kind:'exec',sql,values});return 2;}} as any;
+ const db=httpQueryAdapter(driver),payload="'); DROP TABLE users; --";
+ const result=await db.query('UPDATE scans SET result=$1 RETURNING id',[payload]);assert.deepEqual(result.rows,[{id:7}]);assert.equal(result.rowCount,1);assert(!calls[0].sql.includes(payload));assert.deepEqual(calls[0].values,[payload]);
+ const updated=await db.query("UPDATE events SET category='RETURNING' WHERE false");assert.equal(updated.rowCount,2);assert.deepEqual(updated.rows,[]);assert.equal(calls[1].kind,'exec');assert.equal(calls.length,2);
 });
-test('healthy preflight opens no side connection and failures never execute application SQL',async()=>{
- let sides=0,calls=0;
- await providerPreflight({query:async()=>{calls++;return {rows:[]};}} as any,()=>{sides++;throw new Error('must not create');},1);assert.equal(sides,0);assert.equal(calls,1);
- await assert.rejects(providerPreflight({query:async()=>{calls++;throw new Error('Query read timeout');}} as any,()=>{sides++;throw new Error('must not create');},1),/Query read timeout/);assert.equal(sides,0);assert.equal(calls,2);
+test('HTTP adapter serializes JSON/arrays safely and rejects non-provider credential destinations',async()=>{
+ let args:unknown[]=[];const db=httpQueryAdapter({exec:async(_sql:string,...values:unknown[])=>{args=values;return 1;},query:async()=>{throw new Error('unexpected query');}} as any);
+ await db.query('INSERT INTO events(category) VALUES($1)',[{a:1},['a','NULL',null]]);assert.deepEqual(args,['{"a":1}','{"a","NULL",NULL}']);
+ for(const url of ['https://db.prisma.io','postgres://test:test@evil.invalid/postgres','postgres://test@db.prisma.io/postgres'])assert.throws(()=>prismaHttp(url));
 });
-test('provider recovery settles before cleanup so an in-progress connect is not abandoned',async()=>{
- let release!:()=>void,finished=false,closed=false;
- const pending=new Promise<void>(resolve=>{release=resolve;});
- await providerPreflight({query:async()=>{await pending;return {rows:[]};}} as any,()=>({run:async()=>{release();await new Promise(resolve=>setTimeout(resolve,2));finished=true;},close:async()=>{assert(finished);closed=true;}}),1);
- assert(closed);
+test('HTTP write timeout never replays an operation and tracks its unknown outcome for draining',async()=>{
+ let complete!:(n:number)=>void,calls=0,draining:Promise<unknown>|undefined;
+ const db=httpQueryAdapter({exec:async()=>{calls++;return await new Promise<number>(resolve=>{complete=resolve;});},query:async()=>{throw new Error('unexpected query');}} as any,task=>{draining=task;});
+ await assert.rejects(db.query('DELETE FROM sessions WHERE false',[],1),/Query read timeout/);assert.equal(calls,1);assert(draining);complete(0);await draining;assert.equal(calls,1);
 });
 import {freshConnector,leaseQuery,MAX_IDLE_LEASE_MS} from '../lib/fresh-pool';
 
