@@ -1,3 +1,4 @@
+import 'server-only';
 import {Pool,type QueryResultRow} from 'pg';
 import {attachDatabasePool,waitUntil} from '@vercel/functions';
 import {runtimePoolConfig} from './runtime-pool-config';
@@ -23,6 +24,6 @@ function connector(){const active=pool();return shared.wgFresh??(shared.wgFresh=
 function http(){return shared.wgHttp??(shared.wgHttp=prismaHttp(projectDatabase('runtime').connectionString,task=>waitUntil(task.then(()=>{},()=>{}))));}
 const useHttp=()=>databaseProvider()==='prisma-postgres'&&process.env.VERCEL==='1';
 export const database={
- query:<R extends QueryResultRow=any>(text:string,values?:unknown[])=>{if(databaseProvider()==='prisma-postgres')assertManagedRuntimeSql(text);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
- protectionQuery:(text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';if(managed)assertManagedRuntimeSql(text);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
+ query:<R extends QueryResultRow=any>(text:string,values?:unknown[])=>{assertManagedRuntimeSql(text);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
+ protectionQuery:(text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
 };

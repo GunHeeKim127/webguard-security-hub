@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx scripts/serve.ts --dev",
-    "build": "next build --webpack",
+    "build": "next build --webpack && node scripts/verify-client-boundary.mjs",
     "start": "tsx scripts/serve.ts",
     "security:unblock": "tsx --env-file=.env.migration.local scripts/unblock-ip.ts",
     "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts tests/deployment.test.ts tests/phase2.test.ts tests/file-inspection.test.ts tests/phase2-fixtures.test.ts",

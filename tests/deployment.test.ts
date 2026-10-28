@@ -1,5 +1,19 @@
 import test from 'node:test';
 import {httpQueryAdapter,prismaHttp} from '../lib/prisma-http';
+import {releaseIpBlock} from '../lib/ip-block-management';
+import {releaseAccountBlock} from '../lib/account-block-management';
+
+test('admin release CTEs pass the same runtime SQL boundary as normal requests',async()=>{
+ let calls=0;const guarded=async(sql:string)=>{assertManagedRuntimeSql(sql);calls++;return {rows:[{audit_count:2}]};};
+ const id='00000000-0000-4000-8000-000000000001';
+ assert.equal(await releaseIpBlock(guarded,'192.0.2.1',id,id),true);
+ assert.equal(await releaseAccountBlock(guarded,id,id,id),true);assert.equal(calls,2);
+});
+
+test('runtime SQL rejects side-effectful SELECT and alternate SQL literals before transport',()=>{
+ for(const sql of ['SELECT pg_sleep(5)','SELECT pg_terminate_backend(1)','SELECT pg_notify($1,$2)','SELECT lo_get(1)','SELECT query_to_xml($1,true,false,$2)','SELECT $$hidden$$','SELECT 1 INTO TEMP TABLE leaked'])assert.throws(()=>assertManagedRuntimeSql(sql));
+ for(const sql of ["SELECT 'pg_sleep(5)' AS label",'SELECT id FROM public.scans WHERE user_id=$1','INSERT INTO public.events(category,user_id) VALUES($1,$2)'])assert.doesNotThrow(()=>assertManagedRuntimeSql(sql));
+});
 
 test('HTTP adapter preserves named rows, bound values and row counts without reissuing SQL',async()=>{
  const calls:any[]=[];const driver={query:async(sql:string,...values:unknown[])=>{calls.push({kind:'query',sql,values});return {columns:[{name:'id',oid:23}],rows:{collect:async()=>[{values:[7]}]}};},exec:async(sql:string,...values:unknown[])=>{calls.push({kind:'exec',sql,values});return 2;}} as any;

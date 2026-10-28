@@ -1,5 +1,25 @@
 import test from 'node:test';
 import {inspectSource} from '../lib/source-inspection';
+import {sourceSqlFindings} from '../lib/source-sql-review';
+
+test('SQL source hints distinguish PHP/JS construction, parameters and tagged ORM templates',()=>{
+ for(const text of ['const sql = "SELECT * FROM items WHERE id=" + req.query.id; db.query(sql);','<?php $db->query("SELECT * FROM items WHERE id=$id");','<?php mysqli_query($conn, "SELECT * FROM items WHERE id=" . $_GET["id"]);','db.query(`SELECT * FROM items WHERE id=${input}`);','prisma.$queryRaw`SELECT * FROM items WHERE id=${Prisma.raw(input)}`;'])assert(sourceSqlFindings(text,'en').some(f=>f.id.includes('dynamic-')&&f.status==='warning'),text);
+ for(const text of ['db.query("SELECT * FROM items WHERE id=$1",[input]);','<?php $stmt=$pdo->prepare("SELECT * FROM items WHERE id=?"); $stmt->execute([$id]);','prisma.$queryRaw`SELECT * FROM items WHERE id=${input}`;','db.query({text:"SELECT * FROM items WHERE id=$1",values:[input]});'])assert(!sourceSqlFindings(text,'en').some(f=>f.status==='warning'),text);
+ assert(sourceSqlFindings('prisma.$queryRawUnsafe("SELECT 1")','en').some(f=>f.id.includes('unsafe-')));
+});
+test('SQL source results redact source and distinguish comments and unresolved code from absence',()=>{
+ const secret='PRIVATE_SQL_MARKER';
+ const report=inspectSource('db.query("SELECT * FROM '+secret+' WHERE id=" + input);','ko');assert(report.findings.some(f=>f.id.includes('dynamic-')));assert(!JSON.stringify(report).includes(secret));
+ for(const text of ['// db.query(`SELECT ${input}`);','const sample = "db.query(SELECT secret)";','db.query("query { viewer { id } }");'])assert(!sourceSqlFindings(text,'en').some(f=>f.status==='warning'));
+ assert(sourceSqlFindings('db.query(statementFromOtherFile);','en').some(f=>f.id.includes('unresolved-')&&f.status==='not_assessed'));
+ const creds=sourceSqlFindings('const url="postgres://private:PRIVATE_SQL_MARKER@host/db";','en');assert(creds.some(f=>f.id.endsWith('credential')));assert(!JSON.stringify(creds).includes(secret));
+});
+test('SQL permission hints review PUBLIC grants and definer search paths without asserting live ACLs',()=>{
+ const unsafe=sourceSqlFindings('GRANT ALL ON TABLE private_table TO PUBLIC; CREATE FUNCTION f() RETURNS int LANGUAGE sql SECURITY DEFINER AS $$SELECT 1$$;','ko');
+ assert(unsafe.some(f=>f.id.includes('public-grant-')));assert(unsafe.some(f=>f.id.includes('definer-')));assert(unsafe.some(f=>f.id.endsWith('coverage')&&f.status==='not_assessed'));
+ assert(!sourceSqlFindings('GRANT SELECT ON public_catalog TO PUBLIC; CREATE FUNCTION f() RETURNS int LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$SELECT 1$$;','en').some(f=>f.status==='warning'));
+ assert(!JSON.stringify(unsafe).includes('private_table'));
+});
 
 test('source inspection distinguishes PHP, JavaScript and React core from server runtime packages',()=>{
  const php=inspectSource('<?php echo "PRIVATE_TEST_MARKER";','ko');assert(php.findings.some(f=>f.id.endsWith('CVE-2026-109618')&&f.status==='not_assessed'));assert(!JSON.stringify(php).includes('PRIVATE_TEST_MARKER'));

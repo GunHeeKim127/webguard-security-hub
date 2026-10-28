@@ -23,10 +23,11 @@ import {scan} from '../lib/scanner';
 import dns from 'node:dns/promises';
 import https from 'node:https';
 import {releaseIpBlock} from '../lib/ip-block-management';
+import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 
 test('IP management canonicalizes the target and never stores raw addresses in audit categories',async()=>{
  let captured:unknown[]=[];
- const query=async(sql:string,values:unknown[])=>{assert(sql.includes('WITH reset'));assert(sql.includes('INSERT INTO public.events(category,user_id)'));captured=values;return {rows:[{audit_count:2}]};};
+ const query=async(sql:string,values:unknown[])=>{assertManagedRuntimeSql(sql);assert(sql.includes('INSERT INTO public.events(category,user_id)'));captured=values;return {rows:[{audit_count:2}]};};
  assert(await releaseIpBlock(query,'::ffff:192.0.2.4','11111111-1111-4111-8111-111111111111'));
  assert.equal(captured[0],'192.0.2.4');assert(/^ip_unblocked_target:[a-f0-9]{64}$/.test(String(captured[2])));
  await assert.rejects(releaseIpBlock(query,'not-an-ip','11111111-1111-4111-8111-111111111111'));
