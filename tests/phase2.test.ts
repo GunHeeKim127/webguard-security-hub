@@ -14,6 +14,11 @@ test('SQL source results redact source and distinguish comments and unresolved c
  assert(sourceSqlFindings('db.query(statementFromOtherFile);','en').some(f=>f.id.includes('unresolved-')&&f.status==='not_assessed'));
  const creds=sourceSqlFindings('const url="postgres://private:PRIVATE_SQL_MARKER@host/db";','en');assert(creds.some(f=>f.id.endsWith('credential')));assert(!JSON.stringify(creds).includes(secret));
 });
+test('SQL guidance exposes observed counts and line-specific hints without inventing backend facts',()=>{
+ const report=inspectSource('const sql="SELECT * FROM records WHERE id="+input;\ndb.query(sql);','ko'),item=report.findings.find(f=>f.id.includes('source:sql:dynamic-'))!;
+ assert.match(findingContext(item,report,'ko').observed,/2행/);assert.match(findingContext(report.findings.find(f=>f.id==='source:sql:coverage')!,report,'ko').observed,/1개/);
+ const none=inspectSource('const value=1;','ko');assert.match(findingContext(none.findings.find(f=>f.id==='source:sql:coverage')!,none,'ko').observed,/0개/);
+});
 test('SQL permission hints review PUBLIC grants and definer search paths without asserting live ACLs',()=>{
  const unsafe=sourceSqlFindings('GRANT ALL ON TABLE private_table TO PUBLIC; CREATE FUNCTION f() RETURNS int LANGUAGE sql SECURITY DEFINER AS $$SELECT 1$$;','ko');
  assert(unsafe.some(f=>f.id.includes('public-grant-')));assert(unsafe.some(f=>f.id.includes('definer-')));assert(unsafe.some(f=>f.id.endsWith('coverage')&&f.status==='not_assessed'));

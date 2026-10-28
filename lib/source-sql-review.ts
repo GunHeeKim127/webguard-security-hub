@@ -56,5 +56,6 @@ export function sourceSqlFindings(text:string,locale:'ko'|'en'):Finding[]{
  }
  if(/(?:postgres(?:ql)?|mysql):\/\/[^\s'"`]+@/i.test(text))add('credential',0,'warning','소스에 DB 인증 URL 형태 관찰','Database credential URL pattern observed','인증 URL 원문은 표시하지 않습니다. 비밀 설정으로 분리하고 실제 값이 공개됐다면 자격증명을 교체하세요. 주석·예시일 수도 있어 사용 여부는 확인이 필요합니다.','The URL is redacted. Move credentials into private configuration; rotate real published values. Comments or examples may match, so verify actual use.');
  add('coverage',0,'not_assessed',calls||rawSql?'SQL 검토 범위와 추가 자료':'이 파일에서 SQL 호출을 확인하지 못함',calls||rawSql?'SQL review scope and required evidence':'No SQL call established in this file',calls||rawSql?'한 파일의 정적 단서만 검사했습니다. DB 실행 권한·TLS·백업 테이블 접근·고객별 조회 조건·실제 입력 경로는 미검증입니다. 민감 값을 지운 권한 내역과 관련 API·쿼리 코드를 추가하세요.':'SQL 호출이 안 보인다고 DB를 사용하지 않거나 안전하다는 뜻은 아닙니다. 실제 DB 접근 코드와 매개변수 전달 부분을 추가하세요.',calls||rawSql?'Only static hints in one file were reviewed. Runtime privileges, TLS, backup access, tenant filters and input flow remain unverified. Supply redacted grants and related API/query code.':'No observed call does not establish absence of a database or safety. Supply actual DB access and parameter-binding code.');
+ const coverage=findings.find(f=>f.id==='source:sql:coverage');coverage?.evidence.push(`sqlCallsObserved=${calls}`,`sqlDocumentObserved=${!!rawSql}`);
  return findings;
 }
