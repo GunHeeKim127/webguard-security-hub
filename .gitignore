@@ -179,3 +179,23 @@ next-env.d.ts
 # User-provided local environment downloads may contain production credentials.
 env.download
 env.*.download
+
+# Private keys, signing stores and local cloud/tool credentials.
+*.key
+*.pem
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+.ssh/
+.aws/
+.vercel/
+.npmrc
+.netrc
+# Local database exports and backups never belong in source control.
+*.dump
+*.backup
+*.sql.gz

@@ -8,6 +8,7 @@ import {errorText} from '../../lib/errors-i18n';
 import {protectedRequest} from '../../lib/protected-request';
 import FileInspection from './file-inspection';
 import InfrastructureInput from './infrastructure-input';
+import SourceInspection from './source-inspection';
 import AssessmentFindings,{AssessmentOverview,AssessmentInputSummary} from './assessment-findings';
 import {canAssess} from '../../lib/assessment-permission';
 import ArchitectureOverview,{categoryFor,ModuleIcon} from './architecture-overview';
@@ -98,6 +99,7 @@ export default function Workbench({initialUser,initialLocale,view='home'}:{initi
  <FormControlLabel control={<Checkbox disabled={busy||readingConfig} checked={authorized} onChange={e=>setAuthorized(e.target.checked)}/>} label={t('소유 또는 점검 허가를 확인했으며 분석에 동의합니다.','I confirm ownership/permission and consent to assessment.')}/>
  <Button type="submit" variant="contained" disabled={!readyToSubmit}>{busy?t('검사·저장 중','Assessing and saving'):original!==undefined?t('원본 전송·서버 검사·결과 저장','Upload original / server inspect / save'):onDevice?t('요약 전송·결과 저장','Send summary / save results'):t('진단 및 재검증','Assess / retest')}</Button>{busy&&<LinearProgress/>}</Stack>
  </Paper>}
+ {view==='web'&&<SourceInspection locale={locale} disabled={busy||!canRun}/>}
  {view!=='home'&&<Paper id="assessment-results" variant="outlined" sx={{p:{xs:2.5,sm:3.5},mt:4,bgcolor:'background.paper',scrollMarginTop:24}}><Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}><Box><Typography variant="overline" color="text.secondary">ASSESSMENT RESULTS</Typography><Typography variant="h6">{t('최근 30일 자산·재검증 기록','Assets and retests · last 30 days')}</Typography></Box><Button disabled={busy||loading} onClick={()=>void load(selectedRef.current)}>{t('새로고침','Refresh')}</Button></Stack>
  {loading&&<LinearProgress sx={{my:2}}/>}
  {data?.assets.length?<TextField sx={{my:3}} fullWidth select label={t('내 자산 · 최근 50개','My assets · latest 50')} value={selected} disabled={busy} onChange={e=>chooseAsset(e.target.value)}>{data.assets.map(a=><MenuItem value={a.id} key={a.id}>{a.label} · {name(a.module_id)}</MenuItem>)}</TextField>:!loading&&<Box sx={{py:5,textAlign:'center',color:'text.secondary'}}><ModuleIcon kind="report" size={30}/><Typography fontWeight={600} sx={{mt:1.5,color:'text.primary'}}>{t('첫 번째 자산을 점검해 보세요','Assess your first asset')}</Typography><Typography variant="body2" mt={1}>{(category?t('위의 검사 폼에서 첫 진단을 시작하세요.','Start your first assessment using the form above.'):t('검사 선택 화면에서 작전실을 선택하세요.','Choose a check from the modules screen.'))}</Typography><Typography variant="caption" display="block" mt={1}>{t('기존 웹 작전실의 진단 기록은 상단 웹 진단 작전실에서 확인합니다.','Legacy web scan history remains in Web operations above.')}</Typography></Box>}

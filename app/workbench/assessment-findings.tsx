@@ -3,9 +3,10 @@ import {Alert,Box,Button,Chip,Paper,Stack,Typography} from '@mui/material';
 import type {AssessmentReport,Finding} from '../../lib/assessment/types';
 import {explainFinding,orderedFindings,statusCopy} from '../../lib/assessment/explanation';
 import {findingContext} from '../../lib/assessment/finding-context';
-type Props={report:AssessmentReport;locale:'ko'|'en'};
+type Props={report:AssessmentReport;locale:'ko'|'en';listId?:string};
 export function AssessmentInputSummary({report,locale}:Props){
- const ko=locale==='ko',integrity=report.integrity,web=report.moduleId==='web.compare';
+ const ko=locale==='ko',integrity=report.integrity,web=report.moduleId==='web.compare'&&report.targetKind!=='supplied-source';
+ if(report.targetKind==='supplied-source')return <Alert severity="info" sx={{my:2,overflowWrap:'anywhere'}}>{ko?'서버가 수신한 소스·의존성 텍스트의 정적 검토입니다. 실제 배포 상태나 전체 코드 안전성을 검증하지 않습니다. 수신 텍스트 SHA-256: ':'Static review of received source / dependency text, not live deployment or full code safety verification. Received text SHA-256: '}{integrity?.sha256??(ko?'기록 없음':'unavailable')}</Alert>;
  const text=web?(ko?'공개된 웹 응답의 일부만 확인했습니다. 로그인 후 화면이나 사이트 전체 취약점을 검사한 결과는 아닙니다.':'Only part of the public web response was checked, not signed-in pages or the whole site.'):!integrity?(ko?'과거 결과에는 입력과 결과를 연결하는 검증 근거가 없습니다. 현재 검사 방식으로 다시 확인하세요.':'This older result has no input-integrity evidence. Reassess using a current method.'):integrity.status==='unverified-summary'?(ko?'기기에서 만든 요약으로 검사했습니다. 서버가 원본 파일과 같은지 직접 대조하지는 않았습니다.':'This assessment uses an on-device summary. The server has not independently matched it to the original file.'):integrity.basis==='received-utf8-text'?(ko?'전달받은 설정 내용으로 검사했습니다. 현재 기기에 실제로 적용된 상태인지는 별도로 확인해야 합니다.':'The received configuration text was checked. Its effective state on the device requires a separate check.'):(ko?'서버가 전송받은 파일을 다시 읽어 검사했습니다. 제작자의 진위나 악성코드가 없다는 사실까지 보증하지는 않습니다.':'The server re-read the received file. This does not guarantee publisher authenticity or absence of malware.');
  return <Alert severity={!web&&integrity?.status!=='server-recomputed'?'warning':'info'} sx={{my:2}}>{text}</Alert>;
 }
@@ -42,7 +43,7 @@ function FindingCard({finding:f,report,locale}:Props&{finding:Finding}){
 export default function AssessmentFindings(props:Props){
  const ko=props.locale==='ko',all=orderedFindings(props.report.findings),warnings=all.filter(f=>f.status==='warning'),unknown=all.filter(f=>f.status==='not_assessed'),other=all.filter(f=>f.status==='pass'||f.status==='info');
  const cards=(items:Finding[])=><Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr',lg:'1fr 1fr'},gap:2,mt:1.5}}>{items.map(f=><FindingCard key={f.id} {...props} finding={f}/>)}</Box>;
- return <Stack id="assessment-finding-list" gap={3} sx={{scrollMarginTop:24}}>
+ return <Stack id={props.listId??'assessment-finding-list'} gap={3} sx={{scrollMarginTop:24}}>
   {!!warnings.length&&<Box><Typography variant="h6">{ko?`보완·검토할 내용 ${warnings.length}개`:`Review or improve (${warnings.length})`}</Typography>{cards(warnings)}</Box>}
   {!!unknown.length&&<Box component="details" open={!warnings.length} sx={{'& > summary':{cursor:'pointer',fontWeight:700,color:'primary.main'}}}><Typography component="summary">{ko?`추가 확인이 필요한 내용 ${unknown.length}개 — 문제가 없다는 뜻은 아닙니다`:`Not yet verified (${unknown.length}) — these are not passes`}</Typography>{cards(unknown)}</Box>}
   {!!other.length&&<Box component="details" sx={{'& > summary':{cursor:'pointer',fontWeight:700,color:'primary.main'}}}><Typography component="summary">{ko?`참고·기준 충족 항목 ${other.length}개 보기`:`Observations and baseline results (${other.length})`}</Typography>{cards(other)}</Box>}

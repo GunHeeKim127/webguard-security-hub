@@ -1,4 +1,22 @@
 import test from 'node:test';
+import {inspectSource} from '../lib/source-inspection';
+
+test('source inspection distinguishes PHP, JavaScript and React core from server runtime packages',()=>{
+ const php=inspectSource('<?php echo "PRIVATE_TEST_MARKER";','ko');assert(php.findings.some(f=>f.id.endsWith('CVE-2026-109618')&&f.status==='not_assessed'));assert(!JSON.stringify(php).includes('PRIVATE_TEST_MARKER'));
+ const js=inspectSource('const greeting = "PRIVATE_TEST_MARKER";','en');assert(js.findings.some(f=>f.id.startsWith('source:language:')));assert(!js.findings.some(f=>/CVE-|GHSA-/.test(f.id)));
+ const react=inspectSource(JSON.stringify({dependencies:{react:'19.0.0','react-dom':'19.0.0'}}),'en');assert(react.findings.some(f=>f.id==='source:rsc-applicability'));assert(!react.findings.some(f=>/CVE-|GHSA-/.test(f.id)));
+});
+test('supplied dependency locks compare exact RSC package versions without persisting source fields',()=>{
+ for(const [version,status]of [['19.0.3','warning'],['19.0.4','info'],['19.1.4','warning'],['19.1.5','info'],['19.2.3','warning'],['19.2.4','info'],['^19.2.4','not_assessed']] as const){
+  const text=JSON.stringify({lockfileVersion:3,packages:{'node_modules/react-server-dom-webpack':{version,resolved:'https://PRIVATE_TEST_MARKER',integrity:'PRIVATE_TEST_MARKER'}}});const r=inspectSource(text,'en');assert.equal(r.findings.find(f=>f.id.endsWith('CVE-2026-23864'))?.status,status);assert(!JSON.stringify(r).includes('PRIVATE_TEST_MARKER'));assert.equal(r.integrity?.bytes,Buffer.byteLength(text));
+ }
+ const conflicting=inspectSource(JSON.stringify({packages:{'node_modules/react-server-dom-webpack':{version:'19.2.3'},'node_modules/nested/node_modules/react-server-dom-webpack':{version:'19.2.4'}}}),'en');assert.equal(conflicting.findings.find(f=>f.id.endsWith('CVE-2026-23864'))?.status,'not_assessed');
+});
+test('source inspection never substitutes engines ranges or PHP language hints for deployed runtime versions',()=>{
+ const range=inspectSource(JSON.stringify({engines:{node:'>=24.22.1'}}),'en');assert.equal(range.findings.find(f=>f.id.endsWith('CVE-2026-111497'))?.status,'not_assessed');
+ const declared=inspectSource(JSON.stringify({runtime:{node:'24.22.0',php:'8.4.26'}}),'en');assert.equal(declared.findings.find(f=>f.id.endsWith('CVE-2026-111497'))?.status,'warning');assert.equal(declared.findings.find(f=>f.id.endsWith('CVE-2026-109618'))?.status,'warning');
+ for(const invalid of ['', '[1,2]', '{not json}', 'x'.repeat(65537),'\0'])assert.throws(()=>inspectSource(invalid,'en'));
+});
 import assert from 'node:assert/strict';
 import dns from 'node:dns/promises';
 import https from 'node:https';
