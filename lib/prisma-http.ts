@@ -25,10 +25,18 @@ export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(t
   finally{clearTimeout(timer);}
  }};
 }
-export function prismaHttp(connectionString:string,onPending?:(task:Promise<unknown>)=>void){
+export function managedHttpConfig(connectionString:string){
  const url=new URL(connectionString);
  if(!['postgres:','postgresql:'].includes(url.protocol)||!['pooled.db.prisma.io','db.prisma.io'].includes(url.hostname)||!url.username||!url.password)throw new Error('Invalid managed HTTP database configuration');
- const config=defaultClientConfig(connectionString);
+ // The SDK derives its HTTPS endpoint from this hostname. pooled.db is the
+ // TCP pooler, not its documented HTTP endpoint. Prisma documents the same
+ // credentials for both hosts; retain them and target the official HTTP host.
+ // This never opens a direct TCP connection or uses a migration credential.
+ url.hostname='db.prisma.io';
+ return defaultClientConfig(url.toString());
+}
+export function prismaHttp(connectionString:string,onPending?:(task:Promise<unknown>)=>void){
+ const config=managedHttpConfig(connectionString);
  // Match node-postgres: int8 remains a string and timestamps serialize as ISO.
  config.parsers=[16,20,21,23,700,701,25,1043,114,3802,1082,1114,1184,1700].map(oid=>({oid,parse:(value:string|null)=>value===null?null:types.getTypeParser(oid,'text')(value)}));
  return httpQueryAdapter(client(config),onPending);

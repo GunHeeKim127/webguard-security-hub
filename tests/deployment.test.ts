@@ -1,5 +1,12 @@
 import test from 'node:test';
-import {httpQueryAdapter,prismaHttp} from '../lib/prisma-http';
+import {httpQueryAdapter,prismaHttp,managedHttpConfig} from '../lib/prisma-http';
+
+test('managed HTTPS always targets the documented HTTP host while retaining runtime credentials',()=>{
+ const input=new URL('postgres://runtime-user:runtime-test-password@pooled.db.prisma.io:5432/postgres?sslmode=require'),output=new URL(managedHttpConfig(input.toString()).connectionString);
+ assert.equal(output.hostname,'db.prisma.io');assert.equal(output.username,input.username);assert.equal(output.password,input.password);assert.equal(output.pathname,input.pathname);assert.equal(output.search,input.search);
+ assert.equal(new URL(managedHttpConfig('postgres://test:test@db.prisma.io/postgres').connectionString).hostname,'db.prisma.io');
+ assert.throws(()=>managedHttpConfig('postgres://test:test@db.prisma.io.evil.invalid/postgres'));
+});
 
 test('readiness retries only an interrupted read once, without exposing database error text',async()=>{
  const envBefore={...process.env};Object.assign(process.env,{DATABASE_PROVIDER:'prisma-postgres',DATABASE_URL:'postgres://test:test@pooled.db.prisma.io/postgres',PROJECT_DATABASE:'postgres'});

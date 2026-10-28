@@ -678,3 +678,9 @@ origin을 갱신한 뒤 GitHub main의 39개 커밋에서 텍스트 blob 586개�
 운영 일반 회원이 실제 scan-store.ts를 동의 후 검사해 수신 SHA-256을 독립 파일 해시와 일치 확인했다. SQL 관찰 개수·행 번호와 필요한 추가 자료가 기본 화면에 나오도록 설명을 보완했다. 20:58 KST 실제 웹 비교 검사·저장·이전 결과 선택을 확인했으며 버전이 다른 결과를 개선으로 오인하지 않았다. Windows 실제 정책·PE 저장/조회, 모바일/VMX/GNS3 파일 미선택 오류와 기존 이력 조회도 범위별로 확인했다. 최신 전체 회귀 151개·타입·production 빌드/클라이언트 경계 검사 통과. 상세 운영 후속과 한계는 최신 행렬을 따른다.
 
 개인 캡처 2개도 ignored work/로 옮겨 이번 업로드에서 제외했다. defend-captures 삭제와 환경 파일 무시 정책을 유지한다. 사용자 요청에 따라 이번 정리본의 푸시는 허가됐으며 이후 별도 작업의 커밋·푸시는 사전 확인 원칙을 유지한다.
+
+### 29.1 운영 후속: HTTP 종단 호스트 수정
+
+최종 화면 이동 중 PROTECTION_UNAVAILABLE가 다시 발생해 정상 판정을 보류했다. 공식 Prisma 문서의 서버리스 드라이버는 db.prisma.io HTTPS 종단을 사용하지만 이전 구현은 pooled.db.prisma.io를 SDK에 그대로 넘겼다. 제공자는 두 형식의 자격이 같고 호스트만 다르다고 명시한다. 따라서 기존 검증된 런타임 자격은 그대로 유지하고 SDK의 HTTPS 종단만 db.prisma.io로 고정했다. 직접 TCP 연결·migration 자격 복사·TLS 약화는 없다. 전체 회귀 152개·타입·빌드 및 운영 DB 읽기 전용 자료형/준비 상태 확인 통과. 변경 후 운영 가용성은 다시 관찰하며 이 수정만으로 모든 원인을 입증했다고 하지 않는다.
+
+근거: https://www.prisma.io/docs/postgres/database/serverless-driver 및 https://www.prisma.io/docs/postgres/database/connecting-to-your-database .
