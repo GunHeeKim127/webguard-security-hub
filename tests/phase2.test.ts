@@ -9,6 +9,31 @@ import {compareAssessments} from '../lib/assessment/compare';
 import {peMetadata,apkMetadata} from '../lib/assessment/binary-modules';
 import {trafficSignals} from '../lib/assessment/store';
 import {body} from '../lib/request';
+import {explainFinding,orderedFindings,statusCopy} from '../lib/assessment/explanation';
+import type {Finding} from '../lib/assessment/types';
+
+test('readable findings prioritize warnings without changing stored verdicts or evidence',()=>{
+ const make=(id:string,status:Finding['status'],severity:Finding['severity']):Finding=>Object.freeze({id,title:id,status,severity,evidence:['explicit=true'],remediation:'Original guidance'});
+ const original=Object.freeze([make('pass','pass','info'),make('medium-a','warning','medium'),make('unknown','not_assessed','info'),make('high','warning','high'),make('medium-b','warning','medium'),make('observed','info','info')]);
+ const before=JSON.stringify(original),sorted=orderedFindings(original);
+ assert.deepEqual(sorted.map(f=>f.id),['high','medium-a','medium-b','unknown','observed','pass']);
+ assert.equal(JSON.stringify(original),before);assert.equal(sorted[0],original[3]);assert.equal(sorted[3].status,'not_assessed');
+});
+test('plain explanations preserve profile and architecture identity with original fallback',()=>{
+ const f:Finding={id:'arch-2:nx',title:'DEP/NX',status:'warning',severity:'medium',evidence:['declared=false'],remediation:'Original next step'};
+ assert.match(explainFinding(f,'application.pe','ko').title,/실행 형식 2/);
+ assert.match(explainFinding(f,'application.pe','ko').action,/제작자/);
+ assert.match(explainFinding({...f,id:'mobile:content-security-policy'},'web.compare','ko').title,/^모바일/);
+ const unknown={...f,id:'future-check',title:'Future check'};
+ assert.equal(explainFinding(unknown,'application.pe','en').action,unknown.remediation);
+ assert.equal(f.status,'warning');assert.deepEqual(f.evidence,['declared=false']);
+});
+test('unverified advisory presentation does not claim a confirmed vulnerability or pass',()=>{
+ const f:Finding={id:'desktop:technology:PHP:CVE-2026-109618',title:'Advisory',status:'not_assessed',severity:'info',evidence:['versionRangeMatch=unknown'],remediation:'Check provider guidance'};
+ const copy=explainFinding(f,'web.compare','ko');
+ assert.match(copy.why,/확정된 것은 아닙니다/);assert.match(copy.action,/실제 설치 버전/);
+ assert.equal(statusCopy[f.status].ko,'아직 확인하지 못함');assert.equal(f.status,'not_assessed');
+});
 
 test('GNS3 version gate rejects unsupported majors and malformed versions before analysis',async()=>{
  const context={locale:'en' as const,signal:new AbortController().signal},input=(version:unknown)=>({moduleId:'network.gns3',label:'Version boundary',authorized:true,text:JSON.stringify({type:'topology',version,topology:{nodes:[],links:[]}})});
