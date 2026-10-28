@@ -1,14 +1,25 @@
-import {Pool,type QueryResultRow} from 'pg';
+import {Pool,Client,type PoolClient,type QueryResultRow} from 'pg';
 import {attachDatabasePool} from '@vercel/functions';
 import {runtimePoolConfig} from './runtime-pool-config';
 import {databaseProvider} from './database-provider';
 import {assertManagedRuntimeSql} from './runtime-sql';
 import {protectionQuery} from './protection-query';
 import {freshConnector,leaseQuery} from './fresh-pool';
+import {providerPreflight} from './provider-preflight';
 const shared=globalThis as unknown as {wgPool?:Pool;wgFresh?:Pick<Pool,'connect'>};
 function pool(){
  if(!shared.wgPool){
-  const created=new Pool(runtimePoolConfig());
+  const config=runtimePoolConfig();
+  const created=new Pool({...config,...(databaseProvider()==='prisma-postgres'&&process.env.VERCEL==='1'?{
+   verify:(client:PoolClient,done:(error?:Error)=>void)=>{
+    providerPreflight(client,()=>{
+     const secondary=new Client({...config,connectionTimeoutMillis:3000,query_timeout:2000});let ended=false;
+     secondary.on('error',()=>{});
+     const close=async()=>{if(!ended){ended=true;await secondary.end();}};
+     return {run:async()=>{try{await secondary.connect();if(!ended)await secondary.query('SELECT 1');}finally{await close();}},close};
+    }).then(()=>done(),error=>done(error instanceof Error?error:new Error('Database connection preflight failed')));
+   }
+  }: {})});
   created.on('error',()=>console.error('PostgreSQL idle connection closed'));
   if(process.env.VERCEL==='1')attachDatabasePool(created);
   shared.wgPool=created;

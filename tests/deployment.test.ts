@@ -1,4 +1,24 @@
 import test from 'node:test';
+import {providerPreflight} from '../lib/provider-preflight';
+
+test('provider preflight keeps the first read pending while one side read releases a held reply',async()=>{
+ let release!:()=>void,closed=0;const queries:string[]=[];
+ const held=new Promise<void>(resolve=>{release=resolve;});
+ const client={query:async(config:any)=>{queries.push(config.text);await held;return {rows:[]};}} as any;
+ await providerPreflight(client,()=>({run:async()=>{queries.push('SELECT 1');release();},close:async()=>{closed++;}}),1);
+ assert.deepEqual(queries,['SELECT 1','SELECT 1']);assert.equal(closed,1);
+});
+test('healthy preflight opens no side connection and failures never execute application SQL',async()=>{
+ let sides=0,calls=0;
+ await providerPreflight({query:async()=>{calls++;return {rows:[]};}} as any,()=>{sides++;throw new Error('must not create');},1);assert.equal(sides,0);assert.equal(calls,1);
+ await assert.rejects(providerPreflight({query:async()=>{calls++;throw new Error('Query read timeout');}} as any,()=>{sides++;throw new Error('must not create');},1),/Query read timeout/);assert.equal(sides,0);assert.equal(calls,2);
+});
+test('provider recovery settles before cleanup so an in-progress connect is not abandoned',async()=>{
+ let release!:()=>void,finished=false,closed=false;
+ const pending=new Promise<void>(resolve=>{release=resolve;});
+ await providerPreflight({query:async()=>{await pending;return {rows:[]};}} as any,()=>({run:async()=>{release();await new Promise(resolve=>setTimeout(resolve,2));finished=true;},close:async()=>{assert(finished);closed=true;}}),1);
+ assert(closed);
+});
 import {freshConnector,leaseQuery,MAX_IDLE_LEASE_MS} from '../lib/fresh-pool';
 
 test('suspended idle sockets are discarded before a query even when idle timers never ran',async()=>{
