@@ -1,5 +1,19 @@
 import test from 'node:test';
-import {httpQueryAdapter,prismaHttp,managedHttpConfig} from '../lib/prisma-http';
+import {httpQueryAdapter,prismaHttp,managedHttpConfig,coalescedReadProbe} from '../lib/prisma-http';
+
+test('slow HTTP operations keep their original request alive and share one fixed read recovery',async()=>{
+ let probes=0,queries=0;const complete:Array<()=>void>=[];let probeDone!:(v:any)=>void;
+ const driver={query:async(sql:string)=>{if(sql==='SELECT 1 AS webguard_read_probe'){probes++;complete.forEach(done=>done());return await new Promise(resolve=>{probeDone=resolve;});}queries++;await new Promise<void>(resolve=>complete.push(resolve));return {columns:[],rows:{collect:async()=>[]}};},exec:async()=>0} as any;
+ const recovery=coalescedReadProbe(driver),pending:Promise<unknown>[]=[],db=httpQueryAdapter(driver,p=>pending.push(p),recovery,1);
+ await Promise.all([db.query('SELECT id FROM scans'),db.query('SELECT id FROM events')]);assert.equal(queries,2);assert.equal(probes,1);
+ probeDone({columns:[],rows:{collect:async()=>[]}});await Promise.all(pending);assert.equal(probes,1);
+});
+test('fixed read recovery never replays a slow write and normal queries schedule no recovery',async()=>{
+ let writes=0,probes=0,complete!:(n:number)=>void;
+ const driver={exec:async()=>{writes++;return await new Promise<number>(resolve=>{complete=resolve;});},query:async()=>{probes++;complete(1);return {columns:[],rows:{collect:async()=>[]}};}} as any;
+ const db=httpQueryAdapter(driver,()=>{},coalescedReadProbe(driver),1);assert.equal((await db.query('INSERT INTO events(category) VALUES($1)',['audit'])).rowCount,1);assert.equal(writes,1);assert.equal(probes,1);
+ let recoveries=0;await httpQueryAdapter({query:async()=>({columns:[],rows:{collect:async()=>[]}}),exec:async()=>0} as any,()=>{},async()=>{recoveries++;},1).query('SELECT 1');assert.equal(recoveries,0);
+});
 
 test('managed HTTPS always targets the documented HTTP host while retaining runtime credentials',()=>{
  const input=new URL('postgres://runtime-user:runtime-test-password@pooled.db.prisma.io:5432/postgres?sslmode=require'),output=new URL(managedHttpConfig(input.toString()).connectionString);

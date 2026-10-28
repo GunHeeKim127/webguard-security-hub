@@ -8,7 +8,11 @@ function parameter(value:unknown,depth=0):unknown{
  if(value&&typeof value==='object'&&!(value instanceof Date))return JSON.stringify(value);
  return value;
 }
-export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(task:Promise<unknown>)=>void=()=>{}){
+export function coalescedReadProbe(driver:Pick<Client,'query'>){
+ let pending:Promise<void>|undefined;
+ return ()=>pending??(pending=(async()=>{const started=performance.now(),result=await driver.query('SELECT 1 AS webguard_read_probe');await result.rows.collect();console.warn('[WebGuard managed HTTPS recovery]',{outcome:'completed',elapsedMs:Math.round(performance.now()-started)});})().finally(()=>{pending=undefined;}));
+}
+export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(task:Promise<unknown>)=>void=()=>{},recover?:(()=>Promise<void>),recoveryDelayMs=2000){
  return {async query<R extends QueryResultRow=any>(text:string,values:unknown[]=[],timeoutMs=5000):Promise<QueryResult<R>>{
   const started=performance.now();
   const structure=text.replace(/'(?:''|[^'])*'/g,"''"),returnsRows=/^\s*(SELECT|WITH)\b/i.test(structure)||/\bRETURNING\b/i.test(structure);
@@ -21,9 +25,10 @@ export function httpQueryAdapter(driver:Pick<Client,'query'|'exec'>,onPending:(t
   })();
   // The SDK has no cancellation API. A deadline bounds the caller's wait only;
   // keep the original operation draining and never retry an ambiguous write.
-  let timer:ReturnType<typeof setTimeout>|undefined;
+  let timer:ReturnType<typeof setTimeout>|undefined,recoveryTimer:ReturnType<typeof setTimeout>|undefined;
+  if(recover)recoveryTimer=setTimeout(()=>{const recovery=recover().catch(()=>{console.warn('[WebGuard managed HTTPS recovery]',{outcome:'failed'});});try{onPending(recovery);}catch{}},recoveryDelayMs);
   try{return await Promise.race([task,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{const pending=task.then(()=>{console.warn('[WebGuard managed HTTPS settlement]',{outcome:'completed',elapsedMs:Math.round(performance.now()-started),deadlineMs:timeoutMs});},()=>{console.warn('[WebGuard managed HTTPS settlement]',{outcome:'failed',elapsedMs:Math.round(performance.now()-started),deadlineMs:timeoutMs});});try{onPending(pending);}catch{}reject(new Error('Query read timeout'));},timeoutMs);})]);}
-  finally{clearTimeout(timer);}
+  finally{clearTimeout(timer);clearTimeout(recoveryTimer);}
  }};
 }
 export function managedHttpConfig(connectionString:string){
@@ -40,5 +45,8 @@ export function prismaHttp(connectionString:string,onPending?:(task:Promise<unkn
  const config=managedHttpConfig(connectionString);
  // Match node-postgres: int8 remains a string and timestamps serialize as ISO.
  config.parsers=[16,20,21,23,700,701,25,1043,114,3802,1082,1114,1184,1700].map(oid=>({oid,parse:(value:string|null)=>value===null?null:types.getTypeParser(oid,'text')(value)}));
- return httpQueryAdapter(client(config),onPending);
+ const driver=client(config);
+ // Preserve the original operation while issuing at most one coalesced,
+ // fixed read probe for a slow provider response. Never replay app SQL.
+ return httpQueryAdapter(driver,onPending,coalescedReadProbe(driver));
 }
