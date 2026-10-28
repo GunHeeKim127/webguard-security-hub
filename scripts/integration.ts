@@ -257,7 +257,8 @@ try{
  assert.equal((await projectAdmin.query("SELECT count(*) FROM events WHERE category='ip_unblocked'")).rows[0].count,'1');
  console.log('PASS local administrator recovery and audited unblock');
  await projectAdmin.query('ALTER ROLE webguard_hub_dev_app REPLICATION');
- assert.equal((await (await call('/api/ready')).json()).code,'DATABASE_RUNTIME_ROLE_UNSAFE');
+ const unsafeReady=await call('/api/ready');assert.equal(unsafeReady.status,503);
+ assert.deepEqual(await unsafeReady.json(),{status:'not_ready',code:'NOT_READY'});
  await assert.rejects(script('scripts/grant-runtime.ts'));
  await projectAdmin.query('ALTER ROLE webguard_hub_dev_app NOREPLICATION');
  await projectAdmin.query('ALTER ROLE webguard_hub_dev_app BYPASSRLS');
