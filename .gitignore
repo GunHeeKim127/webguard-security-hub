@@ -181,6 +181,8 @@ env.download
 env.*.download
 
 # Private keys, signing stores and local cloud/tool credentials.
+/defend-captures/
+/session-expired.jpg
 *.key
 *.pem
 *.p8

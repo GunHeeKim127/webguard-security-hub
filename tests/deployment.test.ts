@@ -1,5 +1,13 @@
 import test from 'node:test';
 import {httpQueryAdapter,prismaHttp} from '../lib/prisma-http';
+
+test('readiness retries only an interrupted read once, without exposing database error text',async()=>{
+ const envBefore={...process.env};Object.assign(process.env,{DATABASE_PROVIDER:'prisma-postgres',DATABASE_URL:'postgres://test:test@pooled.db.prisma.io/postgres',PROJECT_DATABASE:'postgres'});
+ try{let attempts=0;const recovered=await deploymentReadiness(async()=>{attempts++;if(attempts===1)throw new Error('Query read timeout');return {rows:[{schema_ready:false}]};});assert.equal(attempts,2);assert.equal(recovered.code,'DATABASE_SCHEMA_NOT_READY');
+ attempts=0;const failed=await deploymentReadiness(async()=>{attempts++;throw new Error('Query read timeout');});assert.equal(attempts,2);assert.equal(failed.ready,false);
+ attempts=0;await deploymentReadiness(async()=>{attempts++;throw Object.assign(new Error('private credential'),{code:'42501'});});assert.equal(attempts,1);
+ }finally{for(const k of Object.keys(process.env))if(!(k in envBefore))delete process.env[k];Object.assign(process.env,envBefore);}
+});
 import {releaseIpBlock} from '../lib/ip-block-management';
 import {releaseAccountBlock} from '../lib/account-block-management';
 
