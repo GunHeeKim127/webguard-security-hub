@@ -12,8 +12,14 @@ export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind
  ['pubkeyauthentication','공개키 인증','Public key authentication',v=>v==='yes','승인된 키와 파일 권한을 확인하고 공개키 인증을 검토하세요.','Review approved keys, file permissions and public key authentication.'],
  ['maxauthtries','인증 시도 제한','Authentication attempt limit',v=>/^\d+$/.test(v)&&Number(v)>=1&&Number(v)<=4,'MaxAuthTries 4 이하는 이 모듈의 검토 기준입니다. 운영 접근과 영향도를 확인하세요.','MaxAuthTries at most 4 is this module’s review baseline. Check operational impact.'],
  ];
- const findings:Finding[]=rules.map(([key,ko,en,test,koFix,enFix])=>{const value=values.get(key),known=!!value&&!conditional;return {id:key,title:pick(ctx,ko,en),status:!known?'not_assessed':test(value.value)?'pass':'warning',severity:known&&!test(value.value)?'medium':'info',evidence:[`explicit=${!!value}`,`line=${value?.line??0}`,`conditionalOrInclude=${conditional}`],remediation:pick(ctx,koFix,enFix),reference:sshRef};});
- return report(this,findings,[pick(ctx,'제공된 sshd_config의 명시적 전역 설정만 검사','Only explicit global directives in the supplied sshd_config')],[pick(ctx,'Include/Match가 있으면 유효 설정을 확정하지 않습니다. 기본값·실제 장비·키·서버 버전·접근 가능성은 미검사입니다.','Include/Match prevents effective-policy conclusions. Defaults, live hosts, keys, server versions and reachability are not assessed.')]);
+ const findings:Finding[]=rules.map(([key,ko,en,test,koFix,enFix])=>{
+  const value=values.get(key),raw=value?.value;
+  // Store only this fixed directive's non-secret vocabulary, never arbitrary text.
+  const inputValue=raw!==undefined&&(key==='maxauthtries'?/^\d{1,6}$/.test(raw):key==='permitrootlogin'?['yes','no','prohibit-password','without-password','forced-commands-only'].includes(raw):['yes','no'].includes(raw))?raw:'unknown';
+  const known=!!value&&!conditional&&inputValue!=='unknown';
+  return {id:key,title:pick(ctx,ko,en),status:!known?'not_assessed':test(value!.value)?'pass':'warning',severity:known&&!test(value!.value)?'medium':'info',evidence:[`explicit=${!!value}`,`line=${value?.line??0}`,`conditionalOrInclude=${conditional}`,`inputValue=${inputValue}`],remediation:pick(ctx,koFix,enFix),reference:sshRef};
+ });
+ return {...report(this,findings,[pick(ctx,'제공된 sshd_config의 명시적 전역 설정만 검사','Only explicit global directives in the supplied sshd_config')],[pick(ctx,'Include/Match가 있으면 유효 설정을 확정하지 않습니다. 기본값·실제 장비·키·서버 버전·접근 가능성은 미검사입니다.','Include/Match prevents effective-policy conclusions. Defaults, live hosts, keys, server versions and reachability are not assessed.')]),ruleVersion:'2026-10-28.1'};
 }};
 export const windowsPolicy:SecurityScanner={id:'windows.policy',version:'1.0.0',targetKind:'windows-policy-export',maxBytes:65536,validate(input){textInput(input);},async scan(input,ctx){
  checkpoint(ctx);let data:any;try{data=JSON.parse(textInput(input));}catch{throw new Error('INPUT_INVALID');}

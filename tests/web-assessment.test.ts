@@ -74,6 +74,27 @@ test('TLS connection failure rejects scan without insecure retry',async t=>{
 import {observeTechnology,technologyFindings} from '../lib/web-technology';
 import {webCompare} from '../lib/assessment/web-module';
 
+test('React server-only advisories request exact deployed packages instead of guessing versions',()=>{
+ const found=technologyFindings(observeTechnology({'x-powered-by':'Next.js','vary':'RSC'},200),'ko');
+ for(const id of ['CVE-2026-23864','CVE-2025-55183','GHSA-xqc2-xf4c-x3h3','GHSA-h3gv-c5rc-p453']){
+  const rows=found.filter(f=>f.id.endsWith(id));assert.equal(rows.length,2);assert(rows.every(f=>f.status==='not_assessed'&&f.evidence.includes('exploitTested=false')&&!!f.reference));
+ }
+ assert(!technologyFindings(observeTechnology({},200),'en').some(f=>f.id.includes('CVE-2026-23864')));
+});
+test('Node runtime advisory comparisons handle minor boundaries, unsupported branches and Express separately',()=>{
+ for(const [version,expected] of [['22.23.3','warning'],['22.23.4','info'],['24.22.0','warning'],['24.22.1','info'],['24.23.0','info'],['26.12.0','warning'],['26.12.1','info'],['21.7.0','not_assessed']] as const){
+  const rows=technologyFindings(observeTechnology({'server':'Node.js/v'+version},200),'en');
+  assert.equal(rows.find(f=>f.id.endsWith('CVE-2026-111497'))?.status,expected);assert(rows.every(f=>f.status!=='pass'));
+ }
+ for(const banner of ['Express/4.21.0','Node.js/v24.22.1-vendor1','Node.js/v24.22.1, Node.js/v24.21.0']){
+  const rows=technologyFindings(observeTechnology({'x-powered-by':banner},200),'en');
+  assert(rows.filter(f=>f.id.includes('CVE-')).every(f=>f.status==='not_assessed'));
+ }
+ for(const [version,status] of [['20.19.9','warning'],['20.20.0','info'],['22.21.9','warning'],['22.22.0','info'],['24.12.9','warning'],['24.13.0','info'],['25.2.9','warning'],['25.3.0','info']] as const){
+  assert.equal(technologyFindings(observeTechnology({'server':'Node.js/'+version},200),'en').find(f=>f.id.endsWith('CVE-2025-55131'))?.status,status);
+ }
+});
+
 test('PHP2Shell version hints respect each fixed branch and never certify a banner',()=>{
  for(const [version,vulnerable] of [['8.2.34',true],['8.2.35',false],['8.3.35',true],['8.3.36',false],['8.4.26',true],['8.4.27',false],['8.5.11',true],['8.5.12',false]] as const){
   const result=technologyFindings(observeTechnology({'x-powered-by':'PHP/'+version},200),'en');

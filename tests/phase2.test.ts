@@ -11,6 +11,38 @@ import {trafficSignals} from '../lib/assessment/store';
 import {body} from '../lib/request';
 import {explainFinding,orderedFindings,statusCopy} from '../lib/assessment/explanation';
 import type {Finding} from '../lib/assessment/types';
+import {findingContext} from '../lib/assessment/finding-context';
+
+test('SSH contextual guidance uses actual allowed values and explains the exact baseline difference',async()=>{
+ const report=await runAssessment({moduleId:'linux.ssh',label:'Context',text:'MaxAuthTries 6\nPermitRootLogin yes\nPasswordAuthentication no\nPermitEmptyPasswords no\nPubkeyAuthentication yes'}, {locale:'ko',signal:new AbortController().signal});
+ const f=report.findings.find(f=>f.id==='maxauthtries')!,context=findingContext(f,report,'ko');
+ assert.equal(f.status,'warning');assert.match(context.observed,/MaxAuthTries = 6/);assert.match(context.reason!,/2회 많습니다/);assert.match(context.expected,/1~4회/);
+ const old={...f,evidence:f.evidence.filter(v=>!v.startsWith('inputValue='))};
+ const missing=findingContext(old,report,'ko');assert.match(missing.observed,/실제 값이 없습니다/);assert.doesNotMatch(missing.observed,/= 6/);assert.match(missing.reason!,/설정 자체가 없다는 뜻은 아니/);
+});
+test('missing, conditional and unrecognized SSH input never becomes an invented current value',async()=>{
+ const ctx={locale:'ko' as const,signal:new AbortController().signal};
+ const missing=await runAssessment({moduleId:'linux.ssh',label:'Missing',text:'PasswordAuthentication no'},ctx);
+ const missingRoot=missing.findings.find(f=>f.id==='permitrootlogin')!;assert.equal(missingRoot.status,'not_assessed');assert.match(findingContext(missingRoot,missing,'ko').nextStep!,/추가로 확인/);
+ const conditional=await runAssessment({moduleId:'linux.ssh',label:'Conditional',text:'Include /review/example\nMaxAuthTries 6'},ctx);
+ const item=conditional.findings.find(f=>f.id==='maxauthtries')!;assert.equal(item.status,'not_assessed');assert.match(findingContext(item,conditional,'ko').reason!,/Include/);
+ const invalid=await runAssessment({moduleId:'linux.ssh',label:'Invalid',text:'PasswordAuthentication SECRET_DO_NOT_SAVE'},ctx);
+ assert.equal(invalid.findings.find(f=>f.id==='passwordauthentication')!.status,'not_assessed');assert(!JSON.stringify(invalid).includes('SECRET_DO_NOT_SAVE'));
+});
+test('context distinguishes missing Windows data from disabled protection and inactive RDP',async()=>{
+ const report=await runAssessment({moduleId:'windows.policy',label:'Windows',text:JSON.stringify({schemaVersion:1,firewall:{domain:false},defender:{},rdp:{enabled:false}})},{locale:'ko',signal:new AbortController().signal});
+ const firewall=report.findings.find(f=>f.id==='firewall.domain')!;assert.match(findingContext(firewall,report,'ko').observed,/꺼짐/);
+ const missing=report.findings.find(f=>f.id==='defender.antivirus')!;assert.equal(missing.status,'not_assessed');assert.match(findingContext(missing,report,'ko').reason!,/실제 보호 기능이 꺼졌다고 판단하지 않습니다/);
+ const rdp=report.findings.find(f=>f.id==='rdp.nla')!;assert.equal(rdp.status,'info');assert.match(findingContext(rdp,report,'ko').reason!,/요구하는 경고로 처리하지 않았습니다/);
+});
+test('web contextual guidance reports actual header values and requests missing version evidence',async()=>{
+ const base=await runAssessment({moduleId:'windows.policy',label:'Context',text:'{"schemaVersion":1}'},{locale:'ko',signal:new AbortController().signal});
+ const report={...base,moduleId:'web.compare' as const};
+ const f:Finding={id:'desktop:hsts',title:'HSTS',status:'warning',severity:'medium',evidence:['max-age=60'],remediation:'Review'};
+ const result=findingContext(f,report,'ko');assert.match(result.observed,/60초/);assert.match(result.reason!,/15551940초 짧습니다/);
+ const missing=findingContext({...f,id:'desktop:technology:PHP:CVE-test',status:'not_assessed',evidence:['product=PHP','declaredVersion=unknown']},report,'ko');assert.match(missing.reason!,/버전 자료 추가/);assert.match(missing.observed,/설치 여부 미검증/);
+ const conflicting=findingContext({...f,id:'desktop:nosniff',evidence:['nosniff=true','nosniff=false']},report,'ko');assert.match(conflicting.observed,/확인 기록이 없습니다/);
+});
 
 test('readable findings prioritize warnings without changing stored verdicts or evidence',()=>{
  const make=(id:string,status:Finding['status'],severity:Finding['severity']):Finding=>Object.freeze({id,title:id,status,severity,evidence:['explicit=true'],remediation:'Original guidance'});

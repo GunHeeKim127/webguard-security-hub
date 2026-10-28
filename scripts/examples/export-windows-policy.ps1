@@ -13,15 +13,20 @@ try {
  }
 } catch { Write-Warning 'Firewall state unavailable; recording null, not false.' }
 try {
- $status = Get-MpComputerStatus
- $export.defender.antivirus = [bool]$status.AntivirusEnabled
- $export.defender.realtime = [bool]$status.RealTimeProtectionEnabled
+ if (Get-Command Get-MpComputerStatus -ErrorAction SilentlyContinue) {
+  $status = Get-MpComputerStatus
+ } else {
+  $status = Get-CimInstance -Namespace 'root/Microsoft/Windows/Defender' -ClassName MSFT_MpComputerStatus
+ }
+ # Missing provider values remain unknown; never coerce null into a false verdict.
+ if ($status.AntivirusEnabled -is [bool]) { $export.defender.antivirus = $status.AntivirusEnabled }
+ if ($status.RealTimeProtectionEnabled -is [bool]) { $export.defender.realtime = $status.RealTimeProtectionEnabled }
 } catch { Write-Warning 'Defender state unavailable; third-party providers are not inspected.' }
 try {
  $setting = Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections
- $export.rdp.enabled = ($setting.fDenyTSConnections -eq 0)
+ if ($setting.fDenyTSConnections -in @(0,1)) { $export.rdp.enabled = ($setting.fDenyTSConnections -eq 0) }
  $rdp = Get-CimInstance -Namespace 'root/cimv2/terminalservices' -ClassName Win32_TSGeneralSetting -Filter "TerminalName='RDP-tcp'"
- if ($null -ne $rdp.UserAuthenticationRequired) { $export.rdp.nla = ($rdp.UserAuthenticationRequired -eq 1) }
+ if ($null -ne $rdp.UserAuthenticationRequired -and $rdp.UserAuthenticationRequired -in @(0,1)) { $export.rdp.nla = ($rdp.UserAuthenticationRequired -eq 1) }
 } catch { Write-Warning 'RDP effective state unavailable; recording unknown fields as null.' }
 $parent = Split-Path -Parent $targetPath
 if (!(Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }

@@ -2,6 +2,7 @@
 import {Alert,Box,Button,Chip,Paper,Stack,Typography} from '@mui/material';
 import type {AssessmentReport,Finding} from '../../lib/assessment/types';
 import {explainFinding,orderedFindings,statusCopy} from '../../lib/assessment/explanation';
+import {findingContext} from '../../lib/assessment/finding-context';
 type Props={report:AssessmentReport;locale:'ko'|'en'};
 export function AssessmentInputSummary({report,locale}:Props){
  const ko=locale==='ko',integrity=report.integrity,web=report.moduleId==='web.compare';
@@ -20,16 +21,17 @@ export function AssessmentOverview({report,locale}:Props){
  </Paper>;
 }
 function FindingCard({finding:f,report,locale}:Props&{finding:Finding}){
- const ko=locale==='ko',copy=explainFinding(f,report.moduleId,locale),warning=f.status==='warning',unknown=f.status==='not_assessed';
+ const ko=locale==='ko',copy=explainFinding(f,report.moduleId,locale),context=findingContext(f,report,locale),warning=f.status==='warning',unknown=f.status==='not_assessed';
  return <Paper variant="outlined" component="article" sx={{p:2,minWidth:0,borderColor:warning?'warning.main':'divider'}}>
   <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap"><Chip size="small" color={warning?'warning':f.status==='pass'?'success':'default'} label={statusCopy[f.status][locale]}/>{warning&&<Typography variant="caption">{ko?'확인 우선순위: ':'Review priority: '}{f.severity==='high'?(ko?'높음':'High'):f.severity==='low'?(ko?'낮음':'Low'):(ko?'보통':'Normal')}</Typography>}</Stack>
   <Typography component="h3" variant="subtitle1" fontWeight={700} sx={{mt:1}}>{copy.title}</Typography>
-  <Typography variant="body2" sx={{mt:1}}>{copy.meaning}</Typography>
-  <Alert severity={warning?'warning':'info'} sx={{my:1.5,'& .MuiAlert-message':{minWidth:0}}}>{unknown?(ko?'이번 검사로는 판단할 수 없습니다. 필요한 자료나 별도 환경에서 추가 확인이 필요합니다.':'This inspection cannot decide this item. More information or a separate environment is needed.'):warning?(ko?'검토 기준에 맞지 않는 신호가 관찰됐습니다. 실제 설정과 업무상 필요성을 확인하세요.':'A signal did not meet the review baseline. Check the effective setting and whether it is needed.'):f.status==='pass'?(ko?'제공된 자료에서 이 항목의 검사 기준을 충족했습니다.':'The supplied input meets this item’s baseline.'):(ko?'관찰된 정보입니다. 실제 보호 기능이 작동한다는 판정은 아닙니다.':'This is an observation, not a verdict that protection is effective.')}</Alert>
-  <Typography variant="body2" fontWeight={700}>{ko?'왜 확인해야 하나요?':'Why does it matter?'}</Typography><Typography variant="body2" sx={{mt:.5}}>{copy.why}</Typography>
-  <Typography variant="body2" fontWeight={700} sx={{mt:1.5}}>{ko?(unknown?'추가로 확인할 방법':'다음에 할 일'):'What to do next'}</Typography><Typography variant="body2" sx={{mt:.5,whiteSpace:'pre-line'}}>{copy.action}</Typography>
+  <Box component="dl" sx={{my:1.5,p:1.5,bgcolor:'action.hover',borderRadius:1,overflowWrap:'anywhere'}}><Typography component="dt" variant="body2" fontWeight={700}>{ko?'이번 검사에서 확인한 내용':'Observed in this assessment'}</Typography><Typography component="dd" variant="body2" sx={{m:0,mt:.5}}>{context.observed}</Typography><Typography component="dt" variant="body2" fontWeight={700} sx={{mt:1}}>{ko?'비교한 검사 기준':'Compared baseline'}</Typography><Typography component="dd" variant="body2" sx={{m:0,mt:.5}}>{context.expected}</Typography></Box>
+  <Alert severity={warning?'warning':'info'} sx={{my:1.5,'& .MuiAlert-message':{minWidth:0}}}>{context.reason??(unknown?(ko?'이번 검사로는 판단할 수 없습니다. 필요한 자료나 별도 환경에서 추가 확인이 필요합니다.':'This inspection cannot decide this item. More information or a separate environment is needed.'):warning?(ko?'검토 기준에 맞지 않는 신호가 관찰됐습니다. 실제 설정과 업무상 필요성을 확인하세요.':'A signal did not meet the review baseline. Check the effective setting and whether it is needed.'):f.status==='pass'?(ko?'제공된 자료에서 이 항목의 검사 기준을 충족했습니다.':'The supplied input meets this item’s baseline.'):(ko?'관찰된 정보입니다. 실제 보호 기능이 작동한다는 판정은 아닙니다.':'This is an observation, not a verdict that protection is effective.'))}</Alert>
+  <Typography variant="body2" fontWeight={700} sx={{mt:1.5}}>{ko?(unknown?'추가로 확인할 방법':f.status==='pass'?'유지·재확인할 내용':'다음에 할 일'):'What to do next'}</Typography><Typography variant="body2" sx={{mt:.5,whiteSpace:'pre-line'}}>{context.nextStep??(f.status==='pass'?(ko?'이번 자료에서는 이 항목을 변경해야 할 신호가 관찰되지 않았습니다. 실제 적용 상태와 운영 정책이 일치하는지 유지·재확인하세요.':'No change signal was observed for this item in the supplied data. Maintain and recheck effective configuration against your policy.'):copy.action)}</Typography>
   <Box component="details" sx={{mt:2,'& > summary':{cursor:'pointer',color:'primary.main'},'& > summary:focus-visible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:4}}}>
-   <Typography component="summary" variant="body2">{ko?'기술 근거·담당자용 상세 보기':'Technical evidence and details'}</Typography>
+   <Typography component="summary" variant="body2">{ko?'항목 설명·기술 근거 자세히 보기':'Explanation and technical evidence'}</Typography>
+   <Typography variant="body2" sx={{mt:1}}>{copy.meaning}</Typography>
+   <Typography variant="body2" fontWeight={700} sx={{mt:1}}>{ko?'왜 확인해야 하나요?':'Why does it matter?'}</Typography><Typography variant="body2" sx={{mt:.5}}>{copy.why}</Typography>
    <Typography variant="body2" fontWeight={700} sx={{mt:1}}>{f.title}</Typography>
    <Typography component="code" variant="body2" sx={{display:'block',my:1,overflowWrap:'anywhere'}}>{f.evidence.join(' · ')||'—'}</Typography>
    <Typography variant="body2">{f.remediation}</Typography>

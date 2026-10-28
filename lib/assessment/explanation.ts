@@ -42,6 +42,7 @@ ko['content-security-policy']=['웹페이지가 불러올 콘텐츠 제한','브
 ko['strict-transport-security']=['암호화된 웹 연결 유지','브라우저가 HTTPS 연결을 계속 사용하도록 안내하는지 봅니다.','보호 정책이 부족하면 암호화되지 않은 연결로 되돌아가는 상황을 충분히 제한하지 못할 수 있습니다.','웹 담당자에게 HSTS 설정을 확인해 달라고 요청하세요. 하위 도메인 영향과 HTTPS 준비 상태를 먼저 확인해야 합니다.'];
 ko['x-content-type-options']=['웹 파일 형식의 잘못된 해석 방지','브라우저가 서버가 지정한 파일 형식을 따르도록 하는지 봅니다.','브라우저가 파일 형식을 임의로 해석하는 일부 상황을 제한할 필요가 있습니다.','웹 담당자에게 X-Content-Type-Options와 실제 콘텐츠 형식 설정을 확인해 달라고 요청하세요.'];
 ko['referrer-policy']=['다른 사이트로 전달되는 주소 정보','링크를 따라갈 때 원래 페이지 주소가 얼마나 전달되는지 봅니다.','페이지 주소에 중요한 값이 포함돼 있다면 다른 사이트로 노출될 수 있습니다.','웹 담당자와 Referrer-Policy를 검토하고 민감한 값을 주소에 넣지 않는지도 확인하세요.'];
+ko.csp=ko['content-security-policy'];ko.hsts=ko['strict-transport-security'];ko.nosniff=ko['x-content-type-options'];ko.referrer=ko['referrer-policy'];
 
 export const statusCopy:Record<AssessmentStatus,{ko:string;en:string}>={warning:{ko:'보완·검토 필요',en:'Review or improve'},not_assessed:{ko:'아직 확인하지 못함',en:'Not yet verified'},pass:{ko:'이 항목의 기준 충족',en:'Meets this check'},info:{ko:'참고할 정보',en:'Observation'}};
 export function orderedFindings(findings:readonly Finding[]){const order={warning:0,not_assessed:1,info:2,pass:3},priority={high:0,medium:1,low:2,info:3};return findings.map((finding,index)=>({finding,index})).sort((a,b)=>order[a.finding.status]-order[b.finding.status]||(a.finding.status==='warning'?priority[a.finding.severity]-priority[b.finding.severity]:0)||a.index-b.index).map(v=>v.finding);}
@@ -52,7 +53,7 @@ export function explainFinding(f:Finding,moduleId:ModuleId,locale:'ko'|'en'):Exp
  const prefix=profile+(architecture?(locale==='ko'?`실행 형식 ${architecture[1]} · `:`Architecture ${architecture[1]} · `):'');
  if(locale==='ko'&&ko[key]){const [title,meaning,why,action]=ko[key];return {title:prefix+title,meaning,why,action};}
  const signature=/signature|authenticode|gatekeeper|hardenedRuntime|debugEntitlement/.test(key);
- const advisory=key.startsWith('technology:')&&/CVE-/.test(key);
+ const advisory=key.startsWith('technology:')&&/(?:CVE-|GHSA-)/.test(key);
  return {
   title:f.title,
   meaning:locale==='ko'?(advisory?'응답에서 관찰한 제품·버전 흔적을 등록된 보안 권고와 비교한 항목입니다.':signature?'파일의 서명이나 운영체제 보호 설정을 확인하는 항목입니다.':moduleId.startsWith('application.')?'제공한 파일에서 확인할 수 있는 구조나 설정 정보입니다.':'아래 검사 결과와 제공된 자료를 바탕으로 이 항목을 확인합니다.'):'This item describes what was observed in the supplied input. Review the result and next step below.',
