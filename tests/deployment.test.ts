@@ -1,4 +1,22 @@
 import test from 'node:test';
+import {freshConnector,leaseQuery,MAX_IDLE_LEASE_MS} from '../lib/fresh-pool';
+
+test('suspended idle sockets are discarded before a query even when idle timers never ran',async()=>{
+ let clock=1000,releaseListener:Function=()=>{};const released:unknown[]=[],queries:string[]=[];
+ const stale={query:async()=>{throw new Error('stale socket must not execute');},release:(drop:unknown)=>released.push(drop)};
+ const fresh={query:async(sql:string)=>{queries.push(sql);return {rows:[]};},release:(drop:unknown)=>released.push(drop)};
+ const queue=[stale,fresh];const pool={on:(_event:string,fn:Function)=>{releaseListener=fn;},connect:async()=>queue.shift()!} as unknown as Pick<Pool,'connect'|'on'>;
+ const connector=freshConnector(pool,()=>clock);releaseListener(undefined,stale);clock+=MAX_IDLE_LEASE_MS;
+ await leaseQuery(connector,'SELECT 1');assert.deepEqual(released,[true,false]);assert.deepEqual(queries,['SELECT 1']);
+});
+test('fresh leases preserve concurrent borrowers and never replay failed writes',async()=>{
+ let releaseListener:Function=()=>{};const released:unknown[]=[],calls:string[]=[];let connects=0;
+ const client={query:async(sql:string)=>{calls.push(sql);throw new Error('write outcome unknown');},release:(drop:unknown)=>released.push(drop)};
+ const pool={on:(_event:string,fn:Function)=>{releaseListener=fn;},connect:async()=>{connects++;return client;}} as unknown as Pick<Pool,'connect'|'on'>;
+ const connector=freshConnector(pool,()=>1000);releaseListener(undefined,client);
+ await assert.rejects(leaseQuery(connector,'INSERT INTO events(category) VALUES($1)',['test']),/write outcome unknown/);
+ assert.equal(connects,1);assert.equal(calls.length,1);assert.deepEqual(released,[true]);
+});
 import assert from 'node:assert/strict';
 import {projectDatabase} from '../lib/project-database';
 import {deploymentReadiness} from '../lib/deployment-readiness';
