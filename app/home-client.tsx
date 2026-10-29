@@ -1,4 +1,5 @@
 'use client';
+import Link from './navigation-link';
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
@@ -88,7 +89,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
   {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
    <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
    <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
-    <Button href="/workbench/web" variant="outlined">{locale==='ko'?'PC·모바일 응답 비교':'Desktop/mobile response comparison'}</Button><Button href="/workbench" variant="outlined">{locale==='ko'?'검사 선택':'Choose a check'}</Button><Chip label={t.local} variant="outlined"/>{languageControl}
+    <Button component={Link} href="/workbench/web" variant="outlined">{locale==='ko'?'PC·모바일 응답 비교':'Desktop/mobile response comparison'}</Button><Button component={Link} href="/workbench" variant="outlined">{locale==='ko'?'검사 선택':'Choose a check'}</Button><Chip label={t.local} variant="outlined"/>{languageControl}
    </Stack>
   </Stack>
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
@@ -107,7 +108,7 @@ export default function Home({initialLocale}:{initialLocale:Locale}){
    }}><Stack spacing={2}>
     <TextField name="email" label={t.email} type="email" autoComplete="username" required/>
     <TextField name="password" label={t.password} type="password" autoComplete="current-password" required/>
-    <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button>
+    <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button component={Link} href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button>
    </Stack></Box>
    </Paper>
    <Box sx={{minWidth:0,textAlign:'center',px:{xs:2,md:0}}}><Box sx={{maxWidth:{xs:300,md:580},mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>

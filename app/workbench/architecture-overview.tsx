@@ -1,6 +1,6 @@
 'use client';
 import {Box,Button,ButtonBase,Chip,Paper,Stack,Typography} from '@mui/material';
-import Link from 'next/link';
+import Link from '../navigation-link';
 import type {ModuleId} from '../../lib/assessment/types';
 type Category='web'|'mobile'|'endpoint'|'cloud'|'virtualization'|'network'|'iot'|'container';
 const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,scope:[string,string]}[]=[
@@ -13,7 +13,7 @@ const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,scop
  {id:'iot',title:'IoT',subtitle:'Firmware / Device Config',scope:['펌웨어·장비 설정 분석 예정','Firmware and device configuration · planned']},
  {id:'container',title:'Container',subtitle:'Docker / Kubernetes',scope:['컨테이너·클러스터 점검 예정','Container and cluster assessment · planned']},
 ];
-export function categoryFor(module:ModuleId):Category{return module==='virtualization.vmx'?'virtualization':module==='network.gns3'?'network':module==='web.compare'?'web':['application.package','application.apk'].includes(module)?'mobile':'endpoint';}
+export {categoryFor} from '../../lib/assessment/categories';
 export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'report',size?:number}){
  const lines={
   web:<><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.5" ry="8"/><path d="M4 12h16"/></>,

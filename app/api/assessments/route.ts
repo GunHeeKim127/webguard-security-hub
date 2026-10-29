@@ -8,20 +8,25 @@ import {assessmentInput} from '../../../lib/assessment/input';
 import {runAssessment,scannerCatalog} from '../../../lib/assessment/registry';
 import {saveAssessment,trafficSignals} from '../../../lib/assessment/store';
 import {authSourceBucket} from '../../../lib/auth-rate-identity';
+import {assessmentCategories,categoryFor,type AssessmentCategory} from '../../../lib/assessment/categories';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=40;
 const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
 export async function GET(req:Request){try{
- const user=await requireUser(),id=new URL(req.url).searchParams.get('assetId');if(id&&!uuid(id))throw new HttpError(400,'Invalid scan ID');
+ const user=await requireUser(),params=new URL(req.url).searchParams,id=params.get('assetId'),initial=params.get('initial')==='1',category=params.get('category');
+ if(id&&!uuid(id)||params.has('initial')&&!initial||initial&&!!id||category!==null&&(!initial||!assessmentCategories.includes(category as AssessmentCategory))||['assetId','initial','category'].some(key=>params.getAll(key).length>1))throw new HttpError(400,'Invalid scan ID');
  if(id&&!(await db.query('SELECT id FROM public.assessment_assets WHERE id=$1 AND user_id=$2 AND updated_at>=now()-interval \'30 days\'',[id,user.id])).rowCount)throw new HttpError(404,'Scan not found');
+ const categoryModules=category?scannerCatalog.filter(module=>categoryFor(module.id)===category).map(module=>module.id):null;
+ const assetsPromise=categoryModules?db.query('SELECT id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets WHERE user_id=$1 AND module_id=ANY($2::text[]) AND updated_at>=now()-interval \'30 days\' ORDER BY updated_at DESC LIMIT 50',[user.id,categoryModules]):db.query('SELECT id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets WHERE user_id=$1 AND updated_at>=now()-interval \'30 days\' ORDER BY updated_at DESC LIMIT 50',[user.id]);
+ const selectedPromise=initial?assetsPromise.then(result=>result.rows[0]?.id as string|undefined):Promise.resolve(id??undefined);
  const [assets,runs,traffic,hub]=await Promise.all([
-  db.query('SELECT id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets WHERE user_id=$1 AND updated_at>=now()-interval \'30 days\' ORDER BY updated_at DESC LIMIT 50',[user.id]),
-  id?db.query('SELECT id,asset_id,report,created_at FROM public.assessment_runs WHERE asset_id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\' ORDER BY created_at DESC,id DESC LIMIT 10',[id,user.id]):Promise.resolve({rows:[]}),
-  id?db.query("SELECT coalesce(sum(requests),0)::text requests,coalesce(sum(login_failures),0)::text login_failures,coalesce(sum(probes),0)::text probes,coalesce(sum(server_errors),0)::text server_errors FROM public.assessment_traffic WHERE user_id=$1 AND asset_id=$2 AND window_at>=date_trunc('minute',now())-interval '4 minutes'",[user.id,id]):Promise.resolve({rows:[{requests:0,login_failures:0,probes:0,server_errors:0}]}),
+  assetsPromise,
+  selectedPromise.then(async selected=>selected?await db.query('SELECT id,asset_id,report,created_at FROM public.assessment_runs WHERE asset_id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\' ORDER BY created_at DESC,id DESC LIMIT 10',[selected,user.id]):{rows:[]}),
+  selectedPromise.then(async selected=>selected?await db.query("SELECT coalesce(sum(requests),0)::text requests,coalesce(sum(login_failures),0)::text login_failures,coalesce(sum(probes),0)::text probes,coalesce(sum(server_errors),0)::text server_errors FROM public.assessment_traffic WHERE user_id=$1 AND asset_id=$2 AND window_at>=date_trunc('minute',now())-interval '4 minutes'",[user.id,selected]):{rows:[{requests:0,login_failures:0,probes:0,server_errors:0}]}),
   db.query("SELECT category,count(*)::int count FROM public.events WHERE user_id=$1 AND created_at>now()-interval '5 minutes' GROUP BY category",[user.id]),
  ]);
- const counts=traffic.rows[0];return Response.json({user:publicUser(user),modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:publicEvents(hub.rows)},{headers:{'Cache-Control':'no-store'}});
+ const counts=traffic.rows[0];return Response.json({user:publicUser(user),modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:publicEvents(hub.rows),...(initial?{selectedAssetId:await selectedPromise??null}:{})},{headers:{'Cache-Control':'no-store'}});
  }catch(error){return failure(error,req);}}
 export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser();await limit('assessment:'+user.id,5,60);

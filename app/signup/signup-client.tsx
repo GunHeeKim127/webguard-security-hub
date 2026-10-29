@@ -1,4 +1,5 @@
 'use client';
+import Link from '../navigation-link';
 import {useState} from 'react';
 import {ThemeProvider,createTheme,CssBaseline,Container,Paper,Typography,Stack,TextField,Button,Alert,Box} from '@mui/material';
 import type {Locale} from '../../lib/locale';
@@ -22,6 +23,6 @@ export default function Signup({locale}:{locale:Locale}){
    <TextField name="confirm" label={t.confirm} type="password" autoComplete="new-password" required inputProps={{maxLength:128}} disabled={busy}/>
    <Button type="submit" variant="contained" disabled={busy}>{busy?ui.loading:t.submit}</Button>
   </Stack></Box>}
-  <Button href="/" sx={{mt:2}}>{t.back}</Button><Typography variant="caption" color="text.secondary" display="block" mt={2}>{t.limitation}</Typography>
+  <Button component={Link} href="/" sx={{mt:2}}>{t.back}</Button><Typography variant="caption" color="text.secondary" display="block" mt={2}>{t.limitation}</Typography>
  </Paper></Container></ThemeProvider>;
 }

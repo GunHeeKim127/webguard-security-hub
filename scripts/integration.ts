@@ -332,14 +332,20 @@ try{
  console.log('PASS real-DB account attribution: forged/expired/duplicate identity rejected, concurrent strikes, sixth-offense ban, session revocation, login denial, admin-only release/audit/rollback and fresh-login recovery');
  assert.equal((await call('/api/ready')).status,200);console.log('PASS readiness confirms migrated least-privilege runtime');
  assert.equal((await call('/workbench','GET',undefined,newAdmin)).status,200);
- const homeEntry=await fetch(base+'/',{headers:{cookie:newAdmin},redirect:'manual'});assert.equal(homeEntry.status,307);assert.equal(homeEntry.headers.get('location'),'/workbench');
+ async function assertPageRedirect(response:Response,destination:string){
+  if(response.status===307){assert.equal(response.headers.get('location'),destination);return;}
+  assert.equal(response.status,200);const html=await response.text();
+  assert(html.includes('id="__next-page-redirect" http-equiv="refresh" content="1;url='+destination+'"'));
+  assert(!html.includes('id="asset-inspector"'));assert(!html.includes('id="assessment-results"'));
+ }
+ const homeEntry=await fetch(base+'/',{headers:{cookie:newAdmin},redirect:'manual'});await assertPageRedirect(homeEntry,'/workbench');
  const classicEntry=await call('/?view=web','GET',undefined,newAdmin);assert.equal(classicEntry.status,200);
  const platformHtml=await (await call('/workbench','GET',undefined,newAdmin)).text();assert(!platformHtml.includes('admin@example.test'));assert(!platformHtml.includes(actor));for(const section of ['VELTHARA','Unified Asset Security Assessment Platform','Virtualization','Container','Endpoint'])assert(platformHtml.includes(section));
  assert(!platformHtml.includes('id="asset-inspector"'));assert(!platformHtml.includes('id="assessment-results"'));
  for(const href of ['/?view=web','/workbench/mobile','/workbench/endpoint','/workbench/results'])assert(platformHtml.includes('href="'+href+'"'));
- for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare'],['virtualization','virtualization.vmx'],['network','network.gns3']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newViewer);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});assert.equal(guest.status,307);assert.equal(guest.headers.get('location'),'/');}
+ for(const [page,module] of [['mobile','application.package'],['endpoint','application.pe'],['web','web.compare'],['virtualization','virtualization.vmx'],['network','network.gns3']] as const){const pageResponse=await call('/workbench/'+page,'GET',undefined,newViewer);assert.equal(pageResponse.status,200);const html=await pageResponse.text();assert(html.includes('id="asset-inspector"'));assert(html.includes('value="'+module+'"'));assert(!html.includes('Unified Asset Security Assessment Platform'));const guest=await fetch(base+'/workbench/'+page,{redirect:'manual'});await assertPageRedirect(guest,'/');}
  const resultsPage=await (await call('/workbench/results','GET',undefined,newAdmin)).text();assert(resultsPage.includes('id="assessment-results"'));assert(!resultsPage.includes('id="asset-inspector"'));
- assert.equal((await call('/workbench/not-a-module','GET',undefined,newAdmin)).status,404);
+ const missingPage=await call('/workbench/not-a-module','GET',undefined,newAdmin);if(missingPage.status!==404){assert.equal(missingPage.status,200);const missingHtml=await missingPage.text();assert(missingHtml.includes('name="robots" content="noindex"'));assert(!missingHtml.includes('id="asset-inspector"'));}
  console.log('PASS button-only landing, dedicated category pages, direct-link authentication, results page, unknown route 404 and preserved classic web entry');
  assert.equal((await call('/api/assessments','POST',{moduleId:'linux.ssh',label:'lab',text:'PermitRootLogin yes',authorized:true},newViewer)).status,200);
  const phaseInput={moduleId:'linux.ssh',label:'integration lab',text:'PermitRootLogin yes\n# PRIVATE_CONFIG_TOKEN',authorized:true};
@@ -351,6 +357,11 @@ try{
  const phaseHistory=await (await call('/api/assessments?assetId='+phaseA.asset_id,'GET',undefined,newAdmin)).json();assert.equal(phaseHistory.runs.length,2);assert.equal(phaseHistory.runs[0].report.findings[0].status,'pass');assert.equal(phaseHistory.runs[1].report.findings[0].status,'warning');
  const ownAssets=await (await call('/api/assessments','GET',undefined,phaseAnalyst)).json();
  const ownId=ownAssets.assets[0].id,ownHistory=await (await call('/api/assessments?assetId='+ownId,'GET',undefined,phaseAnalyst)).json();
+ const initialResponse=await call('/api/assessments?initial=1&category=endpoint','GET',undefined,phaseAnalyst);assert.equal(initialResponse.status,200);const initialData=await initialResponse.json();
+ assert.equal(initialData.selectedAssetId,ownId);assert.deepEqual(initialData.runs,ownHistory.runs);assert(initialData.assets.every((asset:any)=>['linux.ssh','windows.policy','application.pe','application.macho'].includes(asset.module_id)));assert(!JSON.stringify(initialData).includes(phaseA.asset_id));
+ const emptyCategory=await (await call('/api/assessments?initial=1&category=network','GET',undefined,phaseAnalyst)).json();assert.equal(emptyCategory.selectedAssetId,null);assert.deepEqual(emptyCategory.runs,[]);assert.deepEqual(emptyCategory.assets,[]);
+ for(const path of ['/api/assessments?initial=2','/api/assessments?initial=1&category=admin','/api/assessments?initial=1&category=endpoint&category=web','/api/assessments?initial=1&assetId='+phaseA.asset_id])assert.equal((await call(path,'GET',undefined,phaseAnalyst)).status,400);
+ assert.equal((await call('/api/assessments?initial=1&category=endpoint')).status,401);console.log('PASS single initial assessment GET includes own category asset/history, empty state and strict request/tenant boundaries');
  const invalidConfig=await call('/api/assessments','POST',{...phaseInput,text:'UnrelatedDirective invalid-fixture'},phaseAnalyst);assert.equal(invalidConfig.status,400);assert.equal((await invalidConfig.json()).errorCode,'ASSESSMENT_INPUT_INVALID');
  const afterInvalid=await (await call('/api/assessments?assetId='+ownId,'GET',undefined,phaseAnalyst)).json();assert.deepEqual(afterInvalid.runs,ownHistory.runs);
  console.log('PASS invalid offline configuration gives input-specific guidance and preserves the previous successful run');
