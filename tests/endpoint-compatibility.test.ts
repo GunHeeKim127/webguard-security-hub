@@ -1,12 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {configurationFileText,configurationCompatibility,configurationCompatibilityMessage} from '../lib/configuration-file';
-import {inspectMacContainer} from '../public/tools/executable-inspector.mjs';
+import {inspectMacContainer,verifyFileStability} from '../public/tools/executable-inspector.mjs';
 import {executableSnapshot} from '../lib/assessment/executable-snapshot';
 import {runAssessment} from '../lib/assessment/registry';
 import {compareAssessments} from '../lib/assessment/compare';
 const ctx=()=>({locale:'ko' as const,signal:AbortSignal.timeout(2000)});
 const bytes=(kind:'pkg'|'dmg')=>{const b=Buffer.alloc(512);b.write(kind==='pkg'?'xar!':'koly',kind==='pkg'?0:0);return {path:'/private/not-sent/target.'+kind,size:b.length,read:async(o:number,n:number)=>b.subarray(o,o+n)};};
+const stat={dev:1n,ino:9007199254740992n,size:512n,mtimeNs:1234567890123456n,ctimeNs:1234567890123457n};
+test('stability distinguishes metadata-only movement after matching full hashes',()=>{
+ const hash='a'.repeat(64),after={...stat,ctimeNs:stat.ctimeNs+1n};
+ assert.deepEqual(verifyFileStability(stat,stat,stat,hash,hash),{contentHashesMatch:true,metadataChanged:false});
+ assert.deepEqual(verifyFileStability(stat,after,after,hash,hash),{contentHashesMatch:true,metadataChanged:true});
+});
+test('stability still rejects bytes, replacement, size and modification-time changes',()=>{
+ const hash='a'.repeat(64);
+ for(const delta of [{dev:2n},{ino:stat.ino+1n},{size:513n},{mtimeNs:stat.mtimeNs+1n}]){
+  const changed={...stat,...delta};assert.throws(()=>verifyFileStability(stat,stat,changed,hash,hash),/FILE_CHANGED/);assert.throws(()=>verifyFileStability(stat,changed,stat,hash,hash),/FILE_CHANGED/);
+ }
+ assert.throws(()=>verifyFileStability(stat,stat,stat,hash,'b'.repeat(64)),/FILE_CHANGED/);
+ assert.throws(()=>verifyFileStability(stat,stat,stat,'bad','bad'),/FILE_CHANGED/);
+ // These different inode IDs collapse as Numbers; BigInt must distinguish them.
+ assert.equal(Number(stat.ino),Number(stat.ino+1n));
+});
+test('failed stability diagnostics expose booleans only; schema rejects forged rechecks',async()=>{
+ try{verifyFileStability(stat,stat,{...stat,ino:stat.ino+1n},'a'.repeat(64),'a'.repeat(64));assert.fail('must reject');}catch(error){const flags=(error as Error&{stability:Record<string,boolean>}).stability;assert.equal(flags.identityChanged,true);assert(Object.values(flags).every(v=>typeof v==='boolean'));}
+ const s=await inspectMacContainer(bytes('pkg'),'pkg',async()=>({stdout:'Payload'}));
+ const base={...s,sha256:'a'.repeat(64),stability:{contentHashesMatch:true,metadataChanged:true}};
+ assert.equal(executableSnapshot(base,'macho').stability?.metadataChanged,true);
+ for(const forged of [{...base,source:'browser'},{...base,sha256:undefined},{...base,stability:{contentHashesMatch:false,metadataChanged:true}},{...base,stability:{...base.stability,path:'private'}}])assert.throws(()=>executableSnapshot(forged,'macho'));
+ const result=await runAssessment({moduleId:'application.macho',label:'review',snapshot:base},ctx());assert.equal(result.findings.find(f=>f.id==='local:stability')?.status,'info');assert(result.findings.every(f=>f.status!=='pass'));
+});
 test('configuration decoding supports Windows UTF-16 BOMs and rejects invalid/binary/oversize input',()=>{
  const text='{"schemaVersion":1,"note":"한글"}';
  assert.equal(configurationFileText(Buffer.from(text)),text);

@@ -1,7 +1,7 @@
 /* VELTHARA read-only inspector. No dependencies; never executes the selected file.
  * Browser worker and Node.js 20+ CLI share this bounded parser. */
 export const MAX_FILE_BYTES=8*1024**3,MAX_READ_BYTES=8*1024**2;
-export const INSPECTOR_VERSION='2026-10-29.3';
+export const INSPECTOR_VERSION='2026-10-29.4';
 const invalid=()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
 export async function inspectExecutable(source,format){
  if(!['pe','macho'].includes(format)||!Number.isSafeInteger(source.size)||source.size<32||source.size>MAX_FILE_BYTES)invalid();
@@ -111,6 +111,25 @@ export async function inspectMacContainer(source,kind,exec,native=false){
  return {schemaVersion:1,source:'local',format:'macho',size:source.size,architectures:[],container};
 }
 
+// ctime covers metadata too. Only tolerate its movement after full before/after
+// hashes agree; identity, size and modification-time changes still fail closed.
+export function verifyFileStability(before,after,current,initialHash,finalHash){
+ const observations={
+  identityChanged:[after,current].some(s=>s.dev!==before.dev||s.ino!==before.ino),
+  sizeChanged:[after,current].some(s=>s.size!==before.size),
+  modifiedTimeChanged:[after,current].some(s=>s.mtimeNs!==before.mtimeNs),
+  metadataChanged:[after,current].some(s=>s.ctimeNs!==before.ctimeNs),
+  contentHashChanged:initialHash!==finalHash,
+ };
+ if(!/^[a-f0-9]{64}$/.test(initialHash)||!/^[a-f0-9]{64}$/.test(finalHash)||observations.identityChanged||observations.sizeChanged||observations.modifiedTimeChanged||observations.contentHashChanged){const error=new Error('FILE_CHANGED_DURING_INSPECTION');error.stability=observations;throw error;}
+ return {contentHashesMatch:true,metadataChanged:observations.metadataChanged};
+}
+async function hashFileHandle(handle,size){
+ const {createHash}=await import('node:crypto'),hash=createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
+ while(offset<size){const r=await handle.read(chunk,0,Math.min(chunk.length,size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}
+ return hash.digest('hex');
+}
+
 async function chooseMacInputs(exec){
  const pick=async(script,args=[])=>{const r=await exec('/usr/bin/osascript',['-e',script,...args],{timeout:300000,maxBuffer:131072});return r.stdout.replace(/\r?\n$/,'');};
  const mode=await pick('set p to choose from list {"Choose one app, installer, image or executable", "Search a folder for candidates"} with prompt "Select a local inspection method. No files are uploaded."\nif p is false then error number -128\nreturn item 1 of p');
@@ -171,15 +190,15 @@ async function main(){
    if(!name||name==='.'||name==='..'||/[\\/\0]/.test(name))throw new Error('APP_EXECUTABLE_NAME_INVALID');
    stage='bundle-executable';binary=await fs.realpath(path.join(target,'Contents/MacOS',name));if(!binary.startsWith(target+path.sep))throw new Error('APP_EXECUTABLE_OUTSIDE_BUNDLE');
   }
-  stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');if(before.size<32||before.size>MAX_FILE_BYTES)throw new Error('FILE_SIZE_LIMIT');
+  stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat({bigint:true}),size=Number(before.size);if(!before.isFile())throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');if(size<32||size>MAX_FILE_BYTES)throw new Error('FILE_SIZE_LIMIT');
   const head=new Uint8Array(4);await handle.read(head,0,4,0);const magic=new DataView(head.buffer).getUint32(0,false),format=head[0]===0x4d&&head[1]===0x5a?'pe':[0xfeedface,0xcefaedfe,0xfeedfacf,0xcffaedfe,0xcafebabe,0xbebafeca,0xcafebabf,0xbfbafeca].includes(magic)?'macho':'unknown';
   const containerKind=/\.(pkg|dmg)$/i.exec(binary)?.[1].toLowerCase();
   if(head[0]===0x23&&head[1]===0x21)throw new Error('MAIN_EXECUTABLE_IS_SCRIPT');if(format==='unknown'&&!containerKind)throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');detectedFormat=containerKind??format;stage='structure';
-  const source={path:binary,size:before.size,read:async(o,n)=>{if(o<0||o+n>before.size)invalid();const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}};
+  const source={path:binary,size,read:async(o,n)=>{if(o<0||o+n>size)invalid();const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}};
   if(containerKind&&process.platform!=='darwin')throw new Error('MACOS_REQUIRED');
+  stage='hash';const initialHash=await hashFileHandle(handle,size);stage='structure';
   const result=containerKind?await inspectMacContainer(source,containerKind,exec,native):await inspectExecutable(source,format);result.source='local';
-  stage='hash';const crypto=await import('node:crypto'),hash=crypto.createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
-  while(offset<before.size){const r=await handle.read(chunk,0,Math.min(chunk.length,before.size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}result.sha256=hash.digest('hex');
+  result.sha256=initialHash;
   if(native&&!containerKind){
    result.native={signature:'unknown',gatekeeper:'unknown',hardenedRuntime:'unknown',debugEntitlement:'unknown'};
    if(format==='pe'&&process.platform==='win32'){
@@ -192,9 +211,9 @@ async function main(){
     try{const r=await exec('/usr/bin/codesign',['--display','--entitlements',':-',target],{timeout:10000,maxBuffer:65536});if(r.stdout.includes('<plist'))result.native.debugEntitlement=/<key>com\.apple\.security\.get-task-allow<\/key>\s*<true\s*\/>/.test(r.stdout)?'allowed':'denied';}catch{}
    }
   }
-  stage='stability';const after=await handle.stat(),current=await fs.stat(binary);if(before.size!==after.size||before.mtimeMs!==after.mtimeMs||before.ctimeMs!==after.ctimeMs||before.ino!==current.ino||before.mtimeMs!==current.mtimeMs)throw new Error('FILE_CHANGED_DURING_INSPECTION');
+  stage='stability';const finalHash=await hashFileHandle(handle,size),after=await handle.stat({bigint:true}),current=await fs.stat(binary,{bigint:true});result.stability=verifyFileStability(before,after,current,initialHash,finalHash);
   stage='output';await fs.writeFile(out,JSON.stringify(result,null,2),{flag:'wx',encoding:'utf8'});console.log('Read-only inspection complete. New JSON report written. No file uploaded or executed. A valid signature is not a malware-free verdict.');
- }catch(e){const code=inspectionFailureCode(e,stage);console.error('Inspection stopped: '+code+'. No target was executed or uploaded.');console.error('Diagnostic: '+JSON.stringify({toolVersion:INSPECTOR_VERSION,stage,code,targetKind,detectedFormat,platform:process.platform}));process.exitCode=1;}finally{await handle?.close();}
+ }catch(e){const code=inspectionFailureCode(e,stage);console.error('Inspection stopped: '+code+'. No target was executed or uploaded.');console.error('Diagnostic: '+JSON.stringify({toolVersion:INSPECTOR_VERSION,stage,code,targetKind,detectedFormat,platform:process.platform,...(e.stability?{stability:Object.fromEntries(['identityChanged','sizeChanged','modifiedTimeChanged','metadataChanged','contentHashChanged'].map(k=>[k,e.stability[k]===true]))}:{})}));process.exitCode=1;}finally{await handle?.close();}
 }
 if(typeof process!=='undefined'&&process.versions?.node&&process.argv[1]){
  const fs=await import('node:fs/promises'),url=await import('node:url');

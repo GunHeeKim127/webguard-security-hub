@@ -38,3 +38,5 @@ Windows 설정 파일의 UTF-16 LE/BE BOM과 UTF-8을 지원하고, 빈 파일·
 위 .ps1 미완료 문구를 후속 검증으로 갱신한다. 현재 Windows PowerShell의 정책은 모두 Undefined로 기본 실행 제한이 있지만, 이미 설치된 PowerShell7.6.5는 기존 LocalMachine RemoteSigned 정책을 사용했다. 정책/Zone.Identifier를 변경·우회하지 않고 허용된 PowerShell7에서 공개 도구를 실행했다. 제한된 실행 환경에서는 방화벽/Defender/RDP 일부 조회가 실패해 null로 보존됐고, 실제 PC 조회 권한으로 실행하면 방화벽3/Defender2가true, RDP는enabled=false/nla=true로 수집됐다. 엔진 대조는 정상 수집 기준충족5/참고1/미검사0, 제한 환경 기준충족0/참고1/미검사5였다. 기존 출력 재사용은 거절됐고 SHA-256 비교로 기존 바이트 보존을 확인했다. 새 Windows 내보내기 도구의 이 환경 실행 검증은 완료다. 모든 PowerShell 버전·정책·보안 공급자의 호환성 보증은 아니다.
 
 Mac 담당자는 다른 지역에 있어 사용자가 안내를 전달하기로 했다. [담당자 전달용 전체 절차와 회신 양식](MAC_ENDPOINT_HANDOFF_2026-10-29.md)을 준비했다. 실제 Mac PKG/DMG 결과가 도착하기 전에는 해당 실기기 검증을 완료로 표시하지 않는다.
+
+Mac 실제 후속: 도구2026-10-29.3에서 DMG 형식을 식별한 뒤 stability 단계에서 중단됐다는 사용자 진단을 받았다. 내용 변경과 ctime만의 변화를 구분하지 못한 기존 구현을 보완해2026-10-29.4는 전후 전체 SHA-256·BigInt 식별자/크기/mtime을 대조한다. 메타데이터만 바뀐 경우 해시 일치가 필요하며 실제 변경은 계속 차단한다. 172회귀 통과 및 Windows 실제 파일 전후 해시/서명 조회를 확인했다. Mac DMG 재실행 성공은 아직 미확인이다.

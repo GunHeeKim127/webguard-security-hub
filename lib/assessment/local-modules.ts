@@ -2,6 +2,7 @@ import {executableSnapshot,packageSnapshot} from './executable-snapshot';
 import {checkpoint,pick,report,type SecurityScanner,type Finding,type AssessmentContext} from './types';
 export function executableFindings(snapshot:ReturnType<typeof executableSnapshot>,ctx:AssessmentContext){
  const findings:Finding[]=[];
+ if(snapshot.stability)findings.push({id:'local:stability',title:pick(ctx,'검사 전후 파일 내용 재확인','Before/after file content recheck'),status:'info',severity:'info',evidence:['localContentHashesMatch=true',`metadataChanged=${snapshot.stability.metadataChanged}`],remediation:pick(ctx,snapshot.stability.metadataChanged?'로컬 도구가 검사 전후 SHA-256 일치와 메타데이터 변화를 보고했습니다. 메타데이터 변화만으로 변조를 확정하지 않습니다. 원본의 서버 독립 검증이나 악성코드 없음의 증거는 아닙니다.':'로컬 도구가 검사 전후 SHA-256 일치를 보고했습니다. 서버가 원본을 독립 검증한 것은 아닙니다.','The local tool reports matching before/after SHA-256 values. Metadata movement alone does not establish tampering. This is not independent server verification or proof of malware absence.')});
  const add=(id:string,ko:string,en:string,warning:boolean,evidence:string[],koFix:string,enFix:string)=>findings.push({id,title:pick(ctx,ko,en),status:warning?'warning':'info',severity:warning?'medium':'info',evidence,remediation:pick(ctx,koFix,enFix)});
  if(snapshot.container){
   const c=snapshot.container;

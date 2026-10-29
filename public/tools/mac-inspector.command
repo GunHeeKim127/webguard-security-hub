@@ -27,11 +27,11 @@ if (( major < 20 )); then
   exit 1
 fi
 tool_version=$("$node_path" "$tool" --version 2>/dev/null || true)
-if [[ "$tool_version" != 'VELTHARA executable inspector 2026-10-29.3' ]]; then
+if [[ "$tool_version" != 'VELTHARA executable inspector 2026-10-29.4' ]]; then
   tool=$(/usr/bin/osascript -e 'POSIX path of (choose file with prompt "The inspector is missing or outdated. Select the newly downloaded executable-inspector.mjs.")') || exit 0
   if [[ ! -f "$tool" || ! -r "$tool" ]]; then print -u2 'TOOL_NOT_FOUND'; exit 1; fi
   tool_version=$("$node_path" "$tool" --version 2>/dev/null || true)
-  if [[ "$tool_version" != 'VELTHARA executable inspector 2026-10-29.3' ]]; then
+  if [[ "$tool_version" != 'VELTHARA executable inspector 2026-10-29.4' ]]; then
     print -u2 'TOOL_OUTDATED: Download the inspector and Mac launcher together from the site.'
     exit 1
   fi
