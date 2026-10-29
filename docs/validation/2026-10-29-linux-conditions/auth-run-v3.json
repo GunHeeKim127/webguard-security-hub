@@ -1,0 +1,303 @@
+{
+  "recordedAt": "2026-10-29T01:34:38.775Z",
+  "provenance": "User-operated Kali VM; supplied pasted terminal output, not agent-executed guest commands",
+  "reportedScriptSha256": "c98b0ce863e327a2dc29e67177c1eb1b081d98cfde2c5732c2d65635dac3899e",
+  "reportedHashCheckPassed": true,
+  "reportedCleanup": true,
+  "summary": {
+    "passed": 10,
+    "failed": 1,
+    "allComplete": false
+  },
+  "report": {
+    "schemaVersion": 3,
+    "positiveControlPassed": true,
+    "workspaceChecks": [
+      {
+        "candidate": "/run",
+        "selected": true,
+        "symlinkResolved": false
+      }
+    ],
+    "unassessed": [
+      "extended ACL",
+      "SELinux/AppArmor policy",
+      "production SSH and external key lookup"
+    ],
+    "scope": "isolated loopback test configuration, not production SSH policy",
+    "passwordCase": "method disabled; no password submitted",
+    "results": [
+      {
+        "case": "allowed_key",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 0,
+        "reasonCodes": [
+          "key-accepted"
+        ],
+        "guidance": [],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "custom_key_location",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 0,
+        "reasonCodes": [
+          "key-accepted"
+        ],
+        "guidance": [],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "safe_symlink",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 0,
+        "reasonCodes": [
+          "key-accepted"
+        ],
+        "guidance": [],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": true,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "unregistered_key",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "unregistered-key"
+        ],
+        "guidance": [
+          "Check that the offered public key matches an approved key. Do not infer a path failure from authentication denial alone."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "missing_key_file",
+        "pass": false,
+        "observedExpectedOutcome": false,
+        "status": "FAIL",
+        "clientExit": 255,
+        "reasonCodes": [],
+        "guidance": [],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": false,
+          "issues": [
+            "missing-key-file-or-target"
+          ]
+        }
+      },
+      {
+        "case": "writable_key_file",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "unsafe-key-file"
+        ],
+        "guidance": [
+          "Check the key file owner and group/other write permissions; moving the file alone may not resolve the issue."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [
+            "writable-key-file"
+          ],
+          "ownerUid": 0,
+          "mode": "0o666"
+        }
+      },
+      {
+        "case": "writable_parent",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "unsafe-key-directory"
+        ],
+        "guidance": [
+          "Check the configured key path and its resolved parent directories: owner and group/other write permissions. A directory name alone does not determine safety."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [
+            "unsafe-parent"
+          ],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "unsafe_symlink",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "unsafe-key-directory"
+        ],
+        "guidance": [
+          "Check the configured key path and its resolved parent directories: owner and group/other write permissions. A directory name alone does not determine safety."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": true,
+          "exists": true,
+          "issues": [
+            "unsafe-parent"
+          ],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "denied_user",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "user-denied"
+        ],
+        "guidance": [
+          "Check the account allow/deny rule; a key-path change does not resolve this policy rejection."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "root_login_disabled",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "root-policy-denied"
+        ],
+        "guidance": [
+          "Root login is disabled in this isolated test configuration."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      },
+      {
+        "case": "password_method_disabled",
+        "pass": true,
+        "observedExpectedOutcome": true,
+        "status": "PASS",
+        "clientExit": 255,
+        "reasonCodes": [
+          "password-method-disabled"
+        ],
+        "guidance": [
+          "Password authentication is not offered; no password was submitted."
+        ],
+        "pathNotice": {
+          "severity": "info",
+          "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
+          "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."
+        },
+        "keyPathInspection": {
+          "symlink": false,
+          "exists": true,
+          "issues": [],
+          "ownerUid": 0,
+          "mode": "0o600"
+        }
+      }
+    ]
+  }
+}

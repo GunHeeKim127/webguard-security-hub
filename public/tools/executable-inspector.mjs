@@ -1,6 +1,7 @@
 /* VELTHARA read-only inspector. No dependencies; never executes the selected file.
  * Browser worker and Node.js 20+ CLI share this bounded parser. */
 export const MAX_FILE_BYTES=8*1024**3,MAX_READ_BYTES=8*1024**2;
+export const INSPECTOR_VERSION='2026-10-29.1';
 const invalid=()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
 export async function inspectExecutable(source,format){
  if(!['pe','macho'].includes(format)||!Number.isSafeInteger(source.size)||source.size<32||source.size>MAX_FILE_BYTES)invalid();
@@ -47,21 +48,81 @@ if(typeof self!=='undefined'&&typeof self.postMessage==='function'&&typeof docum
  self.onmessage=async event=>{try{const {file,format}=event.data;const result=await inspectExecutable({size:file.size,read:async(o,n)=>new Uint8Array(await file.slice(o,o+n).arrayBuffer())},format);self.postMessage({ok:true,result});}catch{self.postMessage({ok:false});}};
 }
 
+// Directory names and metadata only; no candidate contents are read or executed.
+export async function discoverLocalCandidates(folder,options={}){
+ const fs=await import('node:fs/promises'),path=await import('node:path');
+ const {maxEntries=2000,maxDepth=4,maxResults=50}=options;
+ if(![maxEntries,maxDepth,maxResults].every(Number.isSafeInteger)||maxEntries<1||maxEntries>10000||maxDepth<0||maxDepth>8||maxResults<1||maxResults>100)throw new Error('INVALID_SEARCH_LIMIT');
+ const root=await fs.realpath(folder);if(!(await fs.stat(root)).isDirectory())throw new Error('SEARCH_REQUIRES_FOLDER');
+ const candidates=[],limits=new Set(),queue=[{dir:root,depth:0}];let entries=0,unreadable=0,symlinksSkipped=0;
+ if(/\.app$/i.test(root))return {candidates:[{path:root,kind:'app-bundle'}],entries:0,truncated:false,limits:[],unreadable,symlinksSkipped};
+ search:while(queue.length){const {dir,depth}=queue.shift();let stream;
+  try{const resolved=await fs.realpath(dir),relative=path.relative(root,resolved);if(relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative)){symlinksSkipped++;continue;}stream=await fs.opendir(resolved);}catch{unreadable++;continue;}
+  for await(const entry of stream){
+   if(entries>=maxEntries){limits.add('entry-limit');break search;}entries++;
+   const file=path.join(dir,entry.name);let metadata;try{metadata=await fs.lstat(file);}catch{unreadable++;continue;}
+   if(metadata.isSymbolicLink()){symlinksSkipped++;continue;}
+   let kind;
+   if(metadata.isDirectory()){
+    if(/\.app$/i.test(entry.name))kind='app-bundle';
+    else if(!['.git','node_modules'].includes(entry.name)){if(depth<maxDepth)queue.push({dir:file,depth:depth+1});else limits.add('depth-limit');}
+   }else if(metadata.isFile()){
+    if(/^executable-inspector(?: \(\d+\))?\.mjs$/i.test(entry.name))kind='inspector-tool';
+    else if(/\.(exe|dll|dylib|so)$/i.test(entry.name)||((metadata.mode&0o111)!==0&&!path.extname(entry.name)))kind='executable-candidate';
+   }
+   if(kind){candidates.push({path:file,kind});if(candidates.length>=maxResults){limits.add('result-limit');break search;}}
+  }
+ }
+ candidates.sort((a,b)=>a.path.localeCompare(b.path));
+ return {candidates,entries,truncated:limits.size>0,limits:[...limits],unreadable,symlinksSkipped};
+}
+
+async function chooseMacInputs(exec){
+ const pick=async(script,args=[])=>{const r=await exec('/usr/bin/osascript',['-e',script,...args],{timeout:300000,maxBuffer:131072});return r.stdout.replace(/\r?\n$/,'');};
+ const mode=await pick('set p to choose from list {"Choose one app or executable", "Search a folder for candidates"} with prompt "Select a local inspection method. No files are uploaded."\nif p is false then error number -128\nreturn item 1 of p');
+ let target;
+ if(mode==='Search a folder for candidates'){
+  const folder=await pick('POSIX path of (choose folder with prompt "Choose the folder to search. Only names and metadata in this folder are searched, with fixed limits.")');
+  const result=await discoverLocalCandidates(folder),items=result.candidates.filter(item=>item.kind!=='inspector-tool');
+  if(!items.length)throw new Error(result.truncated||result.unreadable?'SEARCH_INCOMPLETE':'NO_CANDIDATES');
+  const note=result.truncated||result.unreadable||result.symlinksSkipped?'Search is limited; some folders or links were not searched. ':' ';
+  target=await pick('on run argv\nset p to choose from list argv with prompt "'+note+'Select ONE candidate. Its file format will be checked next; a candidate is not a safety verdict."\nif p is false then error number -128\nreturn item 1 of p\nend run',items.map(item=>item.path));
+  if(!items.some(item=>item.path===target))throw new Error('INVALID_SELECTION');
+ }else target=await pick('POSIX path of (choose file with prompt "Select the actual .app bundle or executable. No example filename is assumed.")');
+ const permission=await pick('button returned of (display dialog "Allow reading the selected file and hashing its main executable? Native checks additionally use macOS signing/trust tools and may contact trust services. The app will not be launched or uploaded." buttons {"Cancel", "Static only", "Native checks"} default button "Static only" cancel button "Cancel")');
+ const output=await pick('POSIX path of (choose file name with prompt "Choose a NEW report filename. Existing files will not be overwritten." default name "mac-report-'+Date.now()+'.json")');
+ return [target,output,'--consent',...(permission==='Native checks'?['--native']:[])];
+}
+
 async function main(){
  const fs=await import('node:fs/promises'),path=await import('node:path'),cp=await import('node:child_process'),util=await import('node:util');
- const exec=util.promisify(cp.execFile),args=process.argv.slice(2),native=args.includes('--native');
+ const exec=util.promisify(cp.execFile);let args=process.argv.slice(2);
+ if(args.length===1&&args[0]==='--version'){console.log('VELTHARA executable inspector '+INSPECTOR_VERSION);return;}
+ if(args.length===1&&args[0]==='--choose'){
+  if(process.platform!=='darwin'){console.error('MAC_CHOOSER_UNAVAILABLE: --choose requires macOS. Use explicit quoted tool, target and new output paths.');process.exitCode=1;return;}
+  try{args=await chooseMacInputs(exec);}catch(e){if(/\(-128\)/.test(e.stderr??'')){console.log('Selection canceled. No inspection report written.');return;}console.error('Selection could not finish. '+(['SEARCH_INCOMPLETE','NO_CANDIDATES','INVALID_SELECTION'].includes(e.message)?e.message:'Check local file access and macOS dialog permissions.'));process.exitCode=1;return;}
+ }
+ if(args.includes('--discover')){
+  const selected=args.filter(a=>!a.startsWith('--'));if(!args.includes('--consent')||selected.length!==1||args.some(a=>a.startsWith('--')&&!['--discover','--consent'].includes(a))){console.error('Usage: node <actual-tool-path> --discover <selected-folder> --consent. Searches names/metadata only; no upload or candidate execution.');process.exitCode=1;return;}
+  try{console.log(JSON.stringify(await discoverLocalCandidates(selected[0]),null,2));}catch{console.error('SEARCH_UNAVAILABLE: select an existing readable folder. No full-disk fallback was attempted.');process.exitCode=1;}return;
+ }
+ const native=args.includes('--native');
  const positional=args.filter(a=>!a.startsWith('--'));
  if(!args.includes('--consent')||positional.length!==2||args.some(a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
- let handle;
+ let handle,stage='target';
  try{
-  const target=await fs.realpath(positional[0]),out=path.resolve(positional[1]);let binary=target;
+  const out=path.resolve(positional[1]);stage='output';
+  try{await fs.lstat(out);const error=new Error('Output already exists');error.code='EEXIST';throw error;}catch(e){if(e.code!=='ENOENT')throw e;}
+  await fs.access(path.dirname(out));stage='target';
+  const target=await fs.realpath(positional[0]);let binary=target;
   if((await fs.stat(target)).isDirectory()){
-   if(process.platform!=='darwin'||!target.endsWith('.app'))invalid();
-   const info=JSON.parse((await exec('/usr/bin/plutil',['-convert','json','-o','-',path.join(target,'Contents/Info.plist')],{timeout:10000,maxBuffer:65536})).stdout),name=info.CFBundleExecutable;
+   if(process.platform!=='darwin'||!/\.app$/i.test(target))invalid();stage='bundle-metadata';
+   const metadata=path.join(target,'Contents/Info.plist');await fs.access(metadata);stage='native-tool';await fs.access('/usr/bin/plutil');stage='bundle-metadata';
+   const info=JSON.parse((await exec('/usr/bin/plutil',['-convert','json','-o','-',metadata],{timeout:10000,maxBuffer:65536})).stdout),name=info.CFBundleExecutable;
    if(typeof name!=='string'||!name||name==='.'||name==='..'||/[\\/\0]/.test(name))invalid();
-   binary=await fs.realpath(path.join(target,'Contents/MacOS',name));if(!binary.startsWith(target+path.sep))invalid();
+   stage='bundle-executable';binary=await fs.realpath(path.join(target,'Contents/MacOS',name));if(!binary.startsWith(target+path.sep))invalid();
   }
-  handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())invalid();const head=new Uint8Array(2);await handle.read(head,0,2,0);const format=head[0]===0x4d&&head[1]===0x5a?'pe':'macho';
+  stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())invalid();const head=new Uint8Array(2);await handle.read(head,0,2,0);const format=head[0]===0x4d&&head[1]===0x5a?'pe':'macho';
   const result=await inspectExecutable({size:before.size,read:async(o,n)=>{const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}},format);result.source='local';
   const crypto=await import('node:crypto'),hash=crypto.createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
   while(offset<before.size){const r=await handle.read(chunk,0,Math.min(chunk.length,before.size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}result.sha256=hash.digest('hex');
@@ -78,7 +139,11 @@ async function main(){
    }
   }
   const after=await handle.stat(),current=await fs.stat(binary);if(before.size!==after.size||before.mtimeMs!==after.mtimeMs||before.ctimeMs!==after.ctimeMs||before.ino!==current.ino||before.mtimeMs!==current.mtimeMs)invalid();
-  await fs.writeFile(out,JSON.stringify(result,null,2),{flag:'wx',encoding:'utf8'});console.log('Read-only inspection complete. New JSON report written. No file uploaded or executed. A valid signature is not a malware-free verdict.');
- }catch{console.error('Inspection failed: unsupported/corrupt/changed file, permission denied, missing OS tool or existing output. No target contents or paths logged.');process.exitCode=1;}finally{await handle?.close();}
+  stage='output';await fs.writeFile(out,JSON.stringify(result,null,2),{flag:'wx',encoding:'utf8'});console.log('Read-only inspection complete. New JSON report written. No file uploaded or executed. A valid signature is not a malware-free verdict.');
+ }catch(e){const code=e.code==='EEXIST'?'OUTPUT_EXISTS':e.code==='ENOENT'?(stage==='output'?'OUTPUT_FOLDER_NOT_FOUND':stage==='native-tool'?'OS_TOOL_NOT_FOUND':stage==='bundle-metadata'?'APP_METADATA_NOT_FOUND':stage==='bundle-executable'?'APP_EXECUTABLE_NOT_FOUND':'TARGET_NOT_FOUND'):['EACCES','EPERM'].includes(e.code)?'ACCESS_DENIED':'UNSUPPORTED_CORRUPT_CHANGED_OR_TOOL_FAILURE';console.error('Inspection stopped: '+code+'. Check the selected '+(stage==='output'?'new report location':stage==='native-tool'?'local OS tool':'target and its actual format')+'. A custom path alone is not a vulnerability. No target contents or paths logged.');process.exitCode=1;}finally{await handle?.close();}
 }
-if(typeof process!=='undefined'&&process.versions?.node&&process.argv[1]?.replace(/\\/g,'/').endsWith('/executable-inspector.mjs'))await main();
+if(typeof process!=='undefined'&&process.versions?.node&&process.argv[1]){
+ const fs=await import('node:fs/promises'),url=await import('node:url');
+ let entry,current;try{[entry,current]=await Promise.all([fs.realpath(process.argv[1]),fs.realpath(url.fileURLToPath(import.meta.url))]);}catch{}
+ if(entry&&entry===current)await main();
+}

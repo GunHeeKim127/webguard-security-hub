@@ -1,0 +1,141 @@
+{
+  "recordedAt": "2026-10-29T00:33:20.862Z",
+  "codeRevision": "f4ec647",
+  "provenance": "User supplied current Kali Tera Term output; agent independently reran project scanner on the supplied five-value review copies, not guest commands.",
+  "syntaxCheck": "user-reported success",
+  "normalizedReviewTextSha256": "6d26034cba0b1b4e2af79c8ba458b88b5776abd8fa3c3312b2fcb7b12b5bd648",
+  "hashBasis": "Normalized five-value UTF-8 review copy, not a guest original file hash",
+  "values": {
+    "maxauthtries": 6,
+    "permitrootlogin": "yes",
+    "pubkeyauthentication": "yes",
+    "passwordauthentication": "yes",
+    "permitemptypasswords": "no"
+  },
+  "cases": [
+    {
+      "user": "root",
+      "source": "loopback",
+      "hostMode": "numeric-address",
+      "localPort": 22,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "permitrootlogin",
+          "status": "warning"
+        },
+        {
+          "id": "passwordauthentication",
+          "status": "warning"
+        },
+        {
+          "id": "permitemptypasswords",
+          "status": "pass"
+        },
+        {
+          "id": "pubkeyauthentication",
+          "status": "pass"
+        },
+        {
+          "id": "maxauthtries",
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "user": "root",
+      "source": "current_ssh_peer",
+      "hostMode": "numeric-address",
+      "localPort": 22,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "permitrootlogin",
+          "status": "warning"
+        },
+        {
+          "id": "passwordauthentication",
+          "status": "warning"
+        },
+        {
+          "id": "permitemptypasswords",
+          "status": "pass"
+        },
+        {
+          "id": "pubkeyauthentication",
+          "status": "pass"
+        },
+        {
+          "id": "maxauthtries",
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "user": "nobody",
+      "source": "loopback",
+      "hostMode": "numeric-address",
+      "localPort": 22,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "permitrootlogin",
+          "status": "warning"
+        },
+        {
+          "id": "passwordauthentication",
+          "status": "warning"
+        },
+        {
+          "id": "permitemptypasswords",
+          "status": "pass"
+        },
+        {
+          "id": "pubkeyauthentication",
+          "status": "pass"
+        },
+        {
+          "id": "maxauthtries",
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "user": "nobody",
+      "source": "current_ssh_peer",
+      "hostMode": "numeric-address",
+      "localPort": 22,
+      "moduleVersion": "1.0.0",
+      "findings": [
+        {
+          "id": "permitrootlogin",
+          "status": "warning"
+        },
+        {
+          "id": "passwordauthentication",
+          "status": "warning"
+        },
+        {
+          "id": "permitemptypasswords",
+          "status": "pass"
+        },
+        {
+          "id": "pubkeyauthentication",
+          "status": "pass"
+        },
+        {
+          "id": "maxauthtries",
+          "status": "warning"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Only four selected user/address conditions, not all Match/Include branches",
+    "Default sshd configuration; running service custom -f/-o arguments not verified",
+    "No original configuration or included files inspected",
+    "No actual SSH login success/denial test; nobody output is not login permission",
+    "No configuration write or restart",
+    "No new production save/retest performed in this round"
+  ]
+}

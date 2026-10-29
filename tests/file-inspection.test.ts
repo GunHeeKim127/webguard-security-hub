@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync} from 'node:zlib';
-import {inspectExecutable} from '../public/tools/executable-inspector.mjs';
+import {inspectExecutable,discoverLocalCandidates} from '../public/tools/executable-inspector.mjs';
 import {inspectPackage,androidSettings,plistValue} from '../public/tools/package-inspector.mjs';
 import {executableSnapshot,packageSnapshot} from '../lib/assessment/executable-snapshot';
 import {assessmentInput} from '../lib/assessment/input';
 import {runAssessment} from '../lib/assessment/registry';
-import {mkdtemp,writeFile,readFile,access} from 'node:fs/promises';
+import {mkdtemp,writeFile,readFile,access,mkdir,copyFile,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {execFile} from 'node:child_process';
@@ -51,4 +51,27 @@ test('all single-file selections reject a batch before selecting or reading any 
 });
 test('assessment APIs reject file arrays and batch fields rather than silently selecting a first entry',()=>{
  for(const data of [{moduleId:'linux.ssh',label:'one',authorized:true,text:['PermitRootLogin no']},{moduleId:'application.pe',label:'one',authorized:true,base64:['AA==']},{moduleId:'linux.ssh',label:'one',authorized:true,text:'PermitRootLogin no',files:['a','b']}])assert.throws(()=>assessmentInput(data));
+});
+
+test('local candidate search stays in the selected folder, reports limits and does not read candidate content',async()=>{
+ const folder=await mkdtemp(path.join(tmpdir(),'inspector-discovery-'));await mkdir(path.join(folder,'My app.app'));await mkdir(path.join(folder,'nested'));await mkdir(path.join(folder,'node_modules'));await writeFile(path.join(folder,'nested','candidate.exe'),'PRIVATE-CONTENT-NOT-A-REAL-EXE');await writeFile(path.join(folder,'node_modules','ignore.exe'),'ignore');
+ const result=await discoverLocalCandidates(folder);assert.equal(result.candidates.length,2);assert(result.candidates.some(c=>c.kind==='app-bundle'));assert(!JSON.stringify(result).includes('PRIVATE-CONTENT'));assert(!result.candidates.some(c=>c.path.includes('ignore.exe')));
+ const limited=await discoverLocalCandidates(folder,{maxEntries:1});assert.equal(limited.truncated,true);assert(limited.limits.includes('entry-limit'));
+ const empty=await mkdtemp(path.join(tmpdir(),'inspector-empty-'));assert.equal((await discoverLocalCandidates(empty)).candidates.length,0);await assert.rejects(discoverLocalCandidates(path.join(empty,'missing')));
+});
+
+test('local candidate search skips directory links instead of following them outside the chosen scope',async t=>{
+ const root=await mkdtemp(path.join(tmpdir(),'inspector-links-')),outside=await mkdtemp(path.join(tmpdir(),'inspector-outside-'));await writeFile(path.join(outside,'outside.exe'),'not read');
+ try{await symlink(outside,path.join(root,'external'),process.platform==='win32'?'junction':'dir');}catch{t.skip('Directory link creation unavailable');return;}
+ const result=await discoverLocalCandidates(root);assert.equal(result.candidates.length,0);assert.equal(result.symlinksSkipped,1);
+});
+
+test('renamed downloaded inspector runs from another cwd and explains absent target/output paths without leaking them',async()=>{
+ const folder=await mkdtemp(path.join(tmpdir(),'inspector-paths-')),tool=path.join(folder,'executable-inspector (1).mjs'),target=path.join(folder,'actual file.exe'),output=path.join(folder,'new report.json'),exec=promisify(execFile);await copyFile(path.resolve('public/tools/executable-inspector.mjs'),tool);await writeFile(target,pe());
+ await exec(process.execPath,[tool,target,output,'--consent'],{cwd:tmpdir()});assert.equal(JSON.parse(await readFile(output,'utf8')).source,'local');
+ assert.equal((await exec(process.execPath,[tool,'--version'],{cwd:tmpdir()})).stdout.trim(),'VELTHARA executable inspector 2026-10-29.1');
+ await assert.rejects(exec(process.execPath,[tool,path.join(folder,'absent.exe'),path.join(folder,'missing-report.json'),'--consent']),error=>{const e=error as Error&{stderr:string};assert(e.stderr.includes('TARGET_NOT_FOUND'));assert(!e.stderr.includes(folder));return true;});
+ await assert.rejects(exec(process.execPath,[tool,target,path.join(folder,'absent folder','report.json'),'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_FOLDER_NOT_FOUND'));return true;});
+ await assert.rejects(exec(process.execPath,[tool,target,output,'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_EXISTS'));return true;});
+ const search=await exec(process.execPath,[tool,'--discover',folder,'--consent']);assert(JSON.parse(search.stdout).candidates.some((c:{kind:string})=>c.kind==='inspector-tool'));
 });
