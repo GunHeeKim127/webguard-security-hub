@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+ <!-- Adapted from app/login-illustration.tsx: the same shield, mint lock and keyhole. -->
+ <rect width="256" height="256" rx="48" fill="#091321"/>
+ <path d="M128 19L222 60V121C222 179 184 216 128 242C72 216 34 179 34 121V60L128 19Z" fill="#123D40" stroke="#66E6C3" stroke-width="10"/>
+ <path d="M98 119V92C98 75 111 62 128 62C145 62 158 75 158 92V119" stroke="#A1FFE3" stroke-width="14" stroke-linecap="round"/>
+ <rect x="77" y="113" width="102" height="83" rx="18" fill="#66E6C3"/>
+ <circle cx="128" cy="145" r="10" fill="#123D40"/>
+ <path d="M128 150V168" stroke="#123D40" stroke-width="9" stroke-linecap="round"/>
+</svg>

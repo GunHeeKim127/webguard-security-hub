@@ -69,7 +69,7 @@ test('local candidate search skips directory links instead of following them out
 test('renamed downloaded inspector runs from another cwd and explains absent target/output paths without leaking them',async()=>{
  const folder=await mkdtemp(path.join(tmpdir(),'inspector-paths-')),tool=path.join(folder,'executable-inspector (1).mjs'),target=path.join(folder,'actual file.exe'),output=path.join(folder,'new report.json'),exec=promisify(execFile);await copyFile(path.resolve('public/tools/executable-inspector.mjs'),tool);await writeFile(target,pe());
  await exec(process.execPath,[tool,target,output,'--consent'],{cwd:tmpdir()});assert.equal(JSON.parse(await readFile(output,'utf8')).source,'local');
- assert.equal((await exec(process.execPath,[tool,'--version'],{cwd:tmpdir()})).stdout.trim(),'VELTHARA executable inspector 2026-10-29.2');
+ assert.equal((await exec(process.execPath,[tool,'--version'],{cwd:tmpdir()})).stdout.trim(),'VELTHARA executable inspector 2026-10-29.3');
  await assert.rejects(exec(process.execPath,[tool,path.join(folder,'absent.exe'),path.join(folder,'missing-report.json'),'--consent']),error=>{const e=error as Error&{stderr:string};assert(e.stderr.includes('TARGET_NOT_FOUND'));assert(!e.stderr.includes(folder));return true;});
  await assert.rejects(exec(process.execPath,[tool,target,path.join(folder,'absent folder','report.json'),'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_FOLDER_NOT_FOUND'));return true;});
  await assert.rejects(exec(process.execPath,[tool,target,output,'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_EXISTS'));return true;});

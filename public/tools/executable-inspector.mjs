@@ -1,7 +1,7 @@
 /* VELTHARA read-only inspector. No dependencies; never executes the selected file.
  * Browser worker and Node.js 20+ CLI share this bounded parser. */
 export const MAX_FILE_BYTES=8*1024**3,MAX_READ_BYTES=8*1024**2;
-export const INSPECTOR_VERSION='2026-10-29.2';
+export const INSPECTOR_VERSION='2026-10-29.3';
 const invalid=()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
 export async function inspectExecutable(source,format){
  if(!['pe','macho'].includes(format)||!Number.isSafeInteger(source.size)||source.size<32||source.size>MAX_FILE_BYTES)invalid();
@@ -68,6 +68,7 @@ export async function discoverLocalCandidates(folder,options={}){
     else if(!['.git','node_modules'].includes(entry.name)){if(depth<maxDepth)queue.push({dir:file,depth:depth+1});else limits.add('depth-limit');}
    }else if(metadata.isFile()){
     if(/^executable-inspector(?: \(\d+\))?\.mjs$/i.test(entry.name))kind='inspector-tool';
+    else if(/\.(pkg|dmg)$/i.test(entry.name))kind='mac-container';
     else if(/\.(exe|dll|dylib|so)$/i.test(entry.name)||((metadata.mode&0o111)!==0&&!path.extname(entry.name)))kind='executable-candidate';
    }
    if(kind){candidates.push({path:file,kind});if(candidates.length>=maxResults){limits.add('result-limit');break search;}}
@@ -77,9 +78,42 @@ export async function discoverLocalCandidates(folder,options={}){
  return {candidates,entries,truncated:limits.size>0,limits:[...limits],unreadable,symlinksSkipped};
 }
 
+// Container tools only query metadata. Never install, expand or mount untrusted
+// archives. Raw paths, certificate subjects and tool diagnostics stay local.
+export async function inspectMacContainer(source,kind,exec,native=false){
+ if(!['pkg','dmg'].includes(kind)||source.size<(kind==='dmg'?512:32)||source.size>MAX_FILE_BYTES)invalid();
+ const bytes=await source.read(kind==='pkg'?0:source.size-512,kind==='pkg'?4:4);
+ if(new TextDecoder().decode(bytes)!==(kind==='pkg'?'xar!':'koly'))throw new Error('CONTAINER_FORMAT_UNSUPPORTED');
+ const options={timeout:60000,maxBuffer:1048576,env:{...process.env,LC_ALL:'C',LANG:'C'}};
+ const query=async(tool,args)=>{try{const r=await exec(tool,args,options);return {ok:true,text:r.stdout,diagnostic:r.stdout+'\n'+(r.stderr??'')};}catch(e){return {ok:false,text:'',diagnostic:'',code:typeof e.code==='number'?e.code:null};}};
+ const container={kind,structure:'unknown',integrity:'unknown',signature:'unknown',gatekeeper:'unknown',payloadListed:false,payloadEntries:0,scriptsPresent:null,unsafePaths:0,scope:'metadata-only'};
+ if(kind==='pkg'){
+  const listing=await query('/usr/bin/xar',['-tf',source.path]);
+  if(listing.ok){const entries=listing.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.structure='observed';container.scriptsPresent=entries.some(p=>/(^|\/)Scripts(\/|$)/.test(p));container.unsafePaths=entries.filter(p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
+  const payload=await query('/usr/sbin/pkgutil',['--payload-files',source.path]);
+  if(payload.ok){const entries=payload.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.payloadListed=true;container.payloadEntries=entries.length;container.unsafePaths+=entries.filter(p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
+  if(native){
+   const sig=await query('/usr/sbin/pkgutil',['--check-signature',source.path]);
+   // Exit zero alone is not proof: unsigned packages can also return success.
+   if(/Status: no signature/i.test(sig.text))container.signature='unsigned';
+   else if(/Status: signed by a certificate trusted by (?:macOS|Mac OS X)/i.test(sig.text)&&sig.ok)container.signature='valid';
+   else if(/Status:.*(?:invalid|untrusted|revoked)/i.test(sig.text))container.signature='invalid';
+  }
+ }else{
+  const info=await query('/usr/bin/hdiutil',['imageinfo','-plist',source.path]);if(info.ok)container.structure='observed';
+  const integrity=await query('/usr/bin/hdiutil',['verify',source.path]);
+  // A successful verify without checksum evidence remains unknown.
+  if(integrity.ok&&/^\s*(?:verified\s|hdiutil: verify: checksum.*\bis VALID\b)/im.test(integrity.diagnostic))container.integrity='verified';
+  if(native){const sig=await query('/usr/bin/codesign',['--verify','--strict',source.path]);if(sig.ok)container.signature='valid';}
+ }
+ if(native){const policy=await query('/usr/sbin/spctl',['--assess','--type',kind==='pkg'?'install':'open',...(kind==='dmg'?['--context','context:primary-signature']:[]),source.path]);if(policy.ok)container.gatekeeper='accepted';else if(policy.code===3)container.gatekeeper='rejected';}
+ if(container.structure!=='observed')throw new Error('CONTAINER_READ_FAILED');
+ return {schemaVersion:1,source:'local',format:'macho',size:source.size,architectures:[],container};
+}
+
 async function chooseMacInputs(exec){
  const pick=async(script,args=[])=>{const r=await exec('/usr/bin/osascript',['-e',script,...args],{timeout:300000,maxBuffer:131072});return r.stdout.replace(/\r?\n$/,'');};
- const mode=await pick('set p to choose from list {"Choose one app or executable", "Search a folder for candidates"} with prompt "Select a local inspection method. No files are uploaded."\nif p is false then error number -128\nreturn item 1 of p');
+ const mode=await pick('set p to choose from list {"Choose one app, installer, image or executable", "Search a folder for candidates"} with prompt "Select a local inspection method. No files are uploaded."\nif p is false then error number -128\nreturn item 1 of p');
  let target;
  if(mode==='Search a folder for candidates'){
   const folder=await pick('POSIX path of (choose folder with prompt "Choose the folder to search. Only names and metadata in this folder are searched, with fixed limits.")');
@@ -88,14 +122,14 @@ async function chooseMacInputs(exec){
   const note=result.truncated||result.unreadable||result.symlinksSkipped?'Search is limited; some folders or links were not searched. ':' ';
   target=await pick('on run argv\nset p to choose from list argv with prompt "'+note+'Select ONE candidate. Its file format will be checked next; a candidate is not a safety verdict."\nif p is false then error number -128\nreturn item 1 of p\nend run',items.map(item=>item.path));
   if(!items.some(item=>item.path===target))throw new Error('INVALID_SELECTION');
- }else target=await pick('POSIX path of (choose file with prompt "Select the actual .app bundle or executable. No example filename is assumed.")');
+ }else target=await pick('POSIX path of (choose file with prompt "Select one .app, .pkg, .dmg or Mach-O executable. Containers receive metadata checks, not full internal code analysis.")');
  const permission=await pick('button returned of (display dialog "Allow reading the selected file and hashing its main executable? Native checks additionally use macOS signing/trust tools and may contact trust services. The app will not be launched or uploaded." buttons {"Cancel", "Static only", "Native checks"} default button "Static only" cancel button "Cancel")');
  const output=await pick('POSIX path of (choose file name with prompt "Choose a NEW report filename. Existing files will not be overwritten." default name "mac-report-'+Date.now()+'.json")');
  return [target,output,'--consent',...(permission==='Native checks'?['--native']:[])];
 }
 
 export function inspectionFailureCode(error,stage){
- const known=['APP_EXECUTABLE_NAME_INVALID','APP_EXECUTABLE_OUTSIDE_BUNDLE','APP_METADATA_READ_FAILED','TARGET_DIRECTORY_UNSUPPORTED','MAIN_EXECUTABLE_IS_SCRIPT','UNSUPPORTED_EXECUTABLE_FORMAT','FILE_CHANGED_DURING_INSPECTION','FILE_SIZE_LIMIT'];
+ const known=['APP_EXECUTABLE_NAME_INVALID','APP_EXECUTABLE_OUTSIDE_BUNDLE','APP_METADATA_READ_FAILED','TARGET_DIRECTORY_UNSUPPORTED','MAIN_EXECUTABLE_IS_SCRIPT','UNSUPPORTED_EXECUTABLE_FORMAT','FILE_CHANGED_DURING_INSPECTION','FILE_SIZE_LIMIT','CONTAINER_FORMAT_UNSUPPORTED','CONTAINER_LIMIT','CONTAINER_READ_FAILED','MACOS_REQUIRED'];
  if(known.includes(error?.message))return error.message;
  if(error?.code==='EEXIST')return 'OUTPUT_EXISTS';
  if(['EACCES','EPERM'].includes(error?.code))return 'ACCESS_DENIED';
@@ -121,7 +155,7 @@ async function main(){
  }
  const native=args.includes('--native');
  const positional=args.filter(a=>!a.startsWith('--'));
- if(!args.includes('--consent')||positional.length!==2||args.some(a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
+ if(!args.includes('--consent')||positional.length!==2||args.some(a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app|installer.pkg|image.dmg> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
  let handle,stage='target',targetKind='file',detectedFormat='unknown';
  try{
   const out=path.resolve(positional[1]);stage='output';
@@ -139,11 +173,14 @@ async function main(){
   }
   stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');if(before.size<32||before.size>MAX_FILE_BYTES)throw new Error('FILE_SIZE_LIMIT');
   const head=new Uint8Array(4);await handle.read(head,0,4,0);const magic=new DataView(head.buffer).getUint32(0,false),format=head[0]===0x4d&&head[1]===0x5a?'pe':[0xfeedface,0xcefaedfe,0xfeedfacf,0xcffaedfe,0xcafebabe,0xbebafeca,0xcafebabf,0xbfbafeca].includes(magic)?'macho':'unknown';
-  if(head[0]===0x23&&head[1]===0x21)throw new Error('MAIN_EXECUTABLE_IS_SCRIPT');if(format==='unknown')throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');detectedFormat=format;stage='structure';
-  const result=await inspectExecutable({size:before.size,read:async(o,n)=>{const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}},format);result.source='local';
+  const containerKind=/\.(pkg|dmg)$/i.exec(binary)?.[1].toLowerCase();
+  if(head[0]===0x23&&head[1]===0x21)throw new Error('MAIN_EXECUTABLE_IS_SCRIPT');if(format==='unknown'&&!containerKind)throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');detectedFormat=containerKind??format;stage='structure';
+  const source={path:binary,size:before.size,read:async(o,n)=>{if(o<0||o+n>before.size)invalid();const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}};
+  if(containerKind&&process.platform!=='darwin')throw new Error('MACOS_REQUIRED');
+  const result=containerKind?await inspectMacContainer(source,containerKind,exec,native):await inspectExecutable(source,format);result.source='local';
   stage='hash';const crypto=await import('node:crypto'),hash=crypto.createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
   while(offset<before.size){const r=await handle.read(chunk,0,Math.min(chunk.length,before.size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}result.sha256=hash.digest('hex');
-  if(native){
+  if(native&&!containerKind){
    result.native={signature:'unknown',gatekeeper:'unknown',hardenedRuntime:'unknown',debugEntitlement:'unknown'};
    if(format==='pe'&&process.platform==='win32'){
     const shell=path.join(process.env.SystemRoot??'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe');

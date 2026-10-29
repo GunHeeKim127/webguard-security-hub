@@ -3,7 +3,17 @@ const sshRef='https://man.openbsd.org/sshd_config';
 export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind:'linux-sshd-config',maxBytes:65536,validate(input){textInput(input);},async scan(input,ctx){
  checkpoint(ctx);const lines=textInput(input).split(/\r?\n/);if(lines.length>5000)throw new Error('INPUT_INVALID');
  const values=new Map<string,{value:string,line:number}>();let conditional=false;
- for(let n=0;n<lines.length;n++){checkpoint(ctx);const line=lines[n].replace(/#.*/,'').trim();if(!line)continue;const [key,...rest]=line.split(/\s+/);if(['include','match'].includes(key.toLowerCase())||/["'\\]/.test(line))conditional=true;if(!values.has(key.toLowerCase()))values.set(key.toLowerCase(),{value:rest.join(' ').toLowerCase(),line:n+1});}
+ for(let n=0;n<lines.length;n++){
+  checkpoint(ctx);let quoted=false,line='';
+  for(const c of lines[n]){if(c==='"')quoted=!quoted;if(c==='#'&&!quoted)break;line+=c;}
+  line=line.trim();if(!line)continue;
+  const [rawKey,...rest]=line.split(/\s+/),key=rawKey.toLowerCase();
+  if(['include','match'].includes(key)||quoted||/[\\]/.test(line))conditional=true;
+  // OpenSSH permits double-quoted arguments. Strip only one complete pair;
+  // arbitrary quoting/extra arguments never become a recognized safe value.
+  const raw=rest.join(' '),value=/^"[^"\r\n]*"$/.test(raw)?raw.slice(1,-1):raw;
+  if(!values.has(key))values.set(key,{value:value.toLowerCase(),line:n+1});
+ }
  if(!['permitrootlogin','passwordauthentication','permitemptypasswords','pubkeyauthentication','maxauthtries','include','match'].some(k=>values.has(k)))throw new Error('INPUT_INVALID');
  const rules:[string,string,string,(s:string)=>boolean,string,string][]=[
  ['permitrootlogin','root 비밀번호 로그인 제한','Root password login restriction',v=>['no','prohibit-password','without-password','forced-commands-only'].includes(v),'PermitRootLogin과 실제 적용값을 확인하고 운영 정책에 따라 root 직접 접속을 제한하세요.','Review effective PermitRootLogin and restrict direct root access according to policy.'],
