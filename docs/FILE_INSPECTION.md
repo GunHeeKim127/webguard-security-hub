@@ -1,5 +1,7 @@
 # 실행 파일·모바일 패키지 점검
 
+최신2026-10-29: 도구2026-10-29.4의 실제 지원/검증 경계는 [전체 현황](PROGRESS_HANDOFF_2026-10-29.md), [Endpoint 현황](ENDPOINT_REVIEW_2026-10-29.md), [Mac 담당자 안내](MAC_ENDPOINT_HANDOFF_2026-10-29.md)를 따른다. Android의 다른 PC 실제 대조는 [별도 인계](ANDROID_OTHER_COMPUTER_PROMPT.md)에서 진행한다. 아래 날짜별 수치는 당시 기록이다.
+
 별도 웹 소스 검사(2026-10-28): 웹 작전실에서 PHP/JS/TS/JSX/TSX/SQL 및 지원 JSON 파일 한 개를 최대 64 KiB까지 명시적 동의 후 서버 메모리로 보내 정적으로 검토한다. 실행 파일·모바일의 아래 크기/원본 검증 방식과는 별도다. 소스·결과는 저장하지 않고 수신 UTF-8 해시만 현재 결과에 표시한다. SQL 사용 단서와 부족 자료는 [웹 검토 범위](WEB_TECHNOLOGY_ADVISORIES.md)를 따른다.
 
 최신 2026-10-27 서버 원본 검증·수신 텍스트 해시 범위는 이 문서 마지막 추가 절을 우선한다.
@@ -21,7 +23,7 @@
 | 대상 | 실제 확인 | 미검사 |
 |---|---|---|
 | Windows EXE/DLL | PE32/PE32+ ASLR·NX 선언, W+X 섹션, 인증서 테이블 관찰 | 전체 내용 무결성, 로더 동작, 악성코드, MSI |
-| macOS Mach-O/Universal·dylib | 실행 파일 PIE 선언, 실행 스택 요청, W+X 세그먼트, 서명 명령 관찰 | 실제 대상 OS 확정, 전체 앱·의존성, 서명·공증 신뢰, DMG/PKG |
+| macOS Mach-O/Universal·dylib·APP, 로컬 PKG/DMG | 브라우저 실행 파일 선언 관찰. 로컬 APP 주 실행 파일/선택한 PKG·DMG의 전후 해시, 동의한 OS 서명/정책·컨테이너 메타데이터 조회 | 전체 앱·의존성·내부 코드·PKG 스크립트 본문·실제 설치 위치·독립 공증/안전 보증. 새 Mac PKG/DMG 실기기 결과 대기 |
 | Android APK | ZIP 목록, 제한된 바이너리 AXML의 명시적 debuggable·allowBackup·usesCleartextTraffic, 요청 권한 수 | 리소스 해석, 기본값, 네트워크 예외 정책, 권한 필요성·실제 승인, exported, 서명·DEX 취약점 |
 | iOS IPA | Payload 앱 구조, 제한된 XML/binary Info.plist의 명시적 NSAllowsArbitraryLoads | ATS 예외 전체, entitlement·provisioning, 코드·서명·설치 가능성 |
 | Android AAB | base Manifest 위치와 패키지 목록 | protobuf Manifest 해독, 배포 APK 생성·설정·서명 |
