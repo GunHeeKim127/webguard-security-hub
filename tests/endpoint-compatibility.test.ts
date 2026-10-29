@@ -4,6 +4,7 @@ import {configurationFileText,configurationCompatibility,configurationCompatibil
 import {inspectMacContainer} from '../public/tools/executable-inspector.mjs';
 import {executableSnapshot} from '../lib/assessment/executable-snapshot';
 import {runAssessment} from '../lib/assessment/registry';
+import {compareAssessments} from '../lib/assessment/compare';
 const ctx=()=>({locale:'ko' as const,signal:AbortSignal.timeout(2000)});
 const bytes=(kind:'pkg'|'dmg')=>{const b=Buffer.alloc(512);b.write(kind==='pkg'?'xar!':'koly',kind==='pkg'?0:0);return {path:'/private/not-sent/target.'+kind,size:b.length,read:async(o:number,n:number)=>b.subarray(o,o+n)};};
 test('configuration decoding supports Windows UTF-16 BOMs and rejects invalid/binary/oversize input',()=>{
@@ -28,6 +29,14 @@ test('quoted SSH directives are understood without treating unrelated quoted pat
  const report=await runAssessment({moduleId:'linux.ssh',label:'review',text:'PermitRootLogin "no" # note\nPasswordAuthentication "no"\nPermitEmptyPasswords "no"\nPubkeyAuthentication "yes"\nMaxAuthTries "4"\nAuthorizedKeysFile ".ssh/keys#local"'},ctx());
  assert(report.findings.every(f=>f.status==='pass'));
  for(const extra of ['\nMatch User example','\nInclude "conf/*.conf"','\nBanner "unterminated']){const r=await runAssessment({moduleId:'linux.ssh',label:'review',text:'PermitRootLogin "no"'+extra},ctx());assert(r.findings.every(f=>f.status==='not_assessed'));}
+});
+test('SSH result comparison ignores line relocation while retaining actual policy changes',async()=>{
+ const input={moduleId:'linux.ssh' as const,label:'review'};
+ const a=await runAssessment({...input,text:'PermitRootLogin yes\nMaxAuthTries 6'},ctx());
+ const b=await runAssessment({...input,text:'# reordered\nMaxAuthTries 6\nPermitRootLogin yes'},ctx());
+ const comparison=compareAssessments(a,b);assert.equal(comparison.changes.find(f=>f.id==='permitrootlogin')?.transition,'unchanged');assert.equal(comparison.changes.find(f=>f.id==='maxauthtries')?.transition,'unchanged');
+ const c=await runAssessment({...input,text:'MaxAuthTries 7\nPermitRootLogin no'},ctx());
+ assert.equal(compareAssessments(b,c).changes.find(f=>f.id==='permitrootlogin')?.transition,'improved');assert.equal(compareAssessments(b,c).changes.find(f=>f.id==='maxauthtries')?.transition,'changed');
 });
 test('PKG inventory/native observations never execute installers or retain paths/certificates',async()=>{
  const calls:string[]=[];
