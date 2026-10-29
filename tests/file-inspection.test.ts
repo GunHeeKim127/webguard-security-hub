@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync} from 'node:zlib';
-import {inspectExecutable,discoverLocalCandidates} from '../public/tools/executable-inspector.mjs';
+import {inspectExecutable,discoverLocalCandidates,inspectionFailureCode} from '../public/tools/executable-inspector.mjs';
 import {inspectPackage,androidSettings,plistValue} from '../public/tools/package-inspector.mjs';
 import {executableSnapshot,packageSnapshot} from '../lib/assessment/executable-snapshot';
 import {assessmentInput} from '../lib/assessment/input';
@@ -69,9 +69,27 @@ test('local candidate search skips directory links instead of following them out
 test('renamed downloaded inspector runs from another cwd and explains absent target/output paths without leaking them',async()=>{
  const folder=await mkdtemp(path.join(tmpdir(),'inspector-paths-')),tool=path.join(folder,'executable-inspector (1).mjs'),target=path.join(folder,'actual file.exe'),output=path.join(folder,'new report.json'),exec=promisify(execFile);await copyFile(path.resolve('public/tools/executable-inspector.mjs'),tool);await writeFile(target,pe());
  await exec(process.execPath,[tool,target,output,'--consent'],{cwd:tmpdir()});assert.equal(JSON.parse(await readFile(output,'utf8')).source,'local');
- assert.equal((await exec(process.execPath,[tool,'--version'],{cwd:tmpdir()})).stdout.trim(),'VELTHARA executable inspector 2026-10-29.1');
+ assert.equal((await exec(process.execPath,[tool,'--version'],{cwd:tmpdir()})).stdout.trim(),'VELTHARA executable inspector 2026-10-29.2');
  await assert.rejects(exec(process.execPath,[tool,path.join(folder,'absent.exe'),path.join(folder,'missing-report.json'),'--consent']),error=>{const e=error as Error&{stderr:string};assert(e.stderr.includes('TARGET_NOT_FOUND'));assert(!e.stderr.includes(folder));return true;});
  await assert.rejects(exec(process.execPath,[tool,target,path.join(folder,'absent folder','report.json'),'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_FOLDER_NOT_FOUND'));return true;});
  await assert.rejects(exec(process.execPath,[tool,target,output,'--consent']),error=>{assert((error as Error&{stderr:string}).stderr.includes('OUTPUT_EXISTS'));return true;});
  const search=await exec(process.execPath,[tool,'--discover',folder,'--consent']);assert(JSON.parse(search.stdout).candidates.some((c:{kind:string})=>c.kind==='inspector-tool'));
+});
+
+test('local inspector separates bundle, structure and change failures without echoing arbitrary messages',()=>{
+ assert.equal(inspectionFailureCode({code:'ENOENT'},'bundle-metadata'),'APP_METADATA_NOT_FOUND');
+ assert.equal(inspectionFailureCode({code:'ENOENT'},'bundle-executable'),'APP_EXECUTABLE_NOT_FOUND');
+ assert.equal(inspectionFailureCode(new Error('private path or tool stderr'),'bundle-metadata'),'APP_METADATA_READ_FAILED');
+ assert.equal(inspectionFailureCode(new Error('private path or tool stderr'),'structure'),'STRUCTURE_INVALID_OR_UNSUPPORTED');
+ assert.equal(inspectionFailureCode(new Error('FILE_CHANGED_DURING_INSPECTION'),'stability'),'FILE_CHANGED_DURING_INSPECTION');
+ assert.equal(inspectionFailureCode({code:'EPERM'},'executable'),'ACCESS_DENIED');
+});
+
+test('local inspector reports scripts and unsupported structures as limitations, not malware or corrupt-file certainty',async()=>{
+ const root=await mkdtemp(path.join(tmpdir(),'inspector-diagnostics-')),exec=promisify(execFile),tool=path.resolve('public/tools/executable-inspector.mjs');
+ for(const [name,bytes,code,stage]of [['launcher',Buffer.from('#!/bin/sh\n# harmless local fixture; never execute\n'),'MAIN_EXECUTABLE_IS_SCRIPT','executable'],['other',Buffer.alloc(64),'UNSUPPORTED_EXECUTABLE_FORMAT','executable'],['broken-mach-o',Buffer.concat([macho(),Buffer.alloc(8)]),'STRUCTURE_INVALID_OR_UNSUPPORTED','structure']] as const){
+  if(name==='broken-mach-o')bytes.writeUInt32LE(1,16);
+  const target=path.join(root,name);await writeFile(target,bytes);
+  await assert.rejects(exec(process.execPath,[tool,target,path.join(root,name+'.json'),'--consent']),error=>{const stderr=(error as Error&{stderr:string}).stderr;assert(stderr.includes(code));assert(stderr.includes('"stage":"'+stage+'"'));assert(!stderr.includes(root));assert(!stderr.includes('harmless'));return true;});
+ }
 });

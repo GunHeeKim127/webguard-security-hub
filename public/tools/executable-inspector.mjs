@@ -1,7 +1,7 @@
 /* VELTHARA read-only inspector. No dependencies; never executes the selected file.
  * Browser worker and Node.js 20+ CLI share this bounded parser. */
 export const MAX_FILE_BYTES=8*1024**3,MAX_READ_BYTES=8*1024**2;
-export const INSPECTOR_VERSION='2026-10-29.1';
+export const INSPECTOR_VERSION='2026-10-29.2';
 const invalid=()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
 export async function inspectExecutable(source,format){
  if(!['pe','macho'].includes(format)||!Number.isSafeInteger(source.size)||source.size<32||source.size>MAX_FILE_BYTES)invalid();
@@ -94,6 +94,19 @@ async function chooseMacInputs(exec){
  return [target,output,'--consent',...(permission==='Native checks'?['--native']:[])];
 }
 
+export function inspectionFailureCode(error,stage){
+ const known=['APP_EXECUTABLE_NAME_INVALID','APP_EXECUTABLE_OUTSIDE_BUNDLE','APP_METADATA_READ_FAILED','TARGET_DIRECTORY_UNSUPPORTED','MAIN_EXECUTABLE_IS_SCRIPT','UNSUPPORTED_EXECUTABLE_FORMAT','FILE_CHANGED_DURING_INSPECTION','FILE_SIZE_LIMIT'];
+ if(known.includes(error?.message))return error.message;
+ if(error?.code==='EEXIST')return 'OUTPUT_EXISTS';
+ if(['EACCES','EPERM'].includes(error?.code))return 'ACCESS_DENIED';
+ if(error?.code==='ENOENT')return stage==='output'?'OUTPUT_FOLDER_NOT_FOUND':stage==='native-tool'?'OS_TOOL_NOT_FOUND':stage==='bundle-metadata'?'APP_METADATA_NOT_FOUND':stage==='bundle-executable'?'APP_EXECUTABLE_NOT_FOUND':'TARGET_NOT_FOUND';
+ if(stage==='structure')return 'STRUCTURE_INVALID_OR_UNSUPPORTED';
+ if(stage==='bundle-metadata')return 'APP_METADATA_READ_FAILED';
+ if(stage==='hash'||stage==='stability')return 'FILE_READ_OR_CHANGE_CHECK_FAILED';
+ if(stage==='output')return 'REPORT_WRITE_FAILED';
+ return 'INSPECTION_STEP_FAILED';
+}
+
 async function main(){
  const fs=await import('node:fs/promises'),path=await import('node:path'),cp=await import('node:child_process'),util=await import('node:util');
  const exec=util.promisify(cp.execFile);let args=process.argv.slice(2);
@@ -109,22 +122,26 @@ async function main(){
  const native=args.includes('--native');
  const positional=args.filter(a=>!a.startsWith('--'));
  if(!args.includes('--consent')||positional.length!==2||args.some(a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
- let handle,stage='target';
+ let handle,stage='target',targetKind='file',detectedFormat='unknown';
  try{
   const out=path.resolve(positional[1]);stage='output';
   try{await fs.lstat(out);const error=new Error('Output already exists');error.code='EEXIST';throw error;}catch(e){if(e.code!=='ENOENT')throw e;}
   await fs.access(path.dirname(out));stage='target';
   const target=await fs.realpath(positional[0]);let binary=target;
   if((await fs.stat(target)).isDirectory()){
-   if(process.platform!=='darwin'||!/\.app$/i.test(target))invalid();stage='bundle-metadata';
+   if(process.platform!=='darwin'||!/\.app$/i.test(target))throw new Error('TARGET_DIRECTORY_UNSUPPORTED');targetKind='app-bundle';stage='bundle-metadata';
    const metadata=path.join(target,'Contents/Info.plist');await fs.access(metadata);stage='native-tool';await fs.access('/usr/bin/plutil');stage='bundle-metadata';
-   const info=JSON.parse((await exec('/usr/bin/plutil',['-convert','json','-o','-',metadata],{timeout:10000,maxBuffer:65536})).stdout),name=info.CFBundleExecutable;
-   if(typeof name!=='string'||!name||name==='.'||name==='..'||/[\\/\0]/.test(name))invalid();
-   stage='bundle-executable';binary=await fs.realpath(path.join(target,'Contents/MacOS',name));if(!binary.startsWith(target+path.sep))invalid();
+   // Read only the declared executable name: unrelated plist data/date fields
+   // or a large full-plist JSON conversion must not block this lookup.
+   let name;try{name=(await exec('/usr/bin/plutil',['-extract','CFBundleExecutable','raw','-expect','string','-o','-',metadata],{timeout:10000,maxBuffer:8192})).stdout.replace(/\r?\n$/,'');}catch{throw new Error('APP_METADATA_READ_FAILED');}
+   if(!name||name==='.'||name==='..'||/[\\/\0]/.test(name))throw new Error('APP_EXECUTABLE_NAME_INVALID');
+   stage='bundle-executable';binary=await fs.realpath(path.join(target,'Contents/MacOS',name));if(!binary.startsWith(target+path.sep))throw new Error('APP_EXECUTABLE_OUTSIDE_BUNDLE');
   }
-  stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())invalid();const head=new Uint8Array(2);await handle.read(head,0,2,0);const format=head[0]===0x4d&&head[1]===0x5a?'pe':'macho';
+  stage='executable';handle=await fs.open(binary,'r');const before=await handle.stat();if(!before.isFile())throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');if(before.size<32||before.size>MAX_FILE_BYTES)throw new Error('FILE_SIZE_LIMIT');
+  const head=new Uint8Array(4);await handle.read(head,0,4,0);const magic=new DataView(head.buffer).getUint32(0,false),format=head[0]===0x4d&&head[1]===0x5a?'pe':[0xfeedface,0xcefaedfe,0xfeedfacf,0xcffaedfe,0xcafebabe,0xbebafeca,0xcafebabf,0xbfbafeca].includes(magic)?'macho':'unknown';
+  if(head[0]===0x23&&head[1]===0x21)throw new Error('MAIN_EXECUTABLE_IS_SCRIPT');if(format==='unknown')throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');detectedFormat=format;stage='structure';
   const result=await inspectExecutable({size:before.size,read:async(o,n)=>{const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}},format);result.source='local';
-  const crypto=await import('node:crypto'),hash=crypto.createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
+  stage='hash';const crypto=await import('node:crypto'),hash=crypto.createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
   while(offset<before.size){const r=await handle.read(chunk,0,Math.min(chunk.length,before.size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}result.sha256=hash.digest('hex');
   if(native){
    result.native={signature:'unknown',gatekeeper:'unknown',hardenedRuntime:'unknown',debugEntitlement:'unknown'};
@@ -138,9 +155,9 @@ async function main(){
     try{const r=await exec('/usr/bin/codesign',['--display','--entitlements',':-',target],{timeout:10000,maxBuffer:65536});if(r.stdout.includes('<plist'))result.native.debugEntitlement=/<key>com\.apple\.security\.get-task-allow<\/key>\s*<true\s*\/>/.test(r.stdout)?'allowed':'denied';}catch{}
    }
   }
-  const after=await handle.stat(),current=await fs.stat(binary);if(before.size!==after.size||before.mtimeMs!==after.mtimeMs||before.ctimeMs!==after.ctimeMs||before.ino!==current.ino||before.mtimeMs!==current.mtimeMs)invalid();
+  stage='stability';const after=await handle.stat(),current=await fs.stat(binary);if(before.size!==after.size||before.mtimeMs!==after.mtimeMs||before.ctimeMs!==after.ctimeMs||before.ino!==current.ino||before.mtimeMs!==current.mtimeMs)throw new Error('FILE_CHANGED_DURING_INSPECTION');
   stage='output';await fs.writeFile(out,JSON.stringify(result,null,2),{flag:'wx',encoding:'utf8'});console.log('Read-only inspection complete. New JSON report written. No file uploaded or executed. A valid signature is not a malware-free verdict.');
- }catch(e){const code=e.code==='EEXIST'?'OUTPUT_EXISTS':e.code==='ENOENT'?(stage==='output'?'OUTPUT_FOLDER_NOT_FOUND':stage==='native-tool'?'OS_TOOL_NOT_FOUND':stage==='bundle-metadata'?'APP_METADATA_NOT_FOUND':stage==='bundle-executable'?'APP_EXECUTABLE_NOT_FOUND':'TARGET_NOT_FOUND'):['EACCES','EPERM'].includes(e.code)?'ACCESS_DENIED':'UNSUPPORTED_CORRUPT_CHANGED_OR_TOOL_FAILURE';console.error('Inspection stopped: '+code+'. Check the selected '+(stage==='output'?'new report location':stage==='native-tool'?'local OS tool':'target and its actual format')+'. A custom path alone is not a vulnerability. No target contents or paths logged.');process.exitCode=1;}finally{await handle?.close();}
+ }catch(e){const code=inspectionFailureCode(e,stage);console.error('Inspection stopped: '+code+'. No target was executed or uploaded.');console.error('Diagnostic: '+JSON.stringify({toolVersion:INSPECTOR_VERSION,stage,code,targetKind,detectedFormat,platform:process.platform}));process.exitCode=1;}finally{await handle?.close();}
 }
 if(typeof process!=='undefined'&&process.versions?.node&&process.argv[1]){
  const fs=await import('node:fs/promises'),url=await import('node:url');

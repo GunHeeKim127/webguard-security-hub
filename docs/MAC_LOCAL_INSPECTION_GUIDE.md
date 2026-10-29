@@ -35,3 +35,17 @@ Windows의 격리 일반 회원 브라우저에서 6단계 안내·두 다운로
 담당자는 도구/Node/대상/출력의 실제 위치를 선택해 실행하고 정상·취소·누락·권한·중복 출력·서명 결과를 확인한다. OS/도구 버전과 실제 수행 범위, 개인정보를 가린 오류 코드, 결과 JSON을 전달하면 대조할 수 있다. 비밀번호·키·개인 경로 전체를 채팅에 보낼 필요는 없다.
 
 참고: [Apple 파일/폴더 선택](https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/PromptforaFileorFolder.html), [저장 위치 선택](https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/PromptforaFileName.html).
+
+## 2026-10-29.2: 앱 검사 단계별 진단 (로컬 수정본)
+
+Mac 담당자가 실행 안내를 시작하고 .app을 선택한 뒤 기존 통합 오류를 전달했다. 도구 시작 성공은 확인됐지만 주 실행 파일 구조/서명 검사는 완료로 판정하지 않는다. 원인 확정 없이 앱 손상·파일 부재·경로 문제라고 표시하지 않는다.
+
+수정본은 앱 메타데이터 전체의 JSON 변환 대신 CFBundleExecutable 문자열만 plutil로 추출한다. 관련 없는 plist 값/전체 출력 크기의 영향을 줄이지만 이것이 사용자 오류의 원인이었다고 확정한 것은 아니다. 오류 시 경로·파일명·원문 없이 도구 버전·검사 단계·고정 코드·형식·플랫폼의 Diagnostic JSON 한 줄을 출력한다.
+
+- APP_METADATA_READ_FAILED: 앱에서 주 실행 파일 이름을 읽지 못함. 메타데이터/OS 도구 호환 확인이 필요하다.
+- MAIN_EXECUTABLE_IS_SCRIPT: 주 실행 파일이 스크립트다. 정상 앱일 수 있으나 현재 Mach-O/PE 구조 검사의 지원 범위 밖이다.
+- UNSUPPORTED_EXECUTABLE_FORMAT / STRUCTURE_INVALID_OR_UNSUPPORTED: 현재 지원 형식/구조로 해석하지 못함. 악성 또는 손상 확정이 아니다.
+- APP_EXECUTABLE_OUTSIDE_BUNDLE: 주 실행 파일이 앱 외부를 가리킨다. 자동으로 범위 밖 파일을 읽지 않는다.
+- FILE_CHANGED_DURING_INSPECTION: 검사 중 파일 메타데이터가 바뀌었다. 안정된 사본으로 재검사가 필요하다.
+
+새 버전은 실행 안내와 검사 도구 두 파일을 함께 다시 받아야 한다. 실제 Mac 재실행 후 Diagnostic 한 줄만 전달하면 된다. 정상/취소/원인 미확정 여부를 구분하고 비밀번호·키·전체 경로를 요청하지 않는다. 관련 검사18개·전체161개와 타입 검증을 로컬에서 확인했으며 실제 Mac 원인은 후속 출력 전까지 미확정이다.
