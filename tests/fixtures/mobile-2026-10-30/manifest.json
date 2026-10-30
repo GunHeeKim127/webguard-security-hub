@@ -1,0 +1,910 @@
+{
+  "synthetic": true,
+  "originalsExecuted": false,
+  "fixtures": [
+    {
+      "name": "ipa-vulnerable.ipa",
+      "format": "ipa",
+      "variant": "vulnerable",
+      "synthetic": true,
+      "installable": false,
+      "size": 510,
+      "sha256": "4eb9b3873f6bf12595e4ace070c6df8ba39d427ec25cf9758d332160d668a7be",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "ipa",
+        "size": 510,
+        "entries": 2,
+        "nestedPackages": 0,
+        "settings": {
+          "decoded": true,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": true,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=ipa",
+              "bytes=510",
+              "entries=2",
+              "nestedPackages=0",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "arbitraryLoads",
+            "title": "광범위 HTTP 허용 선언",
+            "status": "warning",
+            "severity": "medium",
+            "evidence": [
+              "explicit=true"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.630Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "ipa-remediated.ipa",
+      "format": "ipa",
+      "variant": "remediated",
+      "synthetic": true,
+      "installable": false,
+      "size": 511,
+      "sha256": "5d57e00220891c3fdbf2df6223ebd475266cbaa786451525c1da331c2095994c",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "ipa",
+        "size": 511,
+        "entries": 2,
+        "nestedPackages": 0,
+        "settings": {
+          "decoded": true,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": false,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=ipa",
+              "bytes=511",
+              "entries=2",
+              "nestedPackages=0",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "arbitraryLoads",
+            "title": "광범위 HTTP 허용 선언",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "explicit=false"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.654Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "aab-vulnerable.aab",
+      "format": "aab",
+      "variant": "vulnerable",
+      "synthetic": true,
+      "installable": false,
+      "size": 434,
+      "sha256": "8e6808ec69b042538a7a160c65cf843ccec28ee8bafb179a28cee2ca09da139a",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "aab",
+        "size": 434,
+        "entries": 2,
+        "nestedPackages": 0,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=aab",
+              "bytes=434",
+              "entries=2",
+              "nestedPackages=0",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.659Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "aab-remediated.aab",
+      "format": "aab",
+      "variant": "remediated",
+      "synthetic": true,
+      "installable": false,
+      "size": 436,
+      "sha256": "d822ee71b60493fba4855986af1b2c41137a605ee6aac10440d9d431ea5c4160",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "aab",
+        "size": 436,
+        "entries": 2,
+        "nestedPackages": 0,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=aab",
+              "bytes=436",
+              "entries=2",
+              "nestedPackages=0",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.665Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "apks-vulnerable.apks",
+      "format": "apks",
+      "variant": "vulnerable",
+      "synthetic": true,
+      "installable": false,
+      "size": 807,
+      "sha256": "fb683de9a10afd83939e3398557416b9c431ea6c49ae0e6c1cb9889e3c0f7016",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "apks",
+        "size": 807,
+        "entries": 3,
+        "nestedPackages": 1,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=apks",
+              "bytes=807",
+              "entries=3",
+              "nestedPackages=1",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.670Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "apks-remediated.apks",
+      "format": "apks",
+      "variant": "remediated",
+      "synthetic": true,
+      "installable": false,
+      "size": 807,
+      "sha256": "8474f3368897cd641f5eb7a88d568ac420f2cca52282009ab8cf015efac11295",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "apks",
+        "size": 807,
+        "entries": 3,
+        "nestedPackages": 1,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=apks",
+              "bytes=807",
+              "entries=3",
+              "nestedPackages=1",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.675Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "xapk-vulnerable.xapk",
+      "format": "xapk",
+      "variant": "vulnerable",
+      "synthetic": true,
+      "installable": false,
+      "size": 792,
+      "sha256": "538c5a6ab7f5c5d796b7d393c0a452e00433b1d8372045aad887bf2c5d5c8d4c",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "xapk",
+        "size": 792,
+        "entries": 3,
+        "nestedPackages": 1,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=xapk",
+              "bytes=792",
+              "entries=3",
+              "nestedPackages=1",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.680Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    },
+    {
+      "name": "xapk-remediated.xapk",
+      "format": "xapk",
+      "variant": "remediated",
+      "synthetic": true,
+      "installable": false,
+      "size": 793,
+      "sha256": "e86949004797dd3c96094a6754bd96143b45878b239dca63ea0cbd9ab45dda36",
+      "snapshot": {
+        "schemaVersion": 1,
+        "source": "browser",
+        "format": "xapk",
+        "size": 793,
+        "entries": 3,
+        "nestedPackages": 1,
+        "settings": {
+          "decoded": false,
+          "debuggable": null,
+          "allowBackup": null,
+          "cleartext": null,
+          "arbitraryLoads": null,
+          "permissionCount": null
+        }
+      },
+      "report": {
+        "schemaVersion": 1,
+        "moduleId": "application.package",
+        "moduleVersion": "1.0.0",
+        "ruleVersion": "2026-10-20.1",
+        "targetKind": "mobile-package",
+        "findings": [
+          {
+            "id": "package-inventory",
+            "title": "모바일 패키지 구조",
+            "status": "info",
+            "severity": "info",
+            "evidence": [
+              "format=xapk",
+              "bytes=793",
+              "entries=3",
+              "nestedPackages=1",
+              "source=browser"
+            ],
+            "remediation": "내부 구조 기반 분류입니다. 원본 미전송·미실행이며 설치 가능성·파일 무결성·안전성은 보증하지 않습니다."
+          },
+          {
+            "id": "debuggable",
+            "title": "앱 디버그 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "allowBackup",
+            "title": "앱 백업 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "cleartext",
+            "title": "평문 통신 허용 선언",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "explicit=unknown"
+            ],
+            "remediation": "명시된 설정만 관찰했습니다. 기본값·OS 버전·예외 정책·실제 통신·기능 요구사항과 함께 검토하세요."
+          },
+          {
+            "id": "signature-trust",
+            "title": "서명 신뢰",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "code-vulnerabilities",
+            "title": "코드·의존성 취약점",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          },
+          {
+            "id": "nested-packages",
+            "title": "중첩 패키지 분석",
+            "status": "not_assessed",
+            "severity": "info",
+            "evidence": [
+              "notIndependentlyVerified=true"
+            ],
+            "remediation": "해당 플랫폼의 승인된 분석 환경에서 별도 검증이 필요합니다."
+          }
+        ],
+        "scope": [
+          "ZIP 목록 및 제한된 APK Manifest / IPA Info.plist의 명시적 설정"
+        ],
+        "limitations": [
+          "요약은 자기 보고입니다. 서명·실행·중첩 APK·AAB protobuf Manifest·전체 앱 취약점은 미검사입니다."
+        ],
+        "observedAt": "2026-10-30T05:06:17.686Z",
+        "integrity": {
+          "status": "unverified-summary"
+        }
+      }
+    }
+  ]
+}

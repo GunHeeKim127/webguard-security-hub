@@ -1,0 +1,42 @@
+[
+  {
+    "file": "ipa-vulnerable.ipa",
+    "crcVerified": true,
+    "independentPlistVerified": true
+  },
+  {
+    "file": "ipa-remediated.ipa",
+    "crcVerified": true,
+    "independentPlistVerified": true
+  },
+  {
+    "file": "aab-vulnerable.aab",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  },
+  {
+    "file": "aab-remediated.aab",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  },
+  {
+    "file": "apks-vulnerable.apks",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  },
+  {
+    "file": "apks-remediated.apks",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  },
+  {
+    "file": "xapk-vulnerable.xapk",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  },
+  {
+    "file": "xapk-remediated.xapk",
+    "crcVerified": true,
+    "independentPlistVerified": false
+  }
+]

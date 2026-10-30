@@ -1,0 +1,81 @@
+{
+  "sourceCommit": "74b8b17",
+  "atUTC": "2026-10-30T00:14:58.952Z",
+  "synthetic": false,
+  "apkExecuted": false,
+  "files": [
+    {
+      "id": "a",
+      "size": 1663814,
+      "readBytes": 87244,
+      "settings": {
+        "debuggable": true,
+        "allowBackup": true,
+        "cleartext": null,
+        "permissionCount": 2
+      },
+      "decoded": true,
+      "counts": {
+        "warning": 2,
+        "info": 2,
+        "not_assessed": 4,
+        "pass": 0
+      },
+      "independentMatches": true
+    },
+    {
+      "id": "b",
+      "size": 3946182,
+      "readBytes": 111707,
+      "settings": {
+        "debuggable": true,
+        "allowBackup": true,
+        "cleartext": null,
+        "permissionCount": 0
+      },
+      "decoded": true,
+      "counts": {
+        "warning": 2,
+        "info": 2,
+        "not_assessed": 4,
+        "pass": 0
+      },
+      "independentMatches": true
+    }
+  ],
+  "isolatedPcBrowserApi": {
+    "atUTC": "2026-10-30T00:58:20.163Z",
+    "isolatedDatabase": true,
+    "realApkBrowserSaved": true,
+    "downloadMatchesIndependentFindings": true,
+    "storedReportMatches": true,
+    "retestSameAsset": true,
+    "runs": 3,
+    "otherAccountDenied": true,
+    "productionChanged": false
+  },
+  "androidBrowser": {
+    "atUTC": "2026-10-30T02:08:03.052Z",
+    "androidVersion": 16,
+    "chromeVersion": "133.0.6943.137",
+    "realApkSelected": true,
+    "onDeviceInspection": true,
+    "separateSaveConsent": true,
+    "downloadedOnAndroid": true,
+    "downloadFindingsMatchIndependentSdkEvidence": true,
+    "storedReportMatchesAndroidDownload": true,
+    "otherAccountDenied": true,
+    "assetCount": 1,
+    "runs": 2,
+    "productionChanged": false,
+    "sameAssetRetest": true,
+    "readConsentCancelResets": true,
+    "fileChangeResetsConsent": true,
+    "pcSameAccountBrowserVisible": true,
+    "androidRuntimeAppExecuted": false
+  },
+  "verificationHarness": {
+    "occupiedPortRejectedBeforeDatabaseCreation": true,
+    "staleAndroidTreeRejected": true
+  }
+}

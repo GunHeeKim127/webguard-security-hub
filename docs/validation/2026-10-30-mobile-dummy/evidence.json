@@ -1,0 +1,105 @@
+{
+  "atUTC": "2026-10-30T06:04:39.810Z",
+  "synthetic": true,
+  "installable": false,
+  "source": "desktop-browser-user-flow-and-isolated-api-crosscheck",
+  "assets": 4,
+  "runs": 8,
+  "cases": [
+    {
+      "file": "ipa-vulnerable.ipa",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 1,
+      "notAssessed": 3
+    },
+    {
+      "file": "ipa-remediated.ipa",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 3
+    },
+    {
+      "file": "aab-vulnerable.aab",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    },
+    {
+      "file": "aab-remediated.aab",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    },
+    {
+      "file": "apks-vulnerable.apks",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    },
+    {
+      "file": "apks-remediated.apks",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    },
+    {
+      "file": "xapk-vulnerable.xapk",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    },
+    {
+      "file": "xapk-remediated.xapk",
+      "actualBrowserSaved": true,
+      "reportMatchesExpected": true,
+      "warnings": 0,
+      "notAssessed": 6
+    }
+  ],
+  "downloads": [
+    {
+      "format": "apks",
+      "storedReportMatchesDownload": true
+    },
+    {
+      "format": "xapk",
+      "storedReportMatchesDownload": true
+    },
+    {
+      "format": "ipa",
+      "storedReportMatchesDownload": true
+    },
+    {
+      "format": "aab",
+      "storedReportMatchesDownload": true
+    }
+  ],
+  "productionChanged": false,
+  "rejectedInputs": [
+    {
+      "file": "reject-traversal.ipa",
+      "browserRejected": true,
+      "saveDisabled": true
+    },
+    {
+      "file": "reject-not-a-package.ipa",
+      "browserRejected": true,
+      "saveDisabled": true
+    }
+  ],
+  "automatedTests": {
+    "total": 178,
+    "passed": 177,
+    "failed": 0,
+    "skipped": 1
+  },
+  "typecheckPassed": true,
+  "independentArchiveAndPlistCheckPassed": true
+}
