@@ -82,6 +82,14 @@ import assert from 'node:assert/strict';
 import {projectDatabase} from '../lib/project-database';
 import {deploymentReadiness} from '../lib/deployment-readiness';
 import {vercelClientAddress,vercelProtection} from '../lib/vercel-protection';
+test('instance burst rejection happens before database work and does not permanently blacklist a client',/** test 콜백: 초과 요청이 추가 DB 조회 없이 임시 429로 거절되는지 확인합니다. */ async()=>{
+ let queries=0;
+ const query=/** query 콜백: 보호 조회 횟수만 집계하며 차단 기록은 만들지 않습니다. */ async()=>{queries++;return {rows:[]};};
+ const request=new Request('https://owned.example/workbench',{headers:{'x-real-ip':'192.0.2.244'}});
+ for(let n=0;n<600;n++)assert.equal(await vercelProtection(request,query,{VERCEL:'1'}),null);
+ const rejected=await vercelProtection(request,query,{VERCEL:'1'});
+ assert.equal(queries,600);assert.equal(rejected?.status,429);assert.equal((await rejected?.json()).errorCode,'RATE_LIMITED');assert(Number(rejected?.headers.get('retry-after'))>0);
+});
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
 import {assertManagedRuntimeSql} from '../lib/runtime-sql';
 import {runtimePoolConfig} from '../lib/runtime-pool-config';

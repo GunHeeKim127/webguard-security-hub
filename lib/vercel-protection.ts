@@ -3,6 +3,8 @@ import {requestLocale} from './request-locale';
 import {defenseText} from './defense-copy';
 import {ipAddress} from '@vercel/functions';
 import {protectionDbError} from './protection-db-error';
+import {requestBurst} from './request-burst';
+import {errorText} from './errors-i18n';
 
 /** vercelClientAddress: 배포 환경의 신뢰 가능한 접속 주소 메타데이터를 읽습니다 주요 호출: normalizeIp·ipAddress·get. */ export function vercelClientAddress(headers:Pick<Headers,'get'>,env:Readonly<Record<string,string|undefined>>=process.env){
  // Use the platform's official client IP header, only inside a Vercel deployment.
@@ -16,6 +18,7 @@ import {protectionDbError} from './protection-db-error';
  let stage='client_identity';
  try{
   const address=vercelClientAddress(req.headers,env);if(!address)throw new Error('Client IP missing');
+  const burst=requestBurst(address);if(burst)return Response.json({error:errorText(locale,'RATE_LIMITED'),errorCode:'RATE_LIMITED',locale},{status:429,headers:{'Cache-Control':'no-store','Content-Language':locale,'Retry-After':String(burst.retryAfter)}});
   stage='block_lookup';
   // This operation is read-only. A disconnected/timed-out client is discarded by pg.Pool.
   // Retry once with another checkout; never repeat writes or skip the protection check.

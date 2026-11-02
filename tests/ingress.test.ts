@@ -4,6 +4,14 @@ import {clientAddress,normalizeIp,detectThreat,threatSessionHash} from '../lib/i
 import {tokenHash} from '../lib/password';
 import {releaseAccountBlock} from '../lib/account-block-management';
 import {publicUser,publicIpBlock,publicAccountBlock,maskEmail,publicEvents,publicEventCategory} from '../lib/public-identity';
+import {createRequestBurstLimiter} from '../lib/request-burst';
+
+test('request burst budget isolates clients, expires, and refuses excess distinct keys without eviction bypass',/** test 콜백: 임시 예산·만료·다중 주소 메모리 상한을 확인합니다. */ ()=>{
+ let now=0;const check=createRequestBurstLimiter(2,2000,2,/** clock 콜백: 대기 없이 만료 경계를 검증합니다. */ ()=>now);
+ assert.equal(check('client-a'),null);assert.equal(check('client-a'),null);assert.deepEqual(check('client-a'),{retryAfter:2});
+ assert.equal(check('client-b'),null);assert.deepEqual(check('client-c'),{retryAfter:1});assert.deepEqual(check('client-a'),{retryAfter:2});
+ now=2000;assert.equal(check('client-c'),null);assert.equal(check('client-a'),null);
+});
 
 test('server identity serializers whitelist fields and never ship raw identifiers behind masks',/** test 콜백: 테스트: server identity serializers whitelist fields and never ship raw identifiers behind masks 주요 호출: publicUser·deepEqual·sort. */ ()=>{
  const user={id:'PRIVATE_USER_ID',email:'private-customer@secret.example',role:'viewer',password_hash:'PRIVATE_HASH'};

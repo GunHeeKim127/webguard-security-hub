@@ -8,6 +8,8 @@ import {requestLocale} from '../lib/request-locale';
 import {defenseText} from '../lib/defense-copy';
 import {randomBytes} from 'node:crypto';
 import {localAuthIdentity} from '../lib/auth-rate-identity';
+import {requestBurst} from '../lib/request-burst';
+import {errorText} from '../lib/errors-i18n';
 const dev=process.argv.includes('--dev');Object.assign(process.env,{NODE_ENV:dev?'development':'production'});
 nextEnv.loadEnvConfig(process.cwd(),dev);
 process.env.WEBGUARD_LOCAL_AUTH_SECRET=randomBytes(32).toString('hex');
@@ -38,7 +40,11 @@ const query=/** query: 요청한 자료나 현재 상태를 조회합니다 주�
 const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeout:10000},/** createServer 콜백: createServer에서 전달한 값을 처리하는 콜백입니다 주요 호출: inspect·deny·clientAddress. */ async(req,res)=>{
  try{
   // A liveness endpoint carries no application data and remains available for operations.
-  if(req.url!=='/api/health'&&req.url!=='/api/ready'){const block=await inspect(req);if(block){deny(req,res,block);return;}}
+  if(req.url!=='/api/health'&&req.url!=='/api/ready'){
+   const address=clientAddress(req.socket.remoteAddress,headers(req));if(!address)throw new Error('Client identity unavailable');
+   const burst=requestBurst(address);if(burst){const {locale}=requestLocale(headers(req));res.writeHead(429,{'Content-Type':'application/json','Cache-Control':'no-store','Retry-After':String(burst.retryAfter)});res.end(JSON.stringify({error:errorText(locale,'RATE_LIMITED'),errorCode:'RATE_LIMITED',locale}));return;}
+   const block=await inspect(req);if(block){deny(req,res,block);return;}
+  }
   // Never forward a gateway credential into the application or its logs.
   const peer=clientAddress(req.socket.remoteAddress,headers(req));if(!peer)throw new Error('Client identity unavailable');
   Object.assign(req.headers,localAuthIdentity(peer,process.env.WEBGUARD_LOCAL_AUTH_SECRET!));

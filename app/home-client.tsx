@@ -1,7 +1,7 @@
 'use client';
 import Link from './navigation-link';
 import {useEffect,useRef,useState} from 'react';
-import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress} from '@mui/material';
+import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress,IconButton,InputAdornment} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
 import {messages,eventLabel,type MessageKey} from '../lib/messages';
 import {errorText} from '../lib/errors-i18n';
@@ -25,6 +25,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
 
 /** Home: 로그인과 웹 점검의 세션·작업 화면을 관리합니다 주요 호출: useState·useRef·useEffect. */ export default function Home({initialLocale}:{initialLocale:Locale}){
  const [adviceExpanded,setAdviceExpanded]=useState(true);
+ const [passwordVisible,setPasswordVisible]=useState(false);
  const [locale,setLocale]=useState(initialLocale),[data,setData]=useState<Dashboard|null>(null),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[switching,setSwitching]=useState(false),[advice,setAdvice]=useState(''),[authorized,setAuthorized]=useState(false);
  const [inspection,setInspection]=useState<Inspection>({state:'idle',target:''}),[operation,setOperation]=useState<OperationState>(null),[activity,setActivity]=useState<NonNullable<OperationState>[]>([]),[targetValue,setTargetValue]=useState('');
  const [logs,setLogs]=useState<ScanLog[]>([]);const scanRequest=useRef<AbortController|null>(null),generation=useRef(0);
@@ -102,13 +103,13 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
    <Typography component="h1" variant="h4" fontWeight={800} sx={{mt:1,mb:2}}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={4} sx={{lineHeight:1.7}}>{registrationCopy[locale].help}</Typography>
    {message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
    <Box component="form" noValidate onSubmit={/** onSubmit 콜백: onSubmit 이벤트의 입력·상태 처리를 실행합니다 주요 호출: preventDefault·namedItem·setCode. */ async e=>{
-    e.preventDefault();const form=e.currentTarget;const email=form.elements.namedItem('email') as HTMLInputElement;const password=form.elements.namedItem('password') as HTMLInputElement;
+    e.preventDefault();setPasswordVisible(false);const form=e.currentTarget;const email=form.elements.namedItem('email') as HTMLInputElement;const password=form.elements.namedItem('password') as HTMLInputElement;
     if(!email.value||!password.value){setCode('REQUIRED');(!email.value?email:password).focus();return;}
     if(!email.validity.valid){setCode('INVALID_EMAIL');email.focus();return;}
     if(await post('/api/login',{email:email.value,password:password.value}))window.location.replace('/workbench');
    }}><Stack spacing={2}>
     <TextField name="email" label={t.email} type="email" autoComplete="username" required/>
-    <TextField name="password" label={t.password} type="password" autoComplete="current-password" required/>
+    <TextField name="password" label={t.password} type={passwordVisible?'text':'password'} autoComplete="current-password" required slotProps={{input:{endAdornment:<InputAdornment position="end"><IconButton type="button" aria-label={locale==='ko'?(passwordVisible?'비밀번호 숨기기':'비밀번호 보기'):(passwordVisible?'Hide password':'Show password')} aria-pressed={passwordVisible} edge="end" onMouseDown={/** onMouseDown 콜백: 토글 사용 시 비밀번호 입력 포커스를 유지합니다. */ e=>e.preventDefault()} onClick={/** onClick 콜백: 비밀번호 값과 전송 방식은 유지하고 표시만 전환합니다. */ ()=>setPasswordVisible(!passwordVisible)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{passwordVisible&&<path d="m3 3 18 18"/>}</svg></IconButton></InputAdornment>}}}/>
     <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button component={Link} href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button><Button component={Link} href="/help">{locale==='ko'?'사용 가이드':'User guide'}</Button>
    </Stack></Box>
    </Paper>
