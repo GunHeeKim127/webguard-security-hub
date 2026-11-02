@@ -13,6 +13,7 @@ import {scanUI} from '../lib/scan-ui';
 import {assessmentText} from '../lib/assessment-copy';
 import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
+import InspectionHelp from './workbench/inspection-help';
 import DefensePanel from './defense-panel';
 import LoginIllustration from './login-illustration';
 import {defenseText} from '../lib/defense-copy';
@@ -126,6 +127,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
       {publicTargets&&<Alert severity="info">{assessmentText(locale,'publicNotice')}</Alert>}
       <Button type="submit" variant="contained" disabled={busy||switching||!!blockReason} aria-describedby={blockReason?'scan-block-reason':undefined}>{busy?t.loading:assessmentText(locale,'title')}</Button>
       {blockReason&&<Alert id="scan-block-reason" severity="info">{blockReason}</Alert>}
+      <InspectionHelp locale={locale==='ko'?'ko':'en'} blockers={[...(blockReason?[blockReason]:[]),...(busy||switching?[locale==='ko'?'현재 작업이 끝날 때까지 기다려 주세요.':'Wait for the current operation to finish.']:[])]} steps={locale==='ko'?['본인 또는 점검 허가가 있는 공개 HTTPS 주소를 입력합니다.','소유·진단 허가 및 분석 동의를 확인합니다.','웹 기본 보안 진단을 누르고 진행 단계와 저장된 결과를 확인합니다.']:['Enter an authorized public HTTPS URL.','Confirm ownership/permission and assessment consent.','Start the web baseline check, then review progress and saved results.']}/>
       <Typography variant="caption" color="text.secondary">{scanCopy.reset}</Typography>
      </Stack></Box>
     </Paper>
