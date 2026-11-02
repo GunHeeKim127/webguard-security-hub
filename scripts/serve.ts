@@ -11,20 +11,20 @@ import {localAuthIdentity} from '../lib/auth-rate-identity';
 const dev=process.argv.includes('--dev');Object.assign(process.env,{NODE_ENV:dev?'development':'production'});
 nextEnv.loadEnvConfig(process.cwd(),dev);
 process.env.WEBGUARD_LOCAL_AUTH_SECRET=randomBytes(32).toString('hex');
-const option=(name:string,fallback:string)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1]??fallback;};
+const option=/** option: 로컬 실행 도구의 인자 값을 읽습니다 주요 호출: indexOf. */ (name:string,fallback:string)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1]??fallback;};
 const port=Number(option('--port',process.env.PORT??'3000')),hostname=option('--hostname','127.0.0.1');
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('Invalid port');
 const pool=new Pool(runtimePoolConfig());
-pool.on('error',()=>console.error('PostgreSQL guard connection closed'));
-const query=(sql:string,values:unknown[])=>pool.query(sql,values);
-function headers(req:IncomingMessage){return new Headers(Object.entries(req.headers).flatMap(([key,value])=>value===undefined?[]:[[key,Array.isArray(value)?value.join(','):value]]));}
-async function inspect(req:IncomingMessage):Promise<IpBlock|null>{
+pool.on('error',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 주요 호출: error. */ ()=>console.error('PostgreSQL guard connection closed'));
+const query=/** query: 요청한 자료나 현재 상태를 조회합니다 주요 호출: query. */ (sql:string,values:unknown[])=>pool.query(sql,values);
+/** headers: 실행 서버에 전달할 헤더 구성을 준비합니다 주요 호출: flatMap·entries. */ function headers(req:IncomingMessage){return new Headers(Object.entries(req.headers).flatMap(/** flatMap 콜백: 항목을 변환하고 결과 배열을 한 단계 펼칩니다 주요 호출: isArray·join. */ ([key,value])=>value===undefined?[]:[[key,Array.isArray(value)?value.join(','):value]]));}
+/** inspect: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: clientAddress·headers·activeBlock. */ async function inspect(req:IncomingMessage):Promise<IpBlock|null>{
  const address=clientAddress(req.socket.remoteAddress,headers(req));
  if(!address)throw new Error('Client identity unavailable');
  const block=await activeBlock(query,address);if(block)return block;
  const reason=detectThreat(req.url??'/');return reason?recordThreat(query,address,reason,threatSessionHash(req.headers.cookie)):null;
 }
-function deny(req:IncomingMessage,res:ServerResponse,block:IpBlock|null){
+/** deny: 허용하지 않는 요청을 거절 응답으로 종료합니다 주요 호출: requestLocale·headers·defenseText. */ function deny(req:IncomingMessage,res:ServerResponse,block:IpBlock|null){
  const locale=requestLocale(headers(req)).locale,code=block?(block.blacklisted?'IP_BLACKLISTED':'THREAT_BLOCKED'):'PROTECTION_UNAVAILABLE';
  const message=defenseText(locale,block?(block.blacklisted?'permanent':'temporary'):'unavailable');
  res.statusCode=block?(block.blacklisted?403:429):503;
@@ -35,7 +35,7 @@ function deny(req:IncomingMessage,res:ServerResponse,block:IpBlock|null){
  if(req.headers.accept?.includes('text/html')){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang="${locale}"><meta charset="utf-8"><title>WebGuard</title><h1>WebGuard</h1><p>${message}</p></html>`);}
  else{res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify({error:message,errorCode:code,locale,retryAfter:block&&!block.blacklisted?block.retry_after:null,strikes:block?.strikes??null}));}
 }
-const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
+const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeout:10000},/** createServer 콜백: createServer에서 전달한 값을 처리하는 콜백입니다 주요 호출: inspect·deny·clientAddress. */ async(req,res)=>{
  try{
   // A liveness endpoint carries no application data and remains available for operations.
   if(req.url!=='/api/health'&&req.url!=='/api/ready'){const block=await inspect(req);if(block){deny(req,res,block);return;}}
@@ -47,8 +47,8 @@ const server=createServer({maxHeaderSize:16384,requestTimeout:15000,headersTimeo
  }catch{if(!res.headersSent)deny(req,res,null);else res.destroy();}
 });
 const app=next({dev,hostname,port,webpack:true});const handle=app.getRequestHandler();
-server.on('upgrade',async(req,socket,head)=>{try{if(await inspect(req)){socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');return;}delete req.headers['x-webguard-proxy-token'];delete req.headers['x-webguard-client-ip'];await app.getUpgradeHandler()(req,socket,head);}catch{socket.destroy();}});
+server.on('upgrade',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 주요 호출: inspect·end·getUpgradeHandler. */ async(req,socket,head)=>{try{if(await inspect(req)){socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');return;}delete req.headers['x-webguard-proxy-token'];delete req.headers['x-webguard-client-ip'];await app.getUpgradeHandler()(req,socket,head);}catch{socket.destroy();}});
 await app.prepare();
-server.listen(port,hostname,()=>console.log(`WebGuard guarded server: http://${hostname}:${port}`));
-async function stop(){server.close();await app.close();await pool.end();process.exit(0);}
-process.once('SIGTERM',()=>void stop());process.once('SIGINT',()=>void stop());
+server.listen(port,hostname,/** listen 콜백: listen에서 전달한 값을 처리하는 콜백입니다 주요 호출: log. */ ()=>console.log(`WebGuard guarded server: http://${hostname}:${port}`));
+/** stop: 작업의 완료·실패·취소에 맞춰 관련 상태와 자원을 정리합니다 주요 호출: close·end·exit. */ async function stop(){server.close();await app.close();await pool.end();process.exit(0);}
+process.once('SIGTERM',/** once 콜백: once에서 전달한 값을 처리하는 콜백입니다 주요 호출: stop. */ ()=>void stop());process.once('SIGINT',/** once 콜백: once에서 전달한 값을 처리하는 콜백입니다 주요 호출: stop. */ ()=>void stop());

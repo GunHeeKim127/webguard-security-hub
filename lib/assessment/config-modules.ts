@@ -1,6 +1,6 @@
-import {checkpoint,pick,report,textInput,type SecurityScanner,type Finding,type AssessmentContext} from './types';
+import {checkpoint,pick,report,textInput,type SecurityScanner,type Finding} from './types';
 const sshRef='https://man.openbsd.org/sshd_config';
-export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind:'linux-sshd-config',maxBytes:65536,validate(input){textInput(input);},async scan(input,ctx){
+export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind:'linux-sshd-config',maxBytes:65536,/** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: textInput. */ validate(input){textInput(input);},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·split·textInput. */ async scan(input,ctx){
  checkpoint(ctx);const lines=textInput(input).split(/\r?\n/);if(lines.length>5000)throw new Error('INPUT_INVALID');
  const values=new Map<string,{value:string,line:number}>();let conditional=false;
  for(let n=0;n<lines.length;n++){
@@ -14,15 +14,15 @@ export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind
   const raw=rest.join(' '),value=/^"[^"\r\n]*"$/.test(raw)?raw.slice(1,-1):raw;
   if(!values.has(key))values.set(key,{value:value.toLowerCase(),line:n+1});
  }
- if(!['permitrootlogin','passwordauthentication','permitemptypasswords','pubkeyauthentication','maxauthtries','include','match'].some(k=>values.has(k)))throw new Error('INPUT_INVALID');
+ if(!['permitrootlogin','passwordauthentication','permitemptypasswords','pubkeyauthentication','maxauthtries','include','match'].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: has. */ k=>values.has(k)))throw new Error('INPUT_INVALID');
  const rules:[string,string,string,(s:string)=>boolean,string,string][]=[
- ['permitrootlogin','root 비밀번호 로그인 제한','Root password login restriction',v=>['no','prohibit-password','without-password','forced-commands-only'].includes(v),'PermitRootLogin과 실제 적용값을 확인하고 운영 정책에 따라 root 직접 접속을 제한하세요.','Review effective PermitRootLogin and restrict direct root access according to policy.'],
- ['passwordauthentication','SSH 비밀번호 인증','SSH password authentication',v=>v==='no','키 인증과 복구 접속을 먼저 검증한 뒤 비밀번호 인증을 제한하세요.','Verify key authentication and recovery access before restricting password authentication.'],
- ['permitemptypasswords','빈 비밀번호 허용','Empty password authentication',v=>v==='no','PermitEmptyPasswords를 no로 설정하고 실제 인증 정책을 확인하세요.','Set PermitEmptyPasswords no and verify effective authentication policy.'],
- ['pubkeyauthentication','공개키 인증','Public key authentication',v=>v==='yes','승인된 키와 파일 권한을 확인하고 공개키 인증을 검토하세요.','Review approved keys, file permissions and public key authentication.'],
- ['maxauthtries','인증 시도 제한','Authentication attempt limit',v=>/^\d+$/.test(v)&&Number(v)>=1&&Number(v)<=4,'MaxAuthTries 4 이하는 이 모듈의 검토 기준입니다. 운영 접근과 영향도를 확인하세요.','MaxAuthTries at most 4 is this module’s review baseline. Check operational impact.'],
+ ['permitrootlogin','root 비밀번호 로그인 제한','Root password login restriction',/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: includes. */ v=>['no','prohibit-password','without-password','forced-commands-only'].includes(v),'PermitRootLogin과 실제 적용값을 확인하고 운영 정책에 따라 root 직접 접속을 제한하세요.','Review effective PermitRootLogin and restrict direct root access according to policy.'],
+ ['passwordauthentication','SSH 비밀번호 인증','SSH password authentication',/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 */ v=>v==='no','키 인증과 복구 접속을 먼저 검증한 뒤 비밀번호 인증을 제한하세요.','Verify key authentication and recovery access before restricting password authentication.'],
+ ['permitemptypasswords','빈 비밀번호 허용','Empty password authentication',/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 */ v=>v==='no','PermitEmptyPasswords를 no로 설정하고 실제 인증 정책을 확인하세요.','Set PermitEmptyPasswords no and verify effective authentication policy.'],
+ ['pubkeyauthentication','공개키 인증','Public key authentication',/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 */ v=>v==='yes','승인된 키와 파일 권한을 확인하고 공개키 인증을 검토하세요.','Review approved keys, file permissions and public key authentication.'],
+ ['maxauthtries','인증 시도 제한','Authentication attempt limit',/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: Number. */ v=>/^\d+$/.test(v)&&Number(v)>=1&&Number(v)<=4,'MaxAuthTries 4 이하는 이 모듈의 검토 기준입니다. 운영 접근과 영향도를 확인하세요.','MaxAuthTries at most 4 is this module’s review baseline. Check operational impact.'],
  ];
- const findings:Finding[]=rules.map(([key,ko,en,test,koFix,enFix])=>{
+ const findings:Finding[]=rules.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: get·includes·pick. */ ([key,ko,en,test,koFix,enFix])=>{
   const value=values.get(key),raw=value?.value;
   // Store only this fixed directive's non-secret vocabulary, never arbitrary text.
   const inputValue=raw!==undefined&&(key==='maxauthtries'?/^\d{1,6}$/.test(raw):key==='permitrootlogin'?['yes','no','prohibit-password','without-password','forced-commands-only'].includes(raw):['yes','no'].includes(raw))?raw:'unknown';
@@ -31,7 +31,7 @@ export const linuxSsh:SecurityScanner={id:'linux.ssh',version:'1.0.0',targetKind
  });
  return {...report(this,findings,[pick(ctx,'제공된 sshd_config의 명시적 전역 설정만 검사','Only explicit global directives in the supplied sshd_config')],[pick(ctx,'Include/Match가 있으면 유효 설정을 확정하지 않습니다. 기본값·실제 장비·키·서버 버전·접근 가능성은 미검사입니다.','Include/Match prevents effective-policy conclusions. Defaults, live hosts, keys, server versions and reachability are not assessed.')]),ruleVersion:'2026-10-28.1'};
 }};
-export const windowsPolicy:SecurityScanner={id:'windows.policy',version:'1.0.0',targetKind:'windows-policy-export',maxBytes:65536,validate(input){textInput(input);},async scan(input,ctx){
+export const windowsPolicy:SecurityScanner={id:'windows.policy',version:'1.0.0',targetKind:'windows-policy-export',maxBytes:65536,/** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: textInput. */ validate(input){textInput(input);},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·parse·textInput. */ async scan(input,ctx){
  checkpoint(ctx);let data:any;try{data=JSON.parse(textInput(input));}catch{throw new Error('INPUT_INVALID');}
  if(!data||Array.isArray(data)||data.schemaVersion!==1)throw new Error('INPUT_INVALID');
  const rules:[string,string,string,unknown,boolean,string,string][]=[
@@ -42,7 +42,7 @@ export const windowsPolicy:SecurityScanner={id:'windows.policy',version:'1.0.0',
  ['defender.realtime','실시간 보호','Real-time protection',data.defender?.realtime,true,'보호 공급자와 실시간 보호 정책을 확인하세요.','Review the protection provider and real-time policy.'],
  ['rdp.nla','원격 데스크톱 NLA','Remote Desktop NLA',data.rdp?.enabled===false?true:data.rdp?.nla,true,'RDP 사용 여부와 NLA·방화벽·승인된 접근 경로를 함께 검토하세요.','Review RDP use, NLA, firewall and approved access paths together.'],
  ];
- const findings:Finding[]=rules.map(([id,ko,en,value,wanted,fix,fixEn])=>({id,title:pick(ctx,ko,en),status:typeof value!=='boolean'?'not_assessed':value===wanted?'pass':'warning',severity:typeof value==='boolean'&&value!==wanted?'medium':'info',evidence:[`reported=${typeof value==='boolean'?value:'unknown'}`],remediation:pick(ctx,fix,fixEn),reference:'https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/'}));
- if(data.rdp?.enabled===false){const item=findings.find(f=>f.id==='rdp.nla')!;item.status='info';item.severity='info';item.evidence=['rdpReportedDisabled=true'];}
+ const findings:Finding[]=rules.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: pick. */ ([id,ko,en,value,wanted,fix,fixEn])=>({id,title:pick(ctx,ko,en),status:typeof value!=='boolean'?'not_assessed':value===wanted?'pass':'warning',severity:typeof value==='boolean'&&value!==wanted?'medium':'info',evidence:[`reported=${typeof value==='boolean'?value:'unknown'}`],remediation:pick(ctx,fix,fixEn),reference:'https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/'}));
+ if(data.rdp?.enabled===false){const item=findings.find(/** find 콜백: 조건에 맞는 첫 항목을 찾습니다 */ f=>f.id==='rdp.nla')!;item.status='info';item.severity='info';item.evidence=['rdpReportedDisabled=true'];}
  return report(this,findings,[pick(ctx,'버전 1 JSON 내보내기의 선택된 상태값 검사','Selected state values in a version 1 JSON export')],[pick(ctx,'제공자가 작성한 스냅샷이며 현재 장비 상태·GPO 우선순위·예외 규칙·타사 백신은 검증하지 않습니다.','This is a supplied snapshot. Live state, GPO precedence, exceptions and third-party antivirus are unverified.')]);
 }};

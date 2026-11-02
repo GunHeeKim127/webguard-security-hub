@@ -1,6 +1,6 @@
 // Decode only the explicitly permitted, bounded file. Windows exports often
 // use UTF-16; silently treating them as UTF-8 produces NULs or altered values.
-export function configurationFileText(bytes:Uint8Array):string{
+/** configurationFileText: 지원 텍스트 인코딩과 크기를 확인하고 설정 내용을 해독합니다 주요 호출: replace·decode·trim. */ export function configurationFileText(bytes:Uint8Array):string{
  if(bytes.length===0||bytes.length>65536)throw new Error('CONFIG_SIZE');
  const encoding=bytes[0]===0xff&&bytes[1]===0xfe?'utf-16le':bytes[0]===0xfe&&bytes[1]===0xff?'utf-16be':'utf-8';
  const text=new TextDecoder(encoding,{fatal:true}).decode(bytes).replace(/^\uFEFF/,'');
@@ -8,7 +8,7 @@ export function configurationFileText(bytes:Uint8Array):string{
  return text;
 }
 
-export function configurationCompatibility(moduleId:string,text:string):'private-key'|'ssh-client'|'ssh-unrecognized'|'windows-json'|null{
+/** configurationCompatibility: 자료가 선택한 설정 검사 종류와 맞는지 확인합니다 주요 호출: replace·parse·isArray. */ export function configurationCompatibility(moduleId:string,text:string):'private-key'|'ssh-client'|'ssh-unrecognized'|'windows-json'|null{
  const value=text.replace(/^\uFEFF/,'');
  if(/-----BEGIN (?:OPENSSH |RSA |EC |DSA |ENCRYPTED )?PRIVATE KEY-----/.test(value))return 'private-key';
  if(moduleId==='linux.ssh'){
@@ -16,11 +16,11 @@ export function configurationCompatibility(moduleId:string,text:string):'private
   if(!/^\s*(?:PermitRootLogin|PasswordAuthentication|PermitEmptyPasswords|PubkeyAuthentication|MaxAuthTries|Include|Match)\s/im.test(value))return 'ssh-unrecognized';
  }
  if(moduleId==='windows.policy'){
-  try{const v=JSON.parse(value);if(!v||Array.isArray(v)||v.schemaVersion!==1||!['firewall','defender','rdp'].some(k=>v[k]&&typeof v[k]==='object'&&!Array.isArray(v[k])))return 'windows-json';}catch{return 'windows-json';}
+  try{const v=JSON.parse(value);if(!v||Array.isArray(v)||v.schemaVersion!==1||!['firewall','defender','rdp'].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: isArray. */ k=>v[k]&&typeof v[k]==='object'&&!Array.isArray(v[k])))return 'windows-json';}catch{return 'windows-json';}
  }
  return null;
 }
-export function configurationCompatibilityMessage(reason:ReturnType<typeof configurationCompatibility>,locale:'ko'|'en'){
+/** configurationCompatibilityMessage: 잘못된 설정 자료에 맞는 안내를 반환합니다 */ export function configurationCompatibilityMessage(reason:ReturnType<typeof configurationCompatibility>,locale:'ko'|'en'){
  const messages={
   'private-key':['확인 불가 파일: SSH 개인키는 검사 대상이 아닙니다. 개인키를 업로드하지 말고 서버의 sshd_config 또는 비밀값을 제외한 실효 설정을 사용하세요.','Cannot assess file: SSH private keys are not supported. Do not upload private keys; use server sshd_config or redacted effective settings.'],
   'ssh-client':['확인 불가 파일: SSH 클라이언트 설정으로 보입니다. 서버용 sshd_config 또는 sshd -T의 설정 출력이 필요합니다.','Cannot assess file: this appears to be SSH client configuration. Supply server sshd_config or sshd -T settings output.'],

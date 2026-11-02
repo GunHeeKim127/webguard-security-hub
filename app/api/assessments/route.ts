@@ -12,28 +12,28 @@ import {assessmentCategories,categoryFor,type AssessmentCategory} from '../../..
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=40;
-const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
-export async function GET(req:Request){try{
+const uuid=/** uuid: 식별자가 허용된 UUID 형식인지 확인합니다 */ (v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
+/** GET: 로그인 사용자의 자산·최근 검사 이력·집계 정보를 조회합니다。 */ export async function GET(req:Request){try{
  const user=await requireUser(),params=new URL(req.url).searchParams,id=params.get('assetId'),initial=params.get('initial')==='1',category=params.get('category');
- if(id&&!uuid(id)||params.has('initial')&&!initial||initial&&!!id||category!==null&&(!initial||!assessmentCategories.includes(category as AssessmentCategory))||['assetId','initial','category'].some(key=>params.getAll(key).length>1))throw new HttpError(400,'Invalid scan ID');
+ if(id&&!uuid(id)||params.has('initial')&&!initial||initial&&!!id||category!==null&&(!initial||!assessmentCategories.includes(category as AssessmentCategory))||['assetId','initial','category'].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: getAll. */ key=>params.getAll(key).length>1))throw new HttpError(400,'Invalid scan ID');
  if(id&&!(await db.query('SELECT id FROM public.assessment_assets WHERE id=$1 AND user_id=$2 AND updated_at>=now()-interval \'30 days\'',[id,user.id])).rowCount)throw new HttpError(404,'Scan not found');
- const categoryModules=category?scannerCatalog.filter(module=>categoryFor(module.id)===category).map(module=>module.id):null;
+ const categoryModules=category?scannerCatalog.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: categoryFor. */ module=>categoryFor(module.id)===category).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ module=>module.id):null;
  const assetsPromise=categoryModules?db.query('SELECT id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets WHERE user_id=$1 AND module_id=ANY($2::text[]) AND updated_at>=now()-interval \'30 days\' ORDER BY updated_at DESC LIMIT 50',[user.id,categoryModules]):db.query('SELECT id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets WHERE user_id=$1 AND updated_at>=now()-interval \'30 days\' ORDER BY updated_at DESC LIMIT 50',[user.id]);
- const selectedPromise=initial?assetsPromise.then(result=>result.rows[0]?.id as string|undefined):Promise.resolve(id??undefined);
+ const selectedPromise=initial?assetsPromise.then(/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 */ result=>result.rows[0]?.id as string|undefined):Promise.resolve(id??undefined);
  const [assets,runs,traffic,hub]=await Promise.all([
   assetsPromise,
-  selectedPromise.then(async selected=>selected?await db.query('SELECT id,asset_id,report,created_at FROM public.assessment_runs WHERE asset_id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\' ORDER BY created_at DESC,id DESC LIMIT 10',[selected,user.id]):{rows:[]}),
-  selectedPromise.then(async selected=>selected?await db.query("SELECT coalesce(sum(requests),0)::text requests,coalesce(sum(login_failures),0)::text login_failures,coalesce(sum(probes),0)::text probes,coalesce(sum(server_errors),0)::text server_errors FROM public.assessment_traffic WHERE user_id=$1 AND asset_id=$2 AND window_at>=date_trunc('minute',now())-interval '4 minutes'",[user.id,selected]):{rows:[{requests:0,login_failures:0,probes:0,server_errors:0}]}),
+  selectedPromise.then(/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 주요 호출: query. */ async selected=>selected?await db.query('SELECT id,asset_id,report,created_at FROM public.assessment_runs WHERE asset_id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\' ORDER BY created_at DESC,id DESC LIMIT 10',[selected,user.id]):{rows:[]}),
+  selectedPromise.then(/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 주요 호출: query. */ async selected=>selected?await db.query("SELECT coalesce(sum(requests),0)::text requests,coalesce(sum(login_failures),0)::text login_failures,coalesce(sum(probes),0)::text probes,coalesce(sum(server_errors),0)::text server_errors FROM public.assessment_traffic WHERE user_id=$1 AND asset_id=$2 AND window_at>=date_trunc('minute',now())-interval '4 minutes'",[user.id,selected]):{rows:[{requests:0,login_failures:0,probes:0,server_errors:0}]}),
   db.query("SELECT category,count(*)::int count FROM public.events WHERE user_id=$1 AND created_at>now()-interval '5 minutes' GROUP BY category",[user.id]),
  ]);
  const counts=traffic.rows[0];return Response.json({user:publicUser(user),modules:scannerCatalog,assets:assets.rows,runs:runs.rows,traffic:counts,signals:trafficSignals(counts),hubEvents:publicEvents(hub.rows),...(initial?{selectedAssetId:await selectedPromise??null}:{})},{headers:{'Cache-Control':'no-store'}});
  }catch(error){return failure(error,req);}}
-export async function POST(req:Request){try{
+/** POST: 허가된 자료를 검사하고 해당 사용자에게 속한 실행 결과를 저장합니다。 */ export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser();await limit('assessment:'+user.id,5,60);
  await limit(authSourceBucket('assessment',req),60,60);await limit('assessment:global',300,60);
  const data=await body(req,3*1024*1024);
  if(data.action==='rotateTelemetryToken'){
-  if(!uuid(data.assetId)||Object.keys(data).some(k=>!['action','assetId'].includes(k)))throw new HttpError(400,'Invalid scan ID');
+  if(!uuid(data.assetId)||Object.keys(data).some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ k=>!['action','assetId'].includes(k)))throw new HttpError(400,'Invalid scan ID');
   const token=randomBytes(32).toString('hex');
   const asset=await db.query("UPDATE public.assessment_assets SET ingest_token_hash=$1 WHERE id=$2 AND user_id=$3 AND module_id='web.compare' AND updated_at>=now()-interval '30 days' RETURNING id",[tokenHash(token),data.assetId,user.id]);
   if(!asset.rowCount)throw new HttpError(404,'Scan not found');await event('telemetry_key_rotated',user.id);
@@ -45,6 +45,6 @@ export async function POST(req:Request){try{
  let report;try{report=await runAssessment(input,{signal,locale});}catch{await event('assessment_rejected',user.id);throw new HttpError(400,input.moduleId==='web.compare'?'Target rejected or unreachable. Check allowlist, public DNS and TLS.':'Invalid assessment input');}
  signal.throwIfAborted();
  const key=input.moduleId==='web.compare'?new URL(input.url!).hostname:input.label.toLowerCase();
- const saved=await saveAssessment((sql,values)=>db.query(sql,values),user.id,key,input.label,report);
+ const saved=await saveAssessment(/** saveAssessment 콜백: saveAssessment에서 전달한 값을 처리하는 콜백입니다 주요 호출: query. */ (sql,values)=>db.query(sql,values),user.id,key,input.label,report);
  return Response.json({...saved,report},{headers:{'Cache-Control':'no-store'}});
  }catch(error){return failure(error,req);}}

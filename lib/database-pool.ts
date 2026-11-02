@@ -10,20 +10,20 @@ import {prismaHttp} from './prisma-http';
 import {projectDatabase} from './project-database';
 import {ACTIVE_BLOCK_SQL} from './ingress-guard';
 const shared=globalThis as unknown as {wgPool?:Pool;wgFresh?:Pick<Pool,'connect'>;wgHttp?:ReturnType<typeof prismaHttp>};
-function pool(){
+/** pool: 프로젝트 DB 연결 풀을 준비하거나 재사용합니다 주요 호출: runtimePoolConfig·on·attachDatabasePool. */ function pool(){
  if(!shared.wgPool){
   const created=new Pool(runtimePoolConfig());
-  created.on('error',()=>console.error('PostgreSQL idle connection closed'));
+  created.on('error',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 주요 호출: error. */ ()=>console.error('PostgreSQL idle connection closed'));
   if(process.env.VERCEL==='1')attachDatabasePool(created);
   shared.wgPool=created;
   shared.wgFresh=freshConnector(created);
  }
  return shared.wgPool;
 }
-function connector(){const active=pool();return shared.wgFresh??(shared.wgFresh=freshConnector(active));}
-function http(){return shared.wgHttp??(shared.wgHttp=prismaHttp(projectDatabase('runtime').connectionString,task=>waitUntil(task.then(()=>{},()=>{}))));}
-const useHttp=()=>databaseProvider()==='prisma-postgres'&&process.env.VERCEL==='1';
+/** connector: 현재 제공자에 맞는 DB 연결 인터페이스를 선택합니다 주요 호출: pool·freshConnector. */ function connector(){const active=pool();return shared.wgFresh??(shared.wgFresh=freshConnector(active));}
+/** http: 관리형 HTTP 방식의 DB 조회 인터페이스를 준비합니다 주요 호출: prismaHttp·projectDatabase. */ function http(){return shared.wgHttp??(shared.wgHttp=prismaHttp(projectDatabase('runtime').connectionString,/** prismaHttp 콜백: prismaHttp에서 전달한 값을 처리하는 콜백입니다 주요 호출: waitUntil·then. */ task=>waitUntil(task.then(/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 */ ()=>{},/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 */ ()=>{}))));}
+const useHttp=/** useHttp: 현재 환경에서 HTTP DB 연결을 사용할지 확인합니다 주요 호출: databaseProvider. */ ()=>databaseProvider()==='prisma-postgres'&&process.env.VERCEL==='1';
 export const database={
- query:<R extends QueryResultRow=any>(text:string,values?:unknown[])=>{assertManagedRuntimeSql(text);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
- protectionQuery:(text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
+ query:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: assertManagedRuntimeSql·useHttp·query. */ <R extends QueryResultRow=any>(text:string,values?:unknown[])=>{assertManagedRuntimeSql(text);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
+ protectionQuery:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: databaseProvider·assertManagedRuntimeSql·useHttp. */ (text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
 };

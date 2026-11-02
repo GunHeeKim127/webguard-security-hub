@@ -3,7 +3,7 @@ import type {CheckResult} from './inspection';
 type Query=(sql:string,values:unknown[])=>Promise<{rows:{id:string}[]}>;
 // The DB uniqueness constraint also handles simultaneous requests and keeps the record ID stable.
 // Save the result and completion audit event together so an error cannot leave a partial write.
-export async function saveScan(query:Query,userId:string,hostname:string,result:CheckResult){
+/** saveScan: 사용자 검사와 관찰 결과를 저장합니다 주요 호출: query·randomUUID·stringify. */ export async function saveScan(query:Query,userId:string,hostname:string,result:CheckResult){
  const saved=await query(`WITH saved AS (
   INSERT INTO public.scans(id,user_id,hostname,result) VALUES($1,$2,$3,$4)
   ON CONFLICT (user_id,hostname) DO UPDATE

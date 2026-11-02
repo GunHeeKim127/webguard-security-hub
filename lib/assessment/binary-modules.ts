@@ -3,7 +3,7 @@ import {binaryInput,checkpoint,pick,report,type SecurityScanner,type Finding} fr
 import {executableSnapshot} from './executable-snapshot';
 import {executableFindings} from './local-modules';
 const peRef='https://learn.microsoft.com/en-us/windows/win32/debug/pe-format';
-export function peMetadata(b:Buffer){
+/** peMetadata: PE 원본 구조에서 지원 보호 설정 메타데이터를 읽습니다 주요 호출: toString·readUInt32LE·readUInt16LE. */ export function peMetadata(b:Buffer){
  if(b.length<64||b.toString('ascii',0,2)!=='MZ')throw new Error('INPUT_INVALID');
  const pe=b.readUInt32LE(60);if(pe<64||pe+24>b.length||b.readUInt32LE(pe)!==0x4550)throw new Error('INPUT_INVALID');
  const count=b.readUInt16LE(pe+6),size=b.readUInt16LE(pe+20),o=pe+24;if(count<1||count>96||o+size+count*40>b.length||size<96)throw new Error('INPUT_INVALID');
@@ -14,19 +14,19 @@ export function peMetadata(b:Buffer){
  if(directories>4&&base+40<=o+size){const off=b.readUInt32LE(base+32),len=b.readUInt32LE(base+36);if(off&&len){if(off+len>b.length||len<8)throw new Error('INPUT_INVALID');certificate=true;}}
  return {flags:b.readUInt16LE(o+70),writableExecutable,certificate,sha256:createHash('sha256').update(b).digest('hex')};
 }
-export const peScanner:SecurityScanner={id:'application.pe',version:'2.0.0',targetKind:'windows-pe-file',maxBytes:2097152,validate(input){if(input.snapshot!==undefined)executableSnapshot(input.snapshot,'pe');else peMetadata(binaryInput(input));},async scan(input,ctx){
+export const peScanner:SecurityScanner={id:'application.pe',version:'2.0.0',targetKind:'windows-pe-file',maxBytes:2097152,/** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: executableSnapshot·peMetadata·binaryInput. */ validate(input){if(input.snapshot!==undefined)executableSnapshot(input.snapshot,'pe');else peMetadata(binaryInput(input));},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·executableSnapshot·report. */ async scan(input,ctx){
  checkpoint(ctx);
  if(input.snapshot!==undefined){const s=executableSnapshot(input.snapshot,'pe');return {...report(this,executableFindings(s,ctx),[pick(ctx,'브라우저 부분 읽기 또는 로컬 도구의 PE 헤더 요약','PE header summary from browser range reads or local tool')],[pick(ctx,'요약은 자기 보고이며 원본·서명을 서버가 검증하지 않습니다. 파일 미전송·미실행, 악성코드·전체 앱·MSI는 미검사입니다.','Summary is self-reported; no server verification of original/signature. No original upload/execution; malware, whole app and MSI are unassessed.')]),ruleVersion:'2026-10-20.1'};}
  const meta=peMetadata(binaryInput(input));
  const findings:Finding[]=[
-  ...([['aslr',0x40,'ASLR 선언 플래그','ASLR declaration flag'],['nx',0x100,'DEP/NX 선언 플래그','DEP/NX declaration flag']] as const).map(([id,flag,ko,en])=>({id,title:pick(ctx,ko,en),status:meta.flags&flag?'pass' as const:'warning' as const,severity:meta.flags&flag?'info' as const:'medium' as const,evidence:[`declared=${!!(meta.flags&flag)}`],remediation:pick(ctx,'빌드 설정과 실제 로더 적용 여부를 검토하세요. 플래그만으로 런타임 보호를 증명하지 않습니다.','Review build options and effective loader behavior. A flag alone does not establish runtime protection.'),reference:peRef})),
+  ...([['aslr',0x40,'ASLR 선언 플래그','ASLR declaration flag'],['nx',0x100,'DEP/NX 선언 플래그','DEP/NX declaration flag']] as const).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: pick. */ ([id,flag,ko,en])=>({id,title:pick(ctx,ko,en),status:meta.flags&flag?'pass' as const:'warning' as const,severity:meta.flags&flag?'info' as const:'medium' as const,evidence:[`declared=${!!(meta.flags&flag)}`],remediation:pick(ctx,'빌드 설정과 실제 로더 적용 여부를 검토하세요. 플래그만으로 런타임 보호를 증명하지 않습니다.','Review build options and effective loader behavior. A flag alone does not establish runtime protection.'),reference:peRef})),
   {id:'writable-executable',title:pick(ctx,'쓰기·실행 동시 선언 섹션','Sections declared writable and executable'),status:meta.writableExecutable?'warning':'pass',severity:meta.writableExecutable?'medium':'info',evidence:[`sectionCount=${meta.writableExecutable}`],remediation:pick(ctx,'섹션 권한과 패커/JIT 사용을 검토하고 필요한 경우 빌드를 수정하세요.','Review section permissions and packer/JIT requirements before changing the build.'),reference:peRef},
   {id:'authenticode',title:pick(ctx,'서명 신뢰 검증','Signature trust validation'),status:'not_assessed',severity:'info',evidence:[`certificateTableObserved=${meta.certificate}`],remediation:pick(ctx,'승인된 Windows 환경에서 Authenticode 체인·유효기간·파일 해시를 검증하세요. 테이블 존재는 서명 유효성을 뜻하지 않습니다.','Verify the Authenticode chain, validity and file hash on an approved Windows host. A certificate table is not a valid-signature verdict.'),reference:peRef},
   {id:'file-fingerprint',title:pick(ctx,'파일 지문','File fingerprint'),status:'info',severity:'info',evidence:[`sha256=${meta.sha256}`],remediation:pick(ctx,'배포자가 제공한 신뢰 가능한 해시와 별도로 대조하세요.','Compare with a trusted publisher-provided hash.')},
  ];
  return report(this,findings,['PE32 / PE32+ header baseline, max 2 MiB'],[pick(ctx,'파일 실행·악성코드 판정·의존성 CVE·런타임 분석·MSI는 미지원입니다.','No execution, malware verdict, dependency CVEs, runtime analysis or MSI support.')]);
 }};
-export function apkMetadata(b:Buffer){
+/** apkMetadata: APK 컨테이너의 지원 메타데이터를 읽습니다 주요 호출: max·readUInt32LE·readUInt16LE. */ export function apkMetadata(b:Buffer){
  let end=-1;for(let i=b.length-22;i>=Math.max(0,b.length-65557);i--)if(b.readUInt32LE(i)===0x06054b50&&i+22+b.readUInt16LE(i+20)===b.length){end=i;break;}
  if(end<0||b.readUInt16LE(end+4)||b.readUInt16LE(end+6))throw new Error('INPUT_INVALID');
  const count=b.readUInt16LE(end+10),size=b.readUInt32LE(end+12),start=b.readUInt32LE(end+16);
@@ -42,9 +42,9 @@ export function apkMetadata(b:Buffer){
  }
  if(p!==end||!manifest)throw new Error('INPUT_INVALID');return {entries:count,dex,native,sha256:createHash('sha256').update(b).digest('hex')};
 }
-export const apkScanner:SecurityScanner={id:'application.apk',version:'1.0.0',targetKind:'android-apk-file',maxBytes:2097152,validate(input){apkMetadata(binaryInput(input));},async scan(input,ctx){
+export const apkScanner:SecurityScanner={id:'application.apk',version:'1.0.0',targetKind:'android-apk-file',maxBytes:2097152,/** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: apkMetadata·binaryInput. */ validate(input){apkMetadata(binaryInput(input));},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·apkMetadata·binaryInput. */ async scan(input,ctx){
  checkpoint(ctx);const meta=apkMetadata(binaryInput(input));
  const findings:Finding[]=[{id:'package-structure',title:pick(ctx,'APK 컨테이너 구조','APK container structure'),status:'info',severity:'info',evidence:[`entries=${meta.entries}`,`dexObserved=${meta.dex}`,`nativeEntries=${meta.native}`,`sha256=${meta.sha256}`],remediation:pick(ctx,'이 결과는 패키지 목록 관찰입니다. 앱의 안전성이나 설치 가능성을 보장하지 않습니다.','This observes package inventory, not application safety or installability.')},
- ...(['permissions','debuggable','exported-components','signature-trust'] as const).map(id=>({id,title:pick(ctx,({permissions:'앱 권한',debuggable:'디버그 설정','exported-components':'외부 공개 컴포넌트','signature-trust':'앱 서명 신뢰'})[id],id),status:'not_assessed' as const,severity:'info' as const,evidence:['binaryManifestNotDecoded=true'],remediation:pick(ctx,'승인된 Android 분석 환경에서 바이너리 Manifest와 APK 서명을 검증하세요. 이 모듈은 압축 해제·코드 실행·AXML 분석을 하지 않습니다.','Use an approved Android analysis environment to inspect the binary manifest and APK signature. This module does not extract, execute or decode AXML.'),reference:'https://developer.android.com/studio/debug/apk-analyzer'}))];
+ ...(['permissions','debuggable','exported-components','signature-trust'] as const).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: pick. */ id=>({id,title:pick(ctx,({permissions:'앱 권한',debuggable:'디버그 설정','exported-components':'외부 공개 컴포넌트','signature-trust':'앱 서명 신뢰'})[id],id),status:'not_assessed' as const,severity:'info' as const,evidence:['binaryManifestNotDecoded=true'],remediation:pick(ctx,'승인된 Android 분석 환경에서 바이너리 Manifest와 APK 서명을 검증하세요. 이 모듈은 압축 해제·코드 실행·AXML 분석을 하지 않습니다.','Use an approved Android analysis environment to inspect the binary manifest and APK signature. This module does not extract, execute or decode AXML.'),reference:'https://developer.android.com/studio/debug/apk-analyzer'}))];
  return report(this,findings,['ZIP central/local header consistency and inventory, max 2 MiB'],[pick(ctx,'APK 구조의 예비 점검만 지원합니다. 권한·서명·코드 취약점은 미검사이며 ZIP64·분할 ZIP은 거절합니다.','Preliminary container inspection only. Permissions, signatures and code vulnerabilities are unassessed; ZIP64 and split ZIP are rejected.')]);
 }};

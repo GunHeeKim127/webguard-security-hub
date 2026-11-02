@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type {AiErrorCode} from './ai-error-copy';
-export function aiProviderError(error:unknown):AiErrorCode|null{
+/** aiProviderError: 제공자 실패를 고정된 내부 오류 형태로 바꿉니다 주요 호출: includes. */ export function aiProviderError(error:unknown):AiErrorCode|null{
  if(!(error instanceof OpenAI.APIError))return null;
  if(error instanceof OpenAI.APIConnectionError)return 'AI_CONNECTION_FAILED';
  if(error.status===401||error.status===403)return 'AI_AUTH_FAILED';

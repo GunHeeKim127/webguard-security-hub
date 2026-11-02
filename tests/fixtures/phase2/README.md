@@ -4,4 +4,4 @@
 
 작전실에서 해당 검사 종류를 선택하고 같은 자산 이름으로 두 파일을 차례로 검사한 뒤 실행 이력을 비교하세요. 실행 파일·모바일 패키지는 선택 파일 읽기에 별도 동의해야 검사합니다. Linux/Windows/VMX/GNS3는 설정 텍스트를 선택합니다.
 
-생성: node + tsx scripts/generate-review-fixtures.ts. 결과와 SHA-256: [검증 근거](../../../docs/assets/phase2-fixtures-2026-10-27/fixture-results.json). OS 서명·현재 장비·실제 통신·설치 여부는 미검사로 유지합니다. GNS3 2.x 구조만 지원하며 실제 GNS3 앱/장비 버전 호환성을 증명하지 않습니다.
+생성: node + tsx scripts/generate-review-fixtures.ts. 결과와 SHA-256: [검증 근거](../../../docs/PROGRESS_HANDOFF_2026-11-02.md). OS 서명·현재 장비·실제 통신·설치 여부는 미검사로 유지합니다. GNS3 2.x 구조만 지원하며 실제 GNS3 앱/장비 버전 호환성을 증명하지 않습니다.

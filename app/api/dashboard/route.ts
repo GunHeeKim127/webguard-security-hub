@@ -4,7 +4,7 @@ import {db} from '../../../lib/db';
 import {requireUser,failure} from '../../../lib/security';
 import {approvedHosts,targetPolicy} from '../../../lib/scan-policy';
 export const dynamic='force-dynamic';
-export async function GET(req:Request){try{
+/** GET: 로그인 사용자에게 허용된 대시보드 요약을 조회합니다。 */ export async function GET(req:Request){try{
  const user=await requireUser();
  const [scans,events,recent,total,blocks,accounts]=await Promise.all([
   db.query("SELECT id,hostname,result,created_at FROM scans WHERE user_id=$1 AND created_at>=now()-interval '30 days' ORDER BY created_at DESC LIMIT 30",[user.id]),
@@ -15,5 +15,5 @@ export async function GET(req:Request){try{
   user.role==='admin'?db.query('SELECT b.management_id,u.email,b.strikes,b.blacklisted,b.last_reason,b.last_seen FROM public.account_blocks b JOIN public.users u ON u.id=b.user_id WHERE b.strikes>0 ORDER BY b.last_seen DESC LIMIT 50'):Promise.resolve({rows:[]})
  ]);
  const hosts=approvedHosts();
- return Response.json({user:publicUser(user),scans:scans.rows,events:publicEvents(events.rows),recentEvents:recent.rows.map(row=>({category:publicEventCategory(row.category),created_at:row.created_at})),...(user.role==='admin'?{ipBlocks:blocks.rows.map(publicIpBlock),accountBlocks:accounts.rows.map(publicAccountBlock)}:{}),aiEnabled:process.env.AI_ENABLED==='true'&&providerConfigs().length>0,aiProviders:providerConfigs().map(({provider,model})=>({provider,model})),overview:{targetPolicy:targetPolicy(),approvedCount:hosts.length,approvedHosts:hosts,savedCount:total.rows[0].count,updatedAt:new Date().toISOString()}},{headers:{'Cache-Control':'no-store'}});
+ return Response.json({user:publicUser(user),scans:scans.rows,events:publicEvents(events.rows),recentEvents:recent.rows.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: publicEventCategory. */ row=>({category:publicEventCategory(row.category),created_at:row.created_at})),...(user.role==='admin'?{ipBlocks:blocks.rows.map(publicIpBlock),accountBlocks:accounts.rows.map(publicAccountBlock)}:{}),aiEnabled:process.env.AI_ENABLED==='true'&&providerConfigs().length>0,aiProviders:providerConfigs().map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ ({provider,model})=>({provider,model})),overview:{targetPolicy:targetPolicy(),approvedCount:hosts.length,approvedHosts:hosts,savedCount:total.rows[0].count,updatedAt:new Date().toISOString()}},{headers:{'Cache-Control':'no-store'}});
 }catch(e){return failure(e,req);}}

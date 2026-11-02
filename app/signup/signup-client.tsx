@@ -8,12 +8,12 @@ import {registrationCopy} from '../../lib/registration-copy';
 import {registrationInput} from '../../lib/registration';
 import {errorText} from '../../lib/errors-i18n';
 const theme=createTheme({palette:{mode:'dark',primary:{main:'#66e6c3'},background:{default:'#091321',paper:'#111f31'}},shape:{borderRadius:14}});
-export default function Signup({locale}:{locale:Locale}){
+/** Signup: 회원가입 입력과 요청 상태를 관리합니다 주요 호출: useState. */ export default function Signup({locale}:{locale:Locale}){
  const t=registrationCopy[locale],ui=messages[locale];const [busy,setBusy]=useState(false),[done,setDone]=useState(false),[error,setError]=useState('');
  return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="sm" sx={{py:5}}><Typography color="primary" variant="h6" mb={3}>◈ WEBGUARD</Typography><Paper sx={{p:{xs:3,sm:4}}}>
   <Typography variant="h4" fontWeight={800} mb={2}>{t.title}</Typography><Typography color="text.secondary" mb={3}>{t.intro}</Typography>
   {error&&<Alert severity="warning" role="alert" sx={{mb:2}}>{error}</Alert>}
-  {done?<Alert severity="success" role="status">{t.done}</Alert>:<Box component="form" noValidate onSubmit={async e=>{
+  {done?<Alert severity="success" role="status">{t.done}</Alert>:<Box component="form" noValidate onSubmit={/** onSubmit 콜백: onSubmit 이벤트의 입력·상태 처리를 실행합니다 주요 호출: preventDefault·setError·String. */ async e=>{
    e.preventDefault();if(busy)return;setError('');const form=e.currentTarget,fields=new FormData(form),email=String(fields.get('email')??''),password=String(fields.get('password')??'');
    if(!registrationInput({email,password})){setError(t.validation);return;}if(password!==fields.get('confirm')){setError(t.mismatch);return;}
    setBusy(true);try{const response=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});const json=await response.json();if(!response.ok){setError(errorText(locale,json.errorCode));return;}form.reset();setDone(true);}catch{setError(ui.networkError);}finally{setBusy(false);}

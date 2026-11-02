@@ -9,8 +9,8 @@ const targetUrl=new URL(targetConfig.connectionString);
 if(sourceUrl.hostname===targetUrl.hostname&&(sourceUrl.port||'5432')===(targetUrl.port||'5432')&&sourceUrl.pathname===targetUrl.pathname)throw new Error('Source and target must differ');
 const source=new Pool({connectionString:sourceUrl.toString(),max:1,connectionTimeoutMillis:5000,statement_timeout:30000});
 const target=new Pool({...targetConfig,max:1,connectionTimeoutMillis:5000,...(databaseProvider()==='prisma-postgres'?{query_timeout:30000}:{statement_timeout:30000})});
-const s=await source.connect().catch(async()=>{await source.end();await target.end();console.error('Local source database connection failed.');process.exit(1);});
-const t=await target.connect().catch(async()=>{s.release();await source.end();await target.end();console.error('Production target database connection failed.');process.exit(1);});
+const s=await source.connect().catch(/** catch 콜백: 비동기 실패를 후속 처리합니다 주요 호출: end·error·exit. */ async()=>{await source.end();await target.end();console.error('Local source database connection failed.');process.exit(1);});
+const t=await target.connect().catch(/** catch 콜백: 비동기 실패를 후속 처리합니다 주요 호출: release·end·error. */ async()=>{s.release();await source.end();await target.end();console.error('Production target database connection failed.');process.exit(1);});
 try{
  await s.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
  await t.query('BEGIN');await t.query('LOCK TABLE public.users,public.scans,public.assessment_assets,public.assessment_runs,public.assessment_traffic IN ACCESS EXCLUSIVE MODE');
@@ -20,7 +20,7 @@ try{
  const assets=(await s.query('SELECT id,user_id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets LIMIT 10001')).rows;
  const runs=(await s.query('SELECT id,user_id,asset_id,report,created_at FROM public.assessment_runs LIMIT 10001')).rows;
  const traffic=(await s.query('SELECT user_id,asset_id,window_at,requests,login_failures,probes,server_errors FROM public.assessment_traffic LIMIT 10001')).rows;
- if([users,scans,assets,runs,traffic].some(rows=>rows.length>10000))throw new Error('Use a reviewed backup/restore for larger datasets');
+ if([users,scans,assets,runs,traffic].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ rows=>rows.length>10000))throw new Error('Use a reviewed backup/restore for larger datasets');
  for(const u of users)await t.query('INSERT INTO public.users(id,email,password_hash,role) VALUES($1,$2,$3,$4)',[u.id,u.email,u.password_hash,u.role]);
  for(const r of scans)await t.query('INSERT INTO public.scans(id,user_id,hostname,result,created_at) VALUES($1,$2,$3,$4,$5)',[r.id,r.user_id,r.hostname,r.result,r.created_at]);
  for(const a of assets)await t.query('INSERT INTO public.assessment_assets(id,user_id,module_id,target_key,label,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)',[a.id,a.user_id,a.module_id,a.target_key,a.label,a.created_at,a.updated_at]);

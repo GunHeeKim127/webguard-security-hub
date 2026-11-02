@@ -1,6 +1,8 @@
-import {checkpoint,pick,report,textInput,type AssessmentContext,type AssessmentInput,type Finding,type SecurityScanner} from './types';
+import {checkpoint,pick,report,textInput,type AssessmentInput,type Finding,type SecurityScanner} from './types';
+import {networkPolicy,scanNetworkPolicy} from './network-policy';
+import {virtualXml,scanVirtualXml} from './virtual-xml';
 
-export function parseVmx(input:AssessmentInput){
+/** parseVmx: VMX의 명시적 키와 값을 읽고 중복·구조를 검증합니다 주요 호출: split·textInput·trim. */ export function parseVmx(input:AssessmentInput){
  const values=new Map<string,string>();
  for(const line of textInput(input).split(/\r?\n/)){
   if(!line.trim()||line.trim().startsWith('#'))continue;
@@ -11,9 +13,9 @@ export function parseVmx(input:AssessmentInput){
  if(!values.has('config.version')||!values.has('virtualhw.version'))throw new Error('VMX_INVALID');
  return values;
 }
-export const vmwareConfig:SecurityScanner={id:'virtualization.vmx',version:'1.0.0',targetKind:'vmware-vmx-config',maxBytes:65536,
- validate(input){parseVmx(input);},async scan(input,ctx){checkpoint(ctx);const config=parseVmx(input),findings:Finding[]=[];
- const flag=(id:string,key:string,ko:string,en:string,safe:boolean)=>{
+export const vmwareConfig:SecurityScanner={id:'virtualization.vmx',version:'1.1.0',targetKind:'vmware-vmx-config',maxBytes:65536,
+ /** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: virtualXml·parseVmx. */ validate(input){if(!virtualXml(input))parseVmx(input);},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·virtualXml·scanVirtualXml. */ async scan(input,ctx){checkpoint(ctx);if(virtualXml(input))return scanVirtualXml(this,input,ctx);const config=parseVmx(input),findings:Finding[]=[];
+ const flag=/** flag: 명시된 격리 설정을 확인하고 항목별 결과를 추가합니다 주요 호출: toLowerCase·get·push. */ (id:string,key:string,ko:string,en:string,safe:boolean)=>{
   const raw=config.get(key)?.toLowerCase(),known=raw==='true'||raw==='false',ok=known&&(raw==='true')===safe;
   findings.push({id,title:pick(ctx,ko,en),status:known?(ok?'pass':'warning'):'not_assessed',severity:known&&!ok?'medium':'info',evidence:[`explicit=${known}`,`safeDeclaration=${known?ok:'unknown'}`],remediation:pick(ctx,'업무상 필요한 공유인지 확인하고 VM 설정과 게스트에서 실제 적용을 별도로 검토하세요. 누락된 값의 기본 동작은 추정하지 않습니다.','Review the sharing requirement and effective VM/guest settings. Missing values do not establish a default.')});
  };
@@ -22,27 +24,27 @@ export const vmwareConfig:SecurityScanner={id:'virtualization.vmx',version:'1.0.
  flag('dragDrop','isolation.tools.dnd.disable','드래그 앤 드롭 격리 선언','Drag-and-drop isolation declaration',true);
  flag('sharedFolders','isolation.tools.hgfs.disable','공유 폴더 격리 선언','Shared-folder isolation declaration',true);
  flag('remoteConsole','remotedisplay.vnc.enabled','원격 VNC 비활성 선언','Remote VNC disabled declaration',false);
- const modes=[...config].filter(([key])=>/^ethernet\d+\.connectiontype$/.test(key)).filter(([key])=>config.get(key.replace('connectiontype','present'))?.toLowerCase()!=='false').map(([,value])=>value.toLowerCase());
- const bridged=modes.filter(v=>v==='bridged').length,unknown=modes.filter(v=>!['bridged','nat','hostonly','custom'].includes(v)).length;
+ const modes=[...config].filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ ([key])=>/^ethernet\d+\.connectiontype$/.test(key)).filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: toLowerCase·get·replace. */ ([key])=>config.get(key.replace('connectiontype','present'))?.toLowerCase()!=='false').map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: toLowerCase. */ ([,value])=>value.toLowerCase());
+ const bridged=modes.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ v=>v==='bridged').length,unknown=modes.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: includes. */ v=>!['bridged','nat','hostonly','custom'].includes(v)).length;
  findings.push({id:'networkBoundary',title:pick(ctx,'가상 NIC의 네트워크 경계','Virtual NIC network boundary'),status:bridged?'warning':modes.length&&!unknown?'info':'not_assessed',severity:bridged?'medium':'info',evidence:[`declaredAdapters=${modes.length}`,`bridged=${bridged}`,`unknown=${unknown}`],remediation:pick(ctx,'브리지는 실제 LAN에 연결될 수 있으므로 격리 목적과 방화벽을 확인하세요. NAT·Host-only·Custom도 외부 차단이나 안전을 증명하지 않습니다.','Bridging may join the physical LAN; review isolation and firewall policy. NAT, host-only and custom do not prove isolation or safety.')});
  return report(this,findings,[pick(ctx,'사용자가 제공한 VMX의 명시적 설정만 점검','Only explicit declarations in the supplied VMX are assessed')],[pick(ctx,'VM 실행·변경·게스트 접속 없음. 기본값·실효 정책·VMware 취약점·게스트 OS·암호화·네트워크 도달성은 미검사. 경로·UUID·이름·비밀 값은 결과에 넣지 않습니다.','No VM execution/change or guest access. Defaults, effective policy, VMware vulnerabilities, guest OS, encryption and reachability are unassessed. No paths, UUIDs, names or secrets in reports.')]);
  }};
 
 type LabNode={node_id:string,node_type:string,console_host?:string};
-export function parseGns3(input:AssessmentInput){
+/** parseGns3: GNS3 프로젝트의 지원 버전·노드·링크 구조를 검증합니다 주요 호출: parse·textInput·isArray. */ export function parseGns3(input:AssessmentInput){
  const value=JSON.parse(textInput(input));
  if(!value||typeof value!=='object'||value.type!=='topology'||typeof value.version!=='string'||!/^2\.\d{1,4}(?:\.\d{1,4})?(?:[-+][A-Za-z0-9.-]{1,32})?$/.test(value.version)||!value.topology||!Array.isArray(value.topology.nodes)||!Array.isArray(value.topology.links))throw new Error('GNS3_INVALID');
  const {nodes,links}=value.topology;if(nodes.length>200||links.length>400)throw new Error('GNS3_LIMIT');
  const ids=new Set<string>();
  for(const node of nodes){if(!node||typeof node.node_id!=='string'||!node.node_id||node.node_id.length>128||ids.has(node.node_id)||typeof node.node_type!=='string'||!node.node_type||node.node_type.length>80||node.console_host!==undefined&&typeof node.console_host!=='string')throw new Error('GNS3_NODE_INVALID');ids.add(node.node_id);}
- for(const link of links)if(!link||!Array.isArray(link.nodes)||link.nodes.length!==2||link.nodes.some((end:any)=>!end||!ids.has(end.node_id)))throw new Error('GNS3_LINK_INVALID');
+ for(const link of links)if(!link||!Array.isArray(link.nodes)||link.nodes.length!==2||link.nodes.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: has. */ (end:any)=>!end||!ids.has(end.node_id)))throw new Error('GNS3_LINK_INVALID');
  return {nodes:nodes as LabNode[],links:links as {nodes:{node_id:string}[]}[]};
 }
-export const gns3Topology:SecurityScanner={id:'network.gns3',version:'1.0.1',targetKind:'gns3-topology-config',maxBytes:65536,
- validate(input){parseGns3(input);},async scan(input,ctx){checkpoint(ctx);const {nodes,links}=parseGns3(input);
- const external=nodes.filter(n=>['cloud','nat'].includes(n.node_type.toLowerCase())).length;
- const knownHosts=nodes.filter(n=>n.console_host!==undefined),exposed=knownHosts.filter(n=>!['127.0.0.1','::1','localhost'].includes(n.console_host!.toLowerCase())).length;
- const connected=new Set(links.flatMap(l=>l.nodes.map(n=>n.node_id))),isolated=nodes.filter(n=>!connected.has(n.node_id)).length;
+export const gns3Topology:SecurityScanner={id:'network.gns3',version:'1.1.0',targetKind:'gns3-topology-config',maxBytes:65536,
+ /** validate: 값의 형식이나 처리 조건을 확인합니다 주요 호출: networkPolicy·parseGns3. */ validate(input){if(!networkPolicy(input))parseGns3(input);},/** scan: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: checkpoint·networkPolicy·scanNetworkPolicy. */ async scan(input,ctx){checkpoint(ctx);if(networkPolicy(input))return scanNetworkPolicy(this,input,ctx);const {nodes,links}=parseGns3(input);
+ const external=nodes.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: includes·toLowerCase. */ n=>['cloud','nat'].includes(n.node_type.toLowerCase())).length;
+ const knownHosts=nodes.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ n=>n.console_host!==undefined),exposed=knownHosts.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: includes·toLowerCase. */ n=>!['127.0.0.1','::1','localhost'].includes(n.console_host!.toLowerCase())).length;
+ const connected=new Set(links.flatMap(/** flatMap 콜백: 항목을 변환하고 결과 배열을 한 단계 펼칩니다 주요 호출: map. */ l=>l.nodes.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ n=>n.node_id))),isolated=nodes.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: has. */ n=>!connected.has(n.node_id)).length;
  const findings:Finding[]=[
   {id:'externalBoundary',title:pick(ctx,'외부 연결 노드 선언','External connection node declarations'),status:external?'warning':'info',severity:external?'medium':'info',evidence:[`nodes=${nodes.length}`,`links=${links.length}`,`cloudOrNat=${external}`],remediation:pick(ctx,'Cloud/NAT 연결은 실습망을 외부 또는 호스트에 연결할 수 있습니다. 실제 어댑터·라우팅·방화벽을 별도로 확인하세요. 노드가 없다고 격리가 증명되지는 않습니다.','Cloud/NAT may join a lab to external or host networks. Separately verify adapters, routing and firewalls. Absence does not prove isolation.')},
   {id:'consoleBinding',title:pick(ctx,'콘솔 주소의 루프백 제한 선언','Console loopback binding declarations'),status:exposed?'warning':knownHosts.length===nodes.length&&nodes.length?'pass':'not_assessed',severity:exposed?'high':'info',evidence:[`explicitHosts=${knownHosts.length}`,`nonLoopback=${exposed}`],remediation:pick(ctx,'콘솔 호스트가 있으면 루프백 제한을 검토하세요. 프로젝트에 없으면 GNS3 서버 설정에서 직접 확인해야 합니다. Telnet 콘솔 형식은 장비의 Telnet 서비스 취약점을 의미하지 않습니다.','Review explicit console hosts and loopback restrictions. Missing project values require server-side verification. A Telnet console type does not establish a device Telnet vulnerability.')},

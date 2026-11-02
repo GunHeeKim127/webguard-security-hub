@@ -1,5 +1,5 @@
 // Return only fixed labels: database errors may contain connection secrets.
-export function protectionDbError(error:unknown){
+/** protectionDbError: 접근 보호 조회 실패의 재시도 가능 유형을 분류합니다 주요 호출: String·includes. */ export function protectionDbError(error:unknown){
  const code=typeof error==='object'&&error&&'code' in error?String(error.code):'';
  const message=error instanceof Error?error.message:'';
  if(message==='Query read timeout')return {reason:'DB_QUERY_TIMEOUT',retryable:true};

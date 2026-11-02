@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {normalizeIp,type GuardQuery} from './ingress-guard';
-export async function releaseIpBlock(query:GuardQuery,raw:string,actorId:string,reference:string|null=null){
+/** releaseIpBlock: 권한 있는 IP 차단 해제와 감사 기록을 처리합니다 주요 호출: normalizeIp·digest·update. */ export async function releaseIpBlock(query:GuardQuery,raw:string,actorId:string,reference:string|null=null){
  const address=normalizeIp(raw);if(!address||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(actorId))throw new Error('INPUT_INVALID');
  const audit='ip_unblocked_target:'+createHash('sha256').update(address).digest('hex');
  const result=await query(`WITH released_block AS (

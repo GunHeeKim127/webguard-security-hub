@@ -1,9 +1,9 @@
 import {normalizeIp} from './ingress-guard';
 import {databaseProvider} from './database-provider';
 export class DatabaseConfigurationError extends Error {
- constructor(public code:'DATABASE_NOT_CONFIGURED'|'DATABASE_URL_INVALID'|'DATABASE_LOCALHOST_ON_VERCEL'|'DATABASE_TLS_REQUIRED'|'DATABASE_IDENTITY_MISMATCH'|'DATABASE_PROVIDER_MISMATCH',message:string){super(message);}
+ /** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 */ constructor(public code:'DATABASE_NOT_CONFIGURED'|'DATABASE_URL_INVALID'|'DATABASE_LOCALHOST_ON_VERCEL'|'DATABASE_TLS_REQUIRED'|'DATABASE_IDENTITY_MISMATCH'|'DATABASE_PROVIDER_MISMATCH',message:string){super(message);}
 }
-export function projectDatabase(kind:'runtime'|'migration', allowUnconfigured=false) {
+/** projectDatabase: 프로젝트 DB 식별 설정을 확인합니다 주요 호출: databaseProvider·includes·decodeURIComponent. */ export function projectDatabase(kind:'runtime'|'migration', allowUnconfigured=false) {
  const provider=databaseProvider();
  const raw=kind==='migration'?(process.env.MIGRATION_DATABASE_URL??(provider==='prisma-postgres'?process.env.DIRECT_URL:undefined)):process.env.DATABASE_URL;
  const expected=process.env.PROJECT_DATABASE;

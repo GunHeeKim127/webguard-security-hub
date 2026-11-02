@@ -8,13 +8,13 @@ const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,scop
  {id:'mobile',title:'Mobile',subtitle:'APK / IPA / PWA',module:'application.package',scope:['패키지 정적 점검 · PWA 준비 중','Package baseline · PWA planned']},
  {id:'endpoint',title:'Endpoint',subtitle:'Windows / Linux / macOS',module:'application.pe',scope:['실행 파일·설정 스냅샷 점검','Executable and configuration snapshots']},
  {id:'cloud',title:'Cloud',subtitle:'AWS / Azure / GCP',scope:['클라우드 설정·권한 점검 예정','Cloud configuration and access · planned']},
- {id:'virtualization',title:'Virtualization',subtitle:'VMware VMX',module:'virtualization.vmx',scope:['VMX 명시적 격리 설정','Explicit VMX isolation declarations']},
- {id:'network',title:'Network',subtitle:'GNS3 2.x topology',module:'network.gns3',scope:['GNS3 프로젝트 구성 점검','GNS3 project configuration baseline']},
+ {id:'virtualization',title:'Virtualization',subtitle:'VMX / OVF / XML / VBOX',module:'virtualization.vmx',scope:['지원 VM 설정·제한 범위 확인','Supported VM configuration review']},
+ {id:'network',title:'Network',subtitle:'GNS3 / DNS / Routing',module:'network.gns3',scope:['GNS3·DNS·라우팅 설정 점검','GNS3 / DNS / routing configuration review']},
  {id:'iot',title:'IoT',subtitle:'Firmware / Device Config',scope:['펌웨어·장비 설정 분석 예정','Firmware and device configuration · planned']},
  {id:'container',title:'Container',subtitle:'Docker / Kubernetes',scope:['컨테이너·클러스터 점검 예정','Container and cluster assessment · planned']},
 ];
 export {categoryFor} from '../../lib/assessment/categories';
-export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'report',size?:number}){
+/** ModuleIcon: 모듈 종류에 맞는 아이콘을 렌더링합니다 */ export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'report',size?:number}){
  const lines={
   web:<><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.5" ry="8"/><path d="M4 12h16"/></>,
   mobile:<><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></>,
@@ -30,14 +30,14 @@ export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'repor
  };
  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{lines[kind]}</svg>;
 }
-export default function ArchitectureOverview({locale}:{locale:'ko'|'en'}){
- const t=(ko:string,en:string)=>locale==='ko'?ko:en;
+/** ArchitectureOverview: 지원 모듈과 준비 중 모듈의 진입 화면을 표시합니다 주요 호출: t·map. */ export default function ArchitectureOverview({locale}:{locale:'ko'|'en'}){
+ const t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en;
  return <Box component="section" aria-label={t('통합 진단 모듈','Unified assessment modules')}>
   <Box textAlign="center" sx={{pt:{xs:3,sm:5},pb:3}}><Typography component="h1" sx={{fontSize:{xs:30,sm:38},fontWeight:750,letterSpacing:'-.035em'}}>VELTHARA</Typography><Typography sx={{mt:1,fontSize:{xs:12,sm:14},letterSpacing:'.035em',color:'text.secondary'}}>Unified Asset Security Assessment Platform</Typography><Typography color="text.secondary" sx={{mt:1.5,fontSize:14}}>{t('다양한 디지털 자산의 보안 상태를 한곳에서.','One place to understand security across your digital assets.')}</Typography></Box>
   <Paper variant="outlined" sx={{p:{xs:2.5,sm:3},textAlign:'center',bgcolor:'background.paper',borderRadius:'16px'}}><Stack direction="row" gap={1} justifyContent="center" alignItems="center"><ModuleIcon kind="shield" size={22}/><Typography fontWeight={700}>{t('공통 진단 관리 엔진','Common assessment management engine')}</Typography></Stack><Typography variant="body2" color="text.secondary" sx={{mt:1.25,lineHeight:1.9}}>{t('자산 등록 · 작업 예약 · 결과 표준화 · 위험도 · 재검증','Asset registration · Scheduling · Standardized results · Risk · Retesting')}</Typography><Typography variant="caption" color="text.secondary">{t('현재: 계정별 자산·수동 진단·결과 비교 / 작업 예약 준비 중','Available: private assets, manual assessment and comparison / Scheduling planned')}</Typography></Paper>
   <Box aria-hidden="true" sx={{display:'flex',justifyContent:'center',py:1,color:'#9a9fa2'}}><ModuleIcon kind="arrow" size={20}/></Box>
   <Box sx={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:{xs:1,sm:1.4}}}>
-   {categories.map(c=>{const available=!!c.module;return <ButtonBase key={c.id} {...(available?{component:Link,href:c.id==='web'?'/?view=web':'/workbench/'+c.id,prefetch:false}:{disabled:true})} aria-label={`${c.title} · ${available?t('검사 화면으로 이동','Go to assessment'):t('준비 중','Planned')}`} sx={{display:'flex',flexDirection:'column',justifyContent:'center',gap:.65,p:1.75,minHeight:{xs:132,sm:126},borderRadius:'16px',bgcolor:'background.paper',border:'1px solid transparent',color:'text.primary',transition:'background-color .16s, border-color .16s','&:hover':{bgcolor:'#183339',borderColor:'primary.main'},'&.Mui-focusVisible':{outline:'3px solid #66e6c3',outlineOffset:3},'&.Mui-disabled':{color:'text.disabled'}}}>
+   {categories.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: t. */ c=>{const available=!!c.module;return <ButtonBase key={c.id} {...(available?{component:Link,href:c.id==='web'?'/?view=web':'/workbench/'+c.id,prefetch:false}:{disabled:true})} aria-label={`${c.title} · ${available?t('검사 화면으로 이동','Go to assessment'):t('준비 중','Planned')}`} sx={{display:'flex',flexDirection:'column',justifyContent:'center',gap:.65,p:1.75,minHeight:{xs:132,sm:126},borderRadius:'16px',bgcolor:'background.paper',border:'1px solid transparent',color:'text.primary',transition:'background-color .16s, border-color .16s','&:hover':{bgcolor:'#183339',borderColor:'primary.main'},'&.Mui-focusVisible':{outline:'3px solid #66e6c3',outlineOffset:3},'&.Mui-disabled':{color:'text.disabled'}}}>
     <ModuleIcon kind={c.id} size={22}/><Typography component="h2" sx={{fontSize:{xs:16,sm:18},fontWeight:600}}>{c.title}</Typography><Typography sx={{fontSize:{xs:10.5,sm:12},color:'text.secondary',textAlign:'center'}}>{locale==='en'&&c.id==='web'?'HTTP / TLS / Authentication':c.subtitle}</Typography><Typography variant="caption" sx={{fontSize:10.5,color:available?'primary.main':'text.secondary',mt:.25}}>{available?t(c.id==='web'?'웹 진단 작전실 →':c.id==='mobile'?'모바일 진단 작전실 →':c.id==='virtualization'?'VMware 설정 진단 →':c.id==='network'?'GNS3 구성 진단 →':'실행 파일·시스템 진단 작전실 →','Go to assessment operations →'):t('준비 중','Planned')}</Typography>
    </ButtonBase>;})}
   </Box>

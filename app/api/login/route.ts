@@ -5,7 +5,7 @@ import { body,sameOrigin,limit,event,failure,HttpError } from '../../../lib/secu
 import {secureOriginCookie} from '../../../lib/access-origins';
 import {authSourceBucket} from '../../../lib/auth-rate-identity';
 const dummy=hashPassword(randomBytes(32).toString('hex'));
-export async function POST(req:Request){try{
+/** POST: 로그인 입력과 접근 제한을 확인하고 세션 응답을 만듭니다。 */ export async function POST(req:Request){try{
  sameOrigin(req);await limit(authSourceBucket('login',req),30,60);await limit('login:global',300,60);
  const data=await body(req);if(typeof data.email!=='string'||typeof data.password!=='string'||data.email.length>254)throw new HttpError(400,'Invalid credentials');
  const email=data.email.trim().toLowerCase();await limit('login:'+tokenHash(email),5,300);

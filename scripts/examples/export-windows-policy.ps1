@@ -1,3 +1,10 @@
+<#
+.SYNOPSIS
+Export-WindowsPolicy: Export read-only firewall, Defender and Remote Desktop observations.
+.DESCRIPTION
+Unavailable values remain null. Requires a new output path and never overwrites an existing file.
+No policy or service setting is changed.
+#>
 param([string]$OutputPath = 'work/windows-policy-export.json')
 $ErrorActionPreference = 'Stop'
 $targetPath = [System.IO.Path]::GetFullPath($OutputPath)

@@ -6,15 +6,15 @@ import Link from '../navigation-link';
 import ModuleGuide from '../workbench/module-guide';
 import {moduleGuides} from '../../lib/assessment/module-guides';
 import type {ModuleId} from '../../lib/assessment/types';
-export default function Help({initialLocale}:{initialLocale:'ko'|'en'}){
- const [locale,setLocale]=useState(initialLocale),index=locale==='ko'?0:1,t=(ko:string,en:string)=>locale==='ko'?ko:en;
+/** Help: 사용 언어에 맞는 지원 자료·사용 순서를 표시합니다 주요 호출: useState·t·map. */ export default function Help({initialLocale}:{initialLocale:'ko'|'en'}){
+ const [locale,setLocale]=useState(initialLocale),index=locale==='ko'?0:1,t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en;
  return <ThemeProvider theme={platformTheme}><CssBaseline/><Container component="main" maxWidth="md" sx={{py:3,pb:6}}>
-  <Stack component="header" direction="row" justifyContent="space-between" gap={1} flexWrap="wrap"><Button component={Link} href="/workbench">{t('검사 화면으로','Go to assessments')}</Button><Button onClick={()=>setLocale(locale==='ko'?'en':'ko')}>{locale==='ko'?'English':'한국어'}</Button></Stack>
+  <Stack component="header" direction="row" justifyContent="space-between" gap={1} flexWrap="wrap"><Button component={Link} href="/workbench">{t('검사 화면으로','Go to assessments')}</Button><Button onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setLocale. */ ()=>setLocale(locale==='ko'?'en':'ko')}>{locale==='ko'?'English':'한국어'}</Button></Stack>
   <Typography variant="h4" component="h1" sx={{my:2}}>{t('사용 가이드','User guide')}</Typography>
   <Typography sx={{mb:2}}>{t('지원 자료를 확인하고 하나를 선택하세요. 선택 → 읽기 허용 → 검사 → 결과 확인 → 저장 순서로 진행합니다.','Check supported input and choose one item: select → allow reading → inspect → review → save.')}</Typography>
   <Alert severity="info">{t('기준 충족은 전체 안전 보증이 아닙니다. 미검사는 안전·취약 어느 쪽도 확정하지 못한 상태입니다. 비밀번호·개인키는 올리지 마세요.','Meeting a criterion is not overall safety. Unassessed means no conclusion, not safe or vulnerable. Do not submit passwords or private keys.')}</Alert>
-  <Stack component="nav" aria-label={t('가이드 목차','Guide contents')} direction="row" flexWrap="wrap" gap={.5} sx={{my:2}}>{(Object.keys(moduleGuides) as ModuleId[]).map(id=><Button key={id} component="a" href={'#'+id} size="small">{moduleGuides[id].title[index]}</Button>)}</Stack>
-  <Stack gap={3}>{(Object.keys(moduleGuides) as ModuleId[]).map(id=><Box component="section" id={id} key={id} sx={{scrollMarginTop:24}}><Typography component="h2" variant="h6" sx={{mb:1}}>{moduleGuides[id].title[index]}</Typography><ModuleGuide moduleId={id} locale={locale} full/></Box>)}</Stack>
+  <Stack component="nav" aria-label={t('가이드 목차','Guide contents')} direction="row" flexWrap="wrap" gap={.5} sx={{my:2}}>{(Object.keys(moduleGuides) as ModuleId[]).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ id=><Button key={id} component="a" href={'#'+id} size="small">{moduleGuides[id].title[index]}</Button>)}</Stack>
+  <Stack gap={3}>{(Object.keys(moduleGuides) as ModuleId[]).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ id=><Box component="section" id={id} key={id} sx={{scrollMarginTop:24}}><Typography component="h2" variant="h6" sx={{mb:1}}>{moduleGuides[id].title[index]}</Typography><ModuleGuide moduleId={id} locale={locale} full/></Box>)}</Stack>
   <Box component="section" id="windows-export" sx={{mt:3}}><Typography component="h2" variant="h6">{t('Windows 정책 JSON 준비','Prepare a Windows policy JSON')}</Typography>
    <Button component="a" href="/tools/export-windows-policy.ps1" download="export-windows-policy.ps1">{t('읽기 전용 내보내기 도구 받기','Download read-only exporter')}</Button>
    <Typography variant="body2">{t('내용을 확인한 뒤 PowerShell에 & 와 공백을 입력하고 받은 .ps1을 끌어놓아 실행합니다. 저장할 새 JSON 경로를 묻습니다. 방화벽·Defender·RDP의 선택된 상태만 읽으며 설정은 바꾸지 않습니다.','Review the script. In PowerShell, type & and a space, drag in the downloaded .ps1 and run it. Enter a new JSON output path when prompted. It reads selected firewall/Defender/RDP states without changing settings.')}</Typography>

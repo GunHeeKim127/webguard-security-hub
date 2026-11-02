@@ -72,4 +72,4 @@ const rows:Record<string,readonly string[]>={
  medium:['중간','Medium','中','中','Media','Moyenne'],
  low:['낮음','Low','低','低','Baja','Faible']
 };
-export function assessmentText(locale:Locale,key:string){return rows[key]?.[order.indexOf(locale)]??key;}
+/** assessmentText: 진단 결과를 조언 입력용 텍스트로 변환합니다 주요 호출: indexOf. */ export function assessmentText(locale:Locale,key:string){return rows[key]?.[order.indexOf(locale)]??key;}

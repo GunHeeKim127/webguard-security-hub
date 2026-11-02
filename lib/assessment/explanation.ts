@@ -45,8 +45,8 @@ ko['referrer-policy']=['다른 사이트로 전달되는 주소 정보','링크�
 ko.csp=ko['content-security-policy'];ko.hsts=ko['strict-transport-security'];ko.nosniff=ko['x-content-type-options'];ko.referrer=ko['referrer-policy'];
 
 export const statusCopy:Record<AssessmentStatus,{ko:string;en:string}>={warning:{ko:'보완·검토 필요',en:'Review or improve'},not_assessed:{ko:'아직 확인하지 못함',en:'Not yet verified'},pass:{ko:'이 항목의 기준 충족',en:'Meets this check'},info:{ko:'참고할 정보',en:'Observation'}};
-export function orderedFindings(findings:readonly Finding[]){const order={warning:0,not_assessed:1,info:2,pass:3},priority={high:0,medium:1,low:2,info:3};return findings.map((finding,index)=>({finding,index})).sort((a,b)=>order[a.finding.status]-order[b.finding.status]||(a.finding.status==='warning'?priority[a.finding.severity]-priority[b.finding.severity]:0)||a.index-b.index).map(v=>v.finding);}
-export function explainFinding(f:Finding,moduleId:ModuleId,locale:'ko'|'en'):Explanation{
+/** orderedFindings: 보완 필요·미확인·참고 항목을 표시 순서로 정렬합니다 주요 호출: map·sort. */ export function orderedFindings(findings:readonly Finding[]){const order={warning:0,not_assessed:1,info:2,pass:3},priority={high:0,medium:1,low:2,info:3};return findings.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ (finding,index)=>({finding,index})).sort(/** sort 콜백: 비교 기준에 따라 항목 순서를 정합니다 */ (a,b)=>order[a.finding.status]-order[b.finding.status]||(a.finding.status==='warning'?priority[a.finding.severity]-priority[b.finding.severity]:0)||a.index-b.index).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ v=>v.finding);}
+/** explainFinding: 진단 항목의 의미·이유·다음 행동을 언어에 맞게 설명합니다 주요 호출: replace·startsWith·exec. */ export function explainFinding(f:Finding,moduleId:ModuleId,locale:'ko'|'en'):Explanation{
  const key=f.id.replace(/^(?:arch-\d+|local|desktop|mobile):/,'');
  const profile=f.id.startsWith('desktop:')?'PC · ':f.id.startsWith('mobile:')?(locale==='ko'?'모바일 · ':'Mobile · '):'';
  const architecture=/^arch-(\d+):/.exec(f.id);

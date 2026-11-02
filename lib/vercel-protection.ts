@@ -4,11 +4,11 @@ import {defenseText} from './defense-copy';
 import {ipAddress} from '@vercel/functions';
 import {protectionDbError} from './protection-db-error';
 
-export function vercelClientAddress(headers:Pick<Headers,'get'>,env:Readonly<Record<string,string|undefined>>=process.env){
+/** vercelClientAddress: 배포 환경의 신뢰 가능한 접속 주소 메타데이터를 읽습니다 주요 호출: normalizeIp·ipAddress·get. */ export function vercelClientAddress(headers:Pick<Headers,'get'>,env:Readonly<Record<string,string|undefined>>=process.env){
  // Use the platform's official client IP header, only inside a Vercel deployment.
  return env.VERCEL==='1'?normalizeIp(ipAddress(new Headers({'x-real-ip':headers.get('x-real-ip')??''}))):null;
 }
-export async function vercelProtection(req:Request,query:GuardQuery,env:Readonly<Record<string,string|undefined>>=process.env):Promise<Response|null>{
+/** vercelProtection: 배포 환경에 맞는 접근 보호 상태와 응답을 계산합니다 주요 호출: includes·requestLocale·vercelClientAddress. */ export async function vercelProtection(req:Request,query:GuardQuery,env:Readonly<Record<string,string|undefined>>=process.env):Promise<Response|null>{
  if(env.VERCEL!=='1')return null;
  const url=new URL(req.url);
  if(['/api/health','/api/ready'].includes(url.pathname))return null;

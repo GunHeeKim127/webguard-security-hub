@@ -6,18 +6,18 @@ import {requestLocale} from './request-locale';
 import {threatSessionHash} from './ingress-guard';
 import { HttpError,roleAllowed } from './request';
 export { HttpError,sameOrigin,body } from './request';
-export async function currentUser(){
+/** currentUser: 현재 세션에 연결된 사용자 정보를 조회합니다 주요 호출: threatSessionHash·get·headers. */ export async function currentUser(){
  const hash=threatSessionHash((await headers()).get('cookie'));if(!hash)return null;
  const r=await db.query('SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND NOT EXISTS(SELECT 1 FROM public.account_blocks b WHERE b.user_id=u.id AND b.blacklisted)',[hash]);
  return r.rows[0] as {id:string,email:string,role:string}|undefined;
 }
-export async function requireUser(roles=['admin','analyst','viewer']) {
+/** requireUser: 로그인 사용자를 요구하고 없으면 요청을 거절합니다 주요 호출: currentUser·roleAllowed. */ export async function requireUser(roles=['admin','analyst','viewer']) {
  const user=await currentUser();if(!user)throw new HttpError(401,'Login required');
  if(!roleAllowed(user.role,roles))throw new HttpError(403,'Insufficient permission');return user;
 }
-export async function limit(bucket:string,max:number,seconds:number){
+/** limit: 작업별 요청 횟수 제한을 적용합니다 주요 호출: query. */ export async function limit(bucket:string,max:number,seconds:number){
  const r=await db.query(`INSERT INTO rate_limits(bucket,hits,reset_at) VALUES($1,1,now()+$2*interval '1 second') ON CONFLICT(bucket) DO UPDATE SET hits=CASE WHEN rate_limits.reset_at<=now() THEN 1 ELSE rate_limits.hits+1 END,reset_at=CASE WHEN rate_limits.reset_at<=now() THEN now()+$2*interval '1 second' ELSE rate_limits.reset_at END RETURNING hits`,[bucket,seconds]);
  if(r.rows[0].hits>max)throw new HttpError(429,'Rate limit exceeded');
 }
-export async function event(category:string,userId:string|null=null){await db.query('INSERT INTO events(category,user_id) VALUES($1,$2)',[category,userId]);}
-export function failure(e:unknown,req:Request){const status=e instanceof HttpError?e.status:503;const code=errorCode(e instanceof HttpError?e.message:'',status);const {locale}=requestLocale(req.headers);return Response.json({error:errorText(locale,code),errorCode:code,locale},{status,headers:{'Cache-Control':'no-store','Content-Language':locale,'Vary':'Cookie, Accept-Language'}});}
+/** event: 내부 감사 이벤트를 기록합니다 주요 호출: query. */ export async function event(category:string,userId:string|null=null){await db.query('INSERT INTO events(category,user_id) VALUES($1,$2)',[category,userId]);}
+/** failure: 오류를 외부에 허용된 응답으로 변환합니다 주요 호출: errorCode·requestLocale·json. */ export function failure(e:unknown,req:Request){const status=e instanceof HttpError?e.status:503;const code=errorCode(e instanceof HttpError?e.message:'',status);const {locale}=requestLocale(req.headers);return Response.json({error:errorText(locale,code),errorCode:code,locale},{status,headers:{'Cache-Control':'no-store','Content-Language':locale,'Vary':'Cookie, Accept-Language'}});}

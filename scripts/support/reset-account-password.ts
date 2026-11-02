@@ -1,5 +1,5 @@
 type Client={query:(sql:string,values?:unknown[])=>Promise<{rows:any[];rowCount:number|null}>};
-export async function resetAccountPassword(client:Client,email:string,passwordHash:string,emailHash:string){
+/** resetAccountPassword: 작업의 완료·실패·취소에 맞춰 관련 상태와 자원을 정리합니다 주요 호출: query. */ export async function resetAccountPassword(client:Client,email:string,passwordHash:string,emailHash:string){
  await client.query('BEGIN');
  try{
   const row=await client.query('SELECT id FROM public.users WHERE email=$1 FOR UPDATE',[email]);

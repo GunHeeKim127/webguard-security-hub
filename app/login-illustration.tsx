@@ -1,5 +1,5 @@
 // Decorative vector art: no external image request, user data, or simulated live status.
-export default function LoginIllustration(){return <svg viewBox="0 0 640 560" fill="none" aria-hidden="true" focusable="false" style={{display:'block',width:'100%',height:'auto'}}>
+/** LoginIllustration: 로그인 화면의 장식 이미지를 렌더링합니다 */ export default function LoginIllustration(){return <svg viewBox="0 0 640 560" fill="none" aria-hidden="true" focusable="false" style={{display:'block',width:'100%',height:'auto'}}>
  <defs>
   <radialGradient id="login-glow"><stop stopColor="#40DDB7" stopOpacity=".18"/><stop offset="1" stopColor="#40DDB7" stopOpacity="0"/></radialGradient>
   <linearGradient id="login-shield" x1="240" y1="160" x2="410" y2="390" gradientUnits="userSpaceOnUse"><stop stopColor="#1F645F"/><stop offset="1" stopColor="#102A3A"/></linearGradient>

@@ -7,7 +7,7 @@ import {errorText} from '../lib/errors-i18n';
 const port=34000+Math.floor(Math.random()*8000),base=`http://127.0.0.1:${port}`,token='test-gateway-secret-'+'x'.repeat(40);
 const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{env:{...process.env,DATABASE_PROVIDER:'postgresql',VERCEL:'',PROJECT_DATABASE:'unconfigured',PROJECT_RUNTIME_ROLE:'unconfigured',DATABASE_URL:'postgresql://unconfigured@127.0.0.1:1/unconfigured',APP_ORIGIN:base,APP_ADDITIONAL_ORIGINS:'',AI_ENABLED:'false',DEFAULT_LOCALE:'en',GEOIP_PROXY_SECRET:token,GEOIP_COUNTRY_HEADER:'cf-ipcountry'},stdio:'ignore',windowsHide:true});
 try{
- let ready=false;for(let i=0;i<60;i++){if(child.exitCode!==null)throw new Error('Server startup failed');try{if((await fetch(base+'/api/health',{signal:AbortSignal.timeout(1000)})).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}assert(ready,'Server startup timeout');
+ let ready=false;for(let i=0;i<60;i++){if(child.exitCode!==null)throw new Error('Server startup failed');try{if((await fetch(base+'/api/health',{signal:AbortSignal.timeout(1000)})).ok){ready=true;break;}}catch{}await new Promise(/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: setTimeout. */ r=>setTimeout(r,500));}assert(ready,'Server startup timeout');
  for(const locale of locales){
   const headers={'Accept-Language':`${locale}-ZZ`};
   const page=await fetch(base,{headers});const html=await page.text();assert.equal(page.status,200);assert(html.includes(`lang="${locale}"`),locale);assert(html.includes(messages[locale].title),locale);

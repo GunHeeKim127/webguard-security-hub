@@ -4,7 +4,7 @@ import {languageNames,type Locale} from './locale';
 import type {CheckResult} from './inspection';
 export type Provider='groq'|'gemini'|'openai';
 export type ProviderConfig={provider:Provider,model:string,apiKey:string,baseURL:string};
-export function providerConfigs(env:Readonly<Record<string,string|undefined>>=process.env):ProviderConfig[]{
+/** providerConfigs: 허용된 AI 제공자 구성을 준비합니다 주요 호출: trim·push. */ export function providerConfigs(env:Readonly<Record<string,string|undefined>>=process.env):ProviderConfig[]{
  const mode=env.AI_PROVIDER??'auto';
  const configs:ProviderConfig[]=[];
  if((mode==='auto'||mode==='groq')&&env.GROQ_API_KEY?.trim())configs.push({provider:'groq',model:env.OPENAI_MODEL?.trim()||'openai/gpt-oss-120b',apiKey:env.GROQ_API_KEY.trim(),baseURL:'https://api.groq.com/openai/v1'});
@@ -13,10 +13,10 @@ export function providerConfigs(env:Readonly<Record<string,string|undefined>>=pr
  if(mode==='openai'&&env.OPENAI_API_KEY?.trim()&&env.OPENAI_MODEL?.trim())configs.push({provider:'openai',model:env.OPENAI_MODEL.trim(),apiKey:env.OPENAI_API_KEY.trim(),baseURL:env.OPENAI_BASE_URL?.trim()||'https://api.openai.com/v1'});
  return configs;
 }
-export async function generateAdvice(config:ProviderConfig,locale:Locale,checks:CheckResult['checks']){
+/** generateAdvice: 선택한 AI 제공자로 조언을 생성합니다 주요 호출: stringify·fromEntries·map. */ export async function generateAdvice(config:ProviderConfig,locale:Locale,checks:CheckResult['checks']){
  const client=new OpenAI({apiKey:config.apiKey,baseURL:config.baseURL,timeout:20000,maxRetries:0});
  const instructions=`Give brief defensive security-header advice in ${languageNames[locale]}. At most 4 short bullets, under 100 words. Presence is not proof of safety. You cannot execute changes.`;
- const input=JSON.stringify(Object.fromEntries(adviceHeaders.map(header=>[header,!!checks.find(check=>check.header===header)?.present])));
+ const input=JSON.stringify(Object.fromEntries(adviceHeaders.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: find. */ header=>[header,!!checks.find(/** find 콜백: 조건에 맞는 첫 항목을 찾습니다 */ check=>check.header===header)?.present])));
  if(config.provider==='openai'){
   const result=await client.responses.create({model:config.model,reasoning:{effort:'low'},store:false,max_output_tokens:400,instructions,input});
   return {advice:result.output_text??'',inputTokens:result.usage?.input_tokens??0,outputTokens:result.usage?.output_tokens??0};

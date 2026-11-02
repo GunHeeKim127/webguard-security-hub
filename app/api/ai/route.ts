@@ -10,18 +10,18 @@ import {db} from '../../../lib/db';
 import {body,sameOrigin,requireUser,limit,event,failure,HttpError} from '../../../lib/security';
 export const runtime='nodejs';
 export const maxDuration=60;
-export async function POST(req:Request){try{
+/** POST: 사용자 요청과 예산 범위 안에서 개선 조언을 생성합니다。 */ export async function POST(req:Request){try{
  sameOrigin(req);const user=await requireUser();await limit('ai-attempt:'+user.id,10,60);
  const data=await body(req);if(typeof data.scanId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.scanId))throw new HttpError(400,'Invalid scan ID');
  const r=await db.query('SELECT result FROM scans WHERE id=$1 AND user_id=$2 AND created_at>=now()-interval \'30 days\'',[data.scanId,user.id]);if(!r.rowCount)throw new HttpError(404,'Scan not found');
  const configs=providerConfigs();if(process.env.AI_ENABLED!=='true'||!configs.length)throw new HttpError(503,'AI disabled: configure server environment');
- const checks=r.rows[0].result.checks,locale=requestLocale(req.headers).locale,query=(sql:string,values:unknown[])=>db.query(sql,values);
+ const checks=r.rows[0].result.checks,locale=requestLocale(req.headers).locale,query=/** query: 요청한 자료나 현재 상태를 조회합니다 주요 호출: query. */ (sql:string,values:unknown[])=>db.query(sql,values);
  const codes=['AI_QUOTA_EXCEEDED','AI_RATE_LIMITED','AI_AUTH_FAILED','AI_MODEL_UNAVAILABLE','AI_CONNECTION_FAILED','AI_REQUEST_REJECTED','AI_PROVIDER_FAILED'];
- const result=await adviceChain(configs,config=>cachedAdvice(query,adviceKey(config.provider+':'+config.model,locale,checks,user.id),async()=>{
+ const result=await adviceChain(configs,/** adviceChain 콜백: adviceChain에서 전달한 값을 처리하는 콜백입니다 주요 호출: cachedAdvice·adviceKey. */ config=>cachedAdvice(query,adviceKey(config.provider+':'+config.model,locale,checks,user.id),/** cachedAdvice 콜백: cachedAdvice에서 전달한 값을 처리하는 콜백입니다 주요 호출: tokenHash·query·withAiBudget. */ async()=>{
   const cooldown='ai-cooldown:'+config.provider+':'+tokenHash(config.apiKey);
   const blocked=(await query('SELECT hits FROM rate_limits WHERE bucket=$1 AND reset_at>now()',[cooldown])).rows[0];
   if(blocked)throw new HttpError(503,codes[blocked.hits-1]??'AI_PROVIDER_FAILED');
-  return withAiBudget(query,'ai:'+user.id,async()=>{
+  return withAiBudget(query,'ai:'+user.id,/** withAiBudget 콜백: withAiBudget에서 전달한 값을 처리하는 콜백입니다 주요 호출: generateAdvice·trim·aiProviderError. */ async()=>{
    let advice;
    try{advice=await generateAdvice(config,locale,checks);if(!advice.advice.trim())throw new HttpError(503,'AI_PROVIDER_FAILED');}
    catch(error){const code=error instanceof HttpError?error.message:aiProviderError(error);if(!code)throw error;

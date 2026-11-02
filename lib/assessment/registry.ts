@@ -8,9 +8,9 @@ import {inspectOriginal} from './original-integrity';
 import {createHash} from 'node:crypto';
 import {binaryInput} from './types';
 export const scanners:readonly SecurityScanner[]=[webCompare,linuxSsh,windowsPolicy,peScanner,apkScanner,machoScanner,packageScanner,vmwareConfig,gns3Topology];
-export const scannerCatalog=scanners.map(({id,version,targetKind,maxBytes})=>({id,version,targetKind,maxBytes}));
-export function scannerFor(id:unknown){const module=scanners.find(s=>s.id===id);if(!module)throw new Error('MODULE_UNSUPPORTED');return module;}
-export async function runAssessment(input:AssessmentInput,context:AssessmentContext){
+export const scannerCatalog=scanners.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ ({id,version,targetKind,maxBytes})=>({id,version,targetKind,maxBytes}));
+/** scannerFor: 등록된 모듈 식별자에 맞는 검사기를 찾습니다 주요 호출: find. */ export function scannerFor(id:unknown){const module=scanners.find(/** find 콜백: 조건에 맞는 첫 항목을 찾습니다 */ s=>s.id===id);if(!module)throw new Error('MODULE_UNSUPPORTED');return module;}
+/** runAssessment: 선택한 모듈을 실행하고 입력 검증 근거를 결과에 연결합니다 주요 호출: inspectOriginal·scannerFor·throwIfAborted. */ export async function runAssessment(input:AssessmentInput,context:AssessmentContext){
  if(input.originalUpload)return inspectOriginal(input,context);
  const scanner=scannerFor(input.moduleId);context.signal.throwIfAborted();scanner.validate(input);
  const result=await scanner.scan(input,context);context.signal.throwIfAborted();

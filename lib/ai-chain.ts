@@ -2,7 +2,7 @@ import {HttpError} from './request';
 import type {ProviderConfig} from './ai-providers';
 import type {GeneratedAdvice} from './advice-cache';
 export type ProviderReply=(GeneratedAdvice&{source:'ai'|'cache'})|{source:'busy'};
-export async function adviceChain(configs:ProviderConfig[],attempt:(config:ProviderConfig)=>Promise<ProviderReply>){
+/** adviceChain: 허용된 AI 조언 실행 순서를 구성합니다 주요 호출: attempt. */ export async function adviceChain(configs:ProviderConfig[],attempt:(config:ProviderConfig)=>Promise<ProviderReply>){
  let reasonCode='AI_PROVIDER_FAILED';
  for(const config of configs){
   try{const result=await attempt(config);if(result.source==='busy')return {source:'local' as const,reasonCode:'AI_IN_PROGRESS'};

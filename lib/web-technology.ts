@@ -3,13 +3,13 @@ type Headers=Record<string,string|string[]|undefined>;
 type Product='PHP'|'Next.js'|'React RSC'|'Django'|'Spring'|'Java servlet'|'ASP.NET'|'Ruby on Rails'|'Node.js'|'Go';
 export const technologyCatalogVersion='2026-10-28.1' as const;
 export type TechnologyObservation={catalogVersion:string,responseEligible:boolean,products:{product:Product,language:string,version:string|null}[]};
-const header=(headers:Headers,key:string)=>{const v=headers[key];return (Array.isArray(v)?v.join(','):v??'').slice(0,16384);};
+const header=/** header: 관찰 대상 헤더의 제한된 값을 읽습니다 주요 호출: slice·isArray·join. */ (headers:Headers,key:string)=>{const v=headers[key];return (Array.isArray(v)?v.join(','):v??'').slice(0,16384);};
 // Hints only. Never retain cookie identities/values or arbitrary server banners.
-export function observeTechnology(headers:Headers,status:number):TechnologyObservation{
+/** observeTechnology: 웹 응답의 제한된 기술 흔적을 관찰합니다 주요 호출: header·add·push. */ export function observeTechnology(headers:Headers,status:number):TechnologyObservation{
  const products:TechnologyObservation['products']=[],powered=header(headers,'x-powered-by'),server=header(headers,'server');
- const add=(product:Product,language:string,pattern:RegExp,text=powered)=>{
+ const add=/** add: 고정된 관찰과 개선 안내를 현재 진단 결과에 추가합니다 주요 호출: matchAll·map·push. */ (product:Product,language:string,pattern:RegExp,text=powered)=>{
   const matches=[...text.matchAll(new RegExp(pattern.source,'ig'))];
-  if(matches.length){const versions=new Set(matches.map(m=>m[1]&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m[1])?m[1]:null));products.push({product,language,version:versions.size===1?[...versions][0]:null});}
+  if(matches.length){const versions=new Set(matches.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ m=>m[1]&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m[1])?m[1]:null));products.push({product,language,version:versions.size===1?[...versions][0]:null});}
  };
  add('PHP','PHP',/\bPHP(?:\/([\d.]+)(?=$|[\s,;]))?\b/i,powered+' '+server);
  add('Next.js','JavaScript / TypeScript',/\bNext\.js\b/i);
@@ -18,11 +18,11 @@ export function observeTechnology(headers:Headers,status:number):TechnologyObser
  add('Spring','Java / JVM',/\bSpring(?:\/([\d.]+)(?=$|[\s,;]))?\b/i);
  add('Java servlet','Java / JVM',/\b(?:Servlet|Tomcat)\b/i,powered+' '+server);
  add('ASP.NET','C# / .NET (language unconfirmed)',/\bASP\.NET\b/i);
- if(header(headers,'x-aspnet-version')&&!products.some(p=>p.product==='ASP.NET'))products.push({product:'ASP.NET',language:'C# / .NET (language unconfirmed)',version:null});
+ if(header(headers,'x-aspnet-version')&&!products.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ p=>p.product==='ASP.NET'))products.push({product:'ASP.NET',language:'C# / .NET (language unconfirmed)',version:null});
  add('Ruby on Rails','Ruby',/\b(?:Ruby|Rails)\b/i);
  // Express has its own version; never interpret that as the Node.js runtime version.
  add('Node.js','JavaScript / TypeScript',/\bNode\.js(?:\/v?([\d.]+(?:[-+][^\s,;]+)?)(?=$|[\s,;]))?\b/i,powered+' '+server);
- if(/\bExpress\b/i.test(powered)&&!products.some(p=>p.product==='Node.js'))products.push({product:'Node.js',language:'JavaScript / TypeScript',version:null});
+ if(/\bExpress\b/i.test(powered)&&!products.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ p=>p.product==='Node.js'))products.push({product:'Node.js',language:'JavaScript / TypeScript',version:null});
  add('Go','Go',/\bGo\b/i);
  return {catalogVersion:technologyCatalogVersion,responseEligible:status>=200&&status<300,products:status>=200&&status<300?products:[]};
 }
@@ -30,12 +30,12 @@ const php='https://www.php.net/archive/2026.php';
 const react='https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components';
 const django='https://www.djangoproject.com/weblog/2025/nov/05/security-releases/';
 const spring='https://spring.io/security/cve-2022-22965/';
-function older(version:string|null,fixes:Record<string,number>):boolean|null{
+/** older: 관찰 버전과 권고 기준 버전의 순서를 비교합니다 주요 호출: map·split. */ function older(version:string|null,fixes:Record<string,number>):boolean|null{
  if(!version)return null;const [major,minor,patch]=version.split('.').map(Number),fixed=fixes[`${major}.${minor}`];return fixed===undefined?null:patch<fixed;
 }
 const nodeJanuary='https://nodejs.org/en/blog/vulnerability/december-2025-security-releases';
 const nodeOctober='https://nodejs.org/en/blog/vulnerability/october-2026-security-releases';
-function nodeOlder(version:string|null,fixes:Record<number,readonly [number,number]>):boolean|null{
+/** nodeOlder: Node 버전 계열에 맞춰 권고 기준과 비교합니다 주요 호출: map·split. */ function nodeOlder(version:string|null,fixes:Record<number,readonly [number,number]>):boolean|null{
  if(!version||!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(version))return null;
  const [major,minor,patch]=version.split('.').map(Number),fix=fixes[major];
  return fix?minor<fix[0]||(minor===fix[0]&&patch<fix[1]):null;
@@ -58,14 +58,14 @@ const nodeRules:JavascriptRule[]=[
  {id:'CVE-2026-105483',reference:nodeOctober,ko:'TLS 인증서 호스트명 검증 우회',en:'TLS certificate hostname verification bypass',fixes:{24:[22,1],26:[12,1]}},
  {id:'CVE-2026-106069',reference:nodeOctober,ko:'비표준 IP의 TLS 검증 우회',en:'TLS verification bypass for non-canonical IPs',fixes:octoberFixes},
 ];
-export function reactPackageFindings(name:string,version:string|null,locale:'ko'|'en'):Finding[]{
+/** reactPackageFindings: 명시된 React 관련 패키지 버전과 권고 범위를 비교합니다 주요 호출: includes·map. */ export function reactPackageFindings(name:string,version:string|null,locale:'ko'|'en'):Finding[]{
  if(!['react-server-dom-webpack','react-server-dom-parcel','react-server-dom-turbopack'].includes(name))return [];
  const fixes:Record<string,Record<string,number>>={'CVE-2025-55182':{'19.0':1,'19.1':2,'19.2':1},'CVE-2026-23864':{'19.0':4,'19.1':5,'19.2':4},'CVE-2025-55183':{'19.0':2,'19.1':3,'19.2':2},'GHSA-xqc2-xf4c-x3h3':{'19.0':9,'19.1':10,'19.2':9,'19.3':1},'GHSA-h3gv-c5rc-p453':{'19.0':9,'19.1':10,'19.2':9,'19.3':1}};
  const exact=version&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(version)?version:null;
- return [...reactRules,{id:'CVE-2025-55182',reference:react,ko:'React2Shell 원격 코드 실행',en:'React2Shell remote code execution'}].map(rule=>{const affected=older(exact,fixes[rule.id]),branch=exact?.split('.').slice(0,2).join('.'),patch=branch?fixes[rule.id]?.[branch]:undefined;return {id:`technology:${name}:${rule.id}`,title:`${rule.id} · ${locale==='ko'?rule.ko:rule.en}`,status:affected===true?'warning':affected===false?'info':'not_assessed',severity:affected===true?'high':'info',reference:rule.reference,evidence:[`product=${name}`,`declaredVersion=${exact??'unknown'}`,`versionRangeMatch=${affected??'unknown'}`,...(patch!==undefined?[`fixedVersion=${branch}.${patch}`]:[]),'runtimeVerified=false','exploitTested=false','evidenceSource=supplied-dependencies'],remediation:locale==='ko'?'제공한 파일의 패키지 버전 대조입니다. 실제 배포의 동일 패키지·버전과 RSC·서버 함수 사용 여부, 공식 권고의 적용 조건을 확인하세요. 파일 자체가 실제 서버 상태를 증명하지는 않습니다.':'Comparison of the package version in the supplied file. Verify the same deployed package/version, RSC / Server Function usage and advisory conditions. This file does not attest to live server state.'};});
+ return [...reactRules,{id:'CVE-2025-55182',reference:react,ko:'React2Shell 원격 코드 실행',en:'React2Shell remote code execution'}].map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: older·join·slice. */ rule=>{const affected=older(exact,fixes[rule.id]),branch=exact?.split('.').slice(0,2).join('.'),patch=branch?fixes[rule.id]?.[branch]:undefined;return {id:`technology:${name}:${rule.id}`,title:`${rule.id} · ${locale==='ko'?rule.ko:rule.en}`,status:affected===true?'warning':affected===false?'info':'not_assessed',severity:affected===true?'high':'info',reference:rule.reference,evidence:[`product=${name}`,`declaredVersion=${exact??'unknown'}`,`versionRangeMatch=${affected??'unknown'}`,...(patch!==undefined?[`fixedVersion=${branch}.${patch}`]:[]),'runtimeVerified=false','exploitTested=false','evidenceSource=supplied-dependencies'],remediation:locale==='ko'?'제공한 파일의 패키지 버전 대조입니다. 실제 배포의 동일 패키지·버전과 RSC·서버 함수 사용 여부, 공식 권고의 적용 조건을 확인하세요. 파일 자체가 실제 서버 상태를 증명하지는 않습니다.':'Comparison of the package version in the supplied file. Verify the same deployed package/version, RSC / Server Function usage and advisory conditions. This file does not attest to live server state.'};});
 }
-export function technologyFindings(observation:TechnologyObservation,locale:'ko'|'en'):Finding[]{
- const t=(ko:string,en:string)=>locale==='ko'?ko:en;
+/** technologyFindings: 기술 관찰과 등록된 권고의 적용 검토 항목을 만듭니다 주요 호출: t·push·nodeOlder. */ export function technologyFindings(observation:TechnologyObservation,locale:'ko'|'en'):Finding[]{
+ const t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en;
  const findings:Finding[]=[{id:'technology:coverage',title:t('웹 언어·프레임워크 관찰 범위','Web language / framework observation scope'),status:'not_assessed',severity:'info',evidence:[`catalog=${observation.catalogVersion}`,`responseEligible=${observation.responseEligible}`,`observedProducts=${observation.products.length}`],remediation:t('공개 HEAD 헤더의 기술 흔적만 관찰합니다. 숨겨진 언어·내부 의존성·서버 실효 버전·침해 여부·모든 CVE는 확인하지 못합니다. 헤더는 위조될 수 있습니다. 소유 서버의 배포 목록·SBOM과 공식 권고를 별도로 대조하세요.','Only public HEAD header hints are observed. Hidden languages, internal dependencies, effective server versions, compromise and all CVEs are not verified. Headers can be forged. Cross-check an owner-controlled deployment inventory/SBOM and official advisories.')}];
  for(const item of observation.products){
   const base={severity:'info' as const,evidence:[`product=${item.product}`,`languageHint=${item.language}`,`declaredVersion=${item.version??'unknown'}`,'runtimeVerified=false'],remediation:t('기술 흔적이며 실제 사용 언어·버전의 증명이 아닙니다. 서버 배포 목록과 해당 제품의 최신 공식 보안 권고를 확인하세요.','A technology hint, not proof of deployed language/version. Check deployment inventory and current official product advisories.')};

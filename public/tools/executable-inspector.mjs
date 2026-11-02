@@ -2,15 +2,15 @@
  * Browser worker and Node.js 20+ CLI share this bounded parser. */
 export const MAX_FILE_BYTES=8*1024**3,MAX_READ_BYTES=8*1024**2;
 export const INSPECTOR_VERSION='2026-10-29.4';
-const invalid=()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
-export async function inspectExecutable(source,format){
+const invalid=/** invalid: 유효하지 않은 입력을 거절합니다 */ ()=>{throw new Error('UNSUPPORTED_OR_INVALID_FILE');};
+/** inspectExecutable: 실행 파일의 지원 구조와 명시적 보호 선언을 읽습니다 주요 호출: includes·isSafeInteger·invalid. */ export async function inspectExecutable(source,format){
  if(!['pe','macho'].includes(format)||!Number.isSafeInteger(source.size)||source.size<32||source.size>MAX_FILE_BYTES)invalid();
  let used=0;
- const read=async(offset,length)=>{
+ const read=/** read: 요청한 자료나 현재 상태를 조회합니다 주요 호출: isSafeInteger·invalid·read. */ async(offset,length)=>{
   if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(length)||offset<0||length<0||offset+length>source.size||(used+=length)>MAX_READ_BYTES)invalid();
   const bytes=await source.read(offset,length);if(bytes.byteLength!==length)invalid();return new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
  };
- const u64=(v,p,le)=>{const n=Number(v.getBigUint64(p,le));if(!Number.isSafeInteger(n))invalid();return n;};
+ const u64=/** u64: 지정 위치의 64비트 정수를 읽습니다 주요 호출: Number·getBigUint64·isSafeInteger. */ (v,p,le)=>{const n=Number(v.getBigUint64(p,le));if(!Number.isSafeInteger(n))invalid();return n;};
  let architectures=[];
  if(format==='pe'){
   const dos=await read(0,64);if(dos.getUint16(0,true)!==0x5a4d)invalid();const offset=dos.getUint32(60,true);if(offset<64)invalid();
@@ -26,7 +26,7 @@ export async function inspectExecutable(source,format){
   const first=await read(0,8),magic=first.getUint32(0,false),fat=[0xcafebabe,0xbebafeca,0xcafebabf,0xbfbafeca].includes(magic);
   let slices=[{offset:0,size:source.size}];
   if(fat){const le=[0xbebafeca,0xbfbafeca].includes(magic),wide=[0xcafebabf,0xbfbafeca].includes(magic),count=first.getUint32(4,le),entry=wide?32:20;if(!count||count>16)invalid();const table=await read(8,count*entry);slices=[];
-   for(let n=0;n<count;n++){const p=n*entry,offset=wide?u64(table,p+8,le):table.getUint32(p+8,le),size=wide?u64(table,p+16,le):table.getUint32(p+12,le);if(offset<8+count*entry||size<32||offset+size>source.size||slices.some(s=>offset<s.offset+s.size&&s.offset<offset+size))invalid();slices.push({offset,size});}
+   for(let n=0;n<count;n++){const p=n*entry,offset=wide?u64(table,p+8,le):table.getUint32(p+8,le),size=wide?u64(table,p+16,le):table.getUint32(p+12,le);if(offset<8+count*entry||size<32||offset+size>source.size||slices.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ s=>offset<s.offset+s.size&&s.offset<offset+size))invalid();slices.push({offset,size});}
   }
   for(const slice of slices){
    const h=await read(slice.offset,28),m=h.getUint32(0,false),le=[0xcefaedfe,0xcffaedfe].includes(m),bits=[0xfeedfacf,0xcffaedfe].includes(m)?64:[0xfeedface,0xcefaedfe].includes(m)?32:0;if(!bits)invalid();
@@ -45,11 +45,11 @@ export async function inspectExecutable(source,format){
 
 // A file object is delivered only after the page's explicit, per-file read consent.
 if(typeof self!=='undefined'&&typeof self.postMessage==='function'&&typeof document==='undefined'){
- self.onmessage=async event=>{try{const {file,format}=event.data;const result=await inspectExecutable({size:file.size,read:async(o,n)=>new Uint8Array(await file.slice(o,o+n).arrayBuffer())},format);self.postMessage({ok:true,result});}catch{self.postMessage({ok:false});}};
+ self.onmessage=/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: inspectExecutable·postMessage. */ async event=>{try{const {file,format}=event.data;const result=await inspectExecutable({size:file.size,read:/** inspectExecutable 콜백: inspectExecutable에서 전달한 값을 처리하는 콜백입니다 주요 호출: arrayBuffer·slice. */ async(o,n)=>new Uint8Array(await file.slice(o,o+n).arrayBuffer())},format);self.postMessage({ok:true,result});}catch{self.postMessage({ok:false});}};
 }
 
 // Directory names and metadata only; no candidate contents are read or executed.
-export async function discoverLocalCandidates(folder,options={}){
+/** discoverLocalCandidates: 허가된 범위에서 검사 대상 후보를 찾습니다 주요 호출: import·every·realpath. */ export async function discoverLocalCandidates(folder,options={}){
  const fs=await import('node:fs/promises'),path=await import('node:path');
  const {maxEntries=2000,maxDepth=4,maxResults=50}=options;
  if(![maxEntries,maxDepth,maxResults].every(Number.isSafeInteger)||maxEntries<1||maxEntries>10000||maxDepth<0||maxDepth>8||maxResults<1||maxResults>100)throw new Error('INVALID_SEARCH_LIMIT');
@@ -74,24 +74,24 @@ export async function discoverLocalCandidates(folder,options={}){
    if(kind){candidates.push({path:file,kind});if(candidates.length>=maxResults){limits.add('result-limit');break search;}}
   }
  }
- candidates.sort((a,b)=>a.path.localeCompare(b.path));
+ candidates.sort(/** sort 콜백: 비교 기준에 따라 항목 순서를 정합니다 주요 호출: localeCompare. */ (a,b)=>a.path.localeCompare(b.path));
  return {candidates,entries,truncated:limits.size>0,limits:[...limits],unreadable,symlinksSkipped};
 }
 
 // Container tools only query metadata. Never install, expand or mount untrusted
 // archives. Raw paths, certificate subjects and tool diagnostics stay local.
-export async function inspectMacContainer(source,kind,exec,native=false){
+/** inspectMacContainer: 지원 Mac 설치 파일의 메타데이터와 허용된 OS 관찰을 수집합니다 주요 호출: includes·invalid·read. */ export async function inspectMacContainer(source,kind,exec,native=false){
  if(!['pkg','dmg'].includes(kind)||source.size<(kind==='dmg'?512:32)||source.size>MAX_FILE_BYTES)invalid();
  const bytes=await source.read(kind==='pkg'?0:source.size-512,kind==='pkg'?4:4);
  if(new TextDecoder().decode(bytes)!==(kind==='pkg'?'xar!':'koly'))throw new Error('CONTAINER_FORMAT_UNSUPPORTED');
  const options={timeout:60000,maxBuffer:1048576,env:{...process.env,LC_ALL:'C',LANG:'C'}};
- const query=async(tool,args)=>{try{const r=await exec(tool,args,options);return {ok:true,text:r.stdout,diagnostic:r.stdout+'\n'+(r.stderr??'')};}catch(e){return {ok:false,text:'',diagnostic:'',code:typeof e.code==='number'?e.code:null};}};
+ const query=/** query: 요청한 자료나 현재 상태를 조회합니다 주요 호출: exec. */ async(tool,args)=>{try{const r=await exec(tool,args,options);return {ok:true,text:r.stdout,diagnostic:r.stdout+'\n'+(r.stderr??'')};}catch(e){return {ok:false,text:'',diagnostic:'',code:typeof e.code==='number'?e.code:null};}};
  const container={kind,structure:'unknown',integrity:'unknown',signature:'unknown',gatekeeper:'unknown',payloadListed:false,payloadEntries:0,scriptsPresent:null,unsafePaths:0,scope:'metadata-only'};
  if(kind==='pkg'){
   const listing=await query('/usr/bin/xar',['-tf',source.path]);
-  if(listing.ok){const entries=listing.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.structure='observed';container.scriptsPresent=entries.some(p=>/(^|\/)Scripts(\/|$)/.test(p));container.unsafePaths=entries.filter(p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
+  if(listing.ok){const entries=listing.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.structure='observed';container.scriptsPresent=entries.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ p=>/(^|\/)Scripts(\/|$)/.test(p));container.unsafePaths=entries.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith·includes·split. */ p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
   const payload=await query('/usr/sbin/pkgutil',['--payload-files',source.path]);
-  if(payload.ok){const entries=payload.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.payloadListed=true;container.payloadEntries=entries.length;container.unsafePaths+=entries.filter(p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
+  if(payload.ok){const entries=payload.text.split(/\r?\n/).filter(Boolean);if(entries.length>50000)throw new Error('CONTAINER_LIMIT');container.payloadListed=true;container.payloadEntries=entries.length;container.unsafePaths+=entries.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith·includes·split. */ p=>p.startsWith('/')||p.split(/[\\/]/).includes('..')).length;}
   if(native){
    const sig=await query('/usr/sbin/pkgutil',['--check-signature',source.path]);
    // Exit zero alone is not proof: unsigned packages can also return success.
@@ -113,41 +113,41 @@ export async function inspectMacContainer(source,kind,exec,native=false){
 
 // ctime covers metadata too. Only tolerate its movement after full before/after
 // hashes agree; identity, size and modification-time changes still fail closed.
-export function verifyFileStability(before,after,current,initialHash,finalHash){
+/** verifyFileStability: 검사 전후 파일 식별자·크기·시간·해시의 일관성을 확인합니다 주요 호출: some. */ export function verifyFileStability(before,after,current,initialHash,finalHash){
  const observations={
-  identityChanged:[after,current].some(s=>s.dev!==before.dev||s.ino!==before.ino),
-  sizeChanged:[after,current].some(s=>s.size!==before.size),
-  modifiedTimeChanged:[after,current].some(s=>s.mtimeNs!==before.mtimeNs),
-  metadataChanged:[after,current].some(s=>s.ctimeNs!==before.ctimeNs),
+  identityChanged:[after,current].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ s=>s.dev!==before.dev||s.ino!==before.ino),
+  sizeChanged:[after,current].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ s=>s.size!==before.size),
+  modifiedTimeChanged:[after,current].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ s=>s.mtimeNs!==before.mtimeNs),
+  metadataChanged:[after,current].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ s=>s.ctimeNs!==before.ctimeNs),
   contentHashChanged:initialHash!==finalHash,
  };
  if(!/^[a-f0-9]{64}$/.test(initialHash)||!/^[a-f0-9]{64}$/.test(finalHash)||observations.identityChanged||observations.sizeChanged||observations.modifiedTimeChanged||observations.contentHashChanged){const error=new Error('FILE_CHANGED_DURING_INSPECTION');error.stability=observations;throw error;}
  return {contentHashesMatch:true,metadataChanged:observations.metadataChanged};
 }
-async function hashFileHandle(handle,size){
+/** hashFileHandle: 열린 파일을 청크로 읽어 전체 내용 해시를 계산합니다 주요 호출: import·createHash·read. */ async function hashFileHandle(handle,size){
  const {createHash}=await import('node:crypto'),hash=createHash('sha256'),chunk=new Uint8Array(1048576);let offset=0;
  while(offset<size){const r=await handle.read(chunk,0,Math.min(chunk.length,size-offset),offset);if(!r.bytesRead)invalid();hash.update(chunk.subarray(0,r.bytesRead));offset+=r.bytesRead;}
  return hash.digest('hex');
 }
 
-async function chooseMacInputs(exec){
- const pick=async(script,args=[])=>{const r=await exec('/usr/bin/osascript',['-e',script,...args],{timeout:300000,maxBuffer:131072});return r.stdout.replace(/\r?\n$/,'');};
+/** chooseMacInputs: 선택한 Mac 대상의 검사 입력을 준비합니다 주요 호출: pick·discoverLocalCandidates·filter. */ async function chooseMacInputs(exec){
+ const pick=/** pick: 현재 언어에 맞는 한국어 또는 영어 문구를 고릅니다 주요 호출: exec·replace. */ async(script,args=[])=>{const r=await exec('/usr/bin/osascript',['-e',script,...args],{timeout:300000,maxBuffer:131072});return r.stdout.replace(/\r?\n$/,'');};
  const mode=await pick('set p to choose from list {"Choose one app, installer, image or executable", "Search a folder for candidates"} with prompt "Select a local inspection method. No files are uploaded."\nif p is false then error number -128\nreturn item 1 of p');
  let target;
  if(mode==='Search a folder for candidates'){
   const folder=await pick('POSIX path of (choose folder with prompt "Choose the folder to search. Only names and metadata in this folder are searched, with fixed limits.")');
-  const result=await discoverLocalCandidates(folder),items=result.candidates.filter(item=>item.kind!=='inspector-tool');
+  const result=await discoverLocalCandidates(folder),items=result.candidates.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ item=>item.kind!=='inspector-tool');
   if(!items.length)throw new Error(result.truncated||result.unreadable?'SEARCH_INCOMPLETE':'NO_CANDIDATES');
   const note=result.truncated||result.unreadable||result.symlinksSkipped?'Search is limited; some folders or links were not searched. ':' ';
-  target=await pick('on run argv\nset p to choose from list argv with prompt "'+note+'Select ONE candidate. Its file format will be checked next; a candidate is not a safety verdict."\nif p is false then error number -128\nreturn item 1 of p\nend run',items.map(item=>item.path));
-  if(!items.some(item=>item.path===target))throw new Error('INVALID_SELECTION');
+  target=await pick('on run argv\nset p to choose from list argv with prompt "'+note+'Select ONE candidate. Its file format will be checked next; a candidate is not a safety verdict."\nif p is false then error number -128\nreturn item 1 of p\nend run',items.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ item=>item.path));
+  if(!items.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ item=>item.path===target))throw new Error('INVALID_SELECTION');
  }else target=await pick('POSIX path of (choose file with prompt "Select one .app, .pkg, .dmg or Mach-O executable. Containers receive metadata checks, not full internal code analysis.")');
  const permission=await pick('button returned of (display dialog "Allow reading the selected file and hashing its main executable? Native checks additionally use macOS signing/trust tools and may contact trust services. The app will not be launched or uploaded." buttons {"Cancel", "Static only", "Native checks"} default button "Static only" cancel button "Cancel")');
  const output=await pick('POSIX path of (choose file name with prompt "Choose a NEW report filename. Existing files will not be overwritten." default name "mac-report-'+Date.now()+'.json")');
  return [target,output,'--consent',...(permission==='Native checks'?['--native']:[])];
 }
 
-export function inspectionFailureCode(error,stage){
+/** inspectionFailureCode: 내부 실패를 경로·원문이 없는 고정 진단 코드로 바꿉니다 주요 호출: includes. */ export function inspectionFailureCode(error,stage){
  const known=['APP_EXECUTABLE_NAME_INVALID','APP_EXECUTABLE_OUTSIDE_BUNDLE','APP_METADATA_READ_FAILED','TARGET_DIRECTORY_UNSUPPORTED','MAIN_EXECUTABLE_IS_SCRIPT','UNSUPPORTED_EXECUTABLE_FORMAT','FILE_CHANGED_DURING_INSPECTION','FILE_SIZE_LIMIT','CONTAINER_FORMAT_UNSUPPORTED','CONTAINER_LIMIT','CONTAINER_READ_FAILED','MACOS_REQUIRED'];
  if(known.includes(error?.message))return error.message;
  if(error?.code==='EEXIST')return 'OUTPUT_EXISTS';
@@ -160,7 +160,7 @@ export function inspectionFailureCode(error,stage){
  return 'INSPECTION_STEP_FAILED';
 }
 
-async function main(){
+/** main: CLI 인자와 사용자 선택을 검증하고 로컬 검사·결과 출력을 실행합니다 주요 호출: import·promisify·slice. */ async function main(){
  const fs=await import('node:fs/promises'),path=await import('node:path'),cp=await import('node:child_process'),util=await import('node:util');
  const exec=util.promisify(cp.execFile);let args=process.argv.slice(2);
  if(args.length===1&&args[0]==='--version'){console.log('VELTHARA executable inspector '+INSPECTOR_VERSION);return;}
@@ -169,12 +169,12 @@ async function main(){
   try{args=await chooseMacInputs(exec);}catch(e){if(/\(-128\)/.test(e.stderr??'')){console.log('Selection canceled. No inspection report written.');return;}console.error('Selection could not finish. '+(['SEARCH_INCOMPLETE','NO_CANDIDATES','INVALID_SELECTION'].includes(e.message)?e.message:'Check local file access and macOS dialog permissions.'));process.exitCode=1;return;}
  }
  if(args.includes('--discover')){
-  const selected=args.filter(a=>!a.startsWith('--'));if(!args.includes('--consent')||selected.length!==1||args.some(a=>a.startsWith('--')&&!['--discover','--consent'].includes(a))){console.error('Usage: node <actual-tool-path> --discover <selected-folder> --consent. Searches names/metadata only; no upload or candidate execution.');process.exitCode=1;return;}
+  const selected=args.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith. */ a=>!a.startsWith('--'));if(!args.includes('--consent')||selected.length!==1||args.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: startsWith·includes. */ a=>a.startsWith('--')&&!['--discover','--consent'].includes(a))){console.error('Usage: node <actual-tool-path> --discover <selected-folder> --consent. Searches names/metadata only; no upload or candidate execution.');process.exitCode=1;return;}
   try{console.log(JSON.stringify(await discoverLocalCandidates(selected[0]),null,2));}catch{console.error('SEARCH_UNAVAILABLE: select an existing readable folder. No full-disk fallback was attempted.');process.exitCode=1;}return;
  }
  const native=args.includes('--native');
- const positional=args.filter(a=>!a.startsWith('--'));
- if(!args.includes('--consent')||positional.length!==2||args.some(a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app|installer.pkg|image.dmg> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
+ const positional=args.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith. */ a=>!a.startsWith('--'));
+ if(!args.includes('--consent')||positional.length!==2||args.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: startsWith·includes. */ a=>a.startsWith('--')&&!['--consent','--native'].includes(a))){console.error('Node.js 20+ required. Usage: node executable-inspector.mjs <file.exe|Mach-O|app.app|installer.pkg|image.dmg> <new-report.json> --consent [--native]\n--consent permits reading this target and hashing its main executable. --native also permits OS signature/policy checks (may contact OS trust services). No upload, installation or target execution.');process.exitCode=1;return;}
  let handle,stage='target',targetKind='file',detectedFormat='unknown';
  try{
   const out=path.resolve(positional[1]);stage='output';
@@ -194,7 +194,7 @@ async function main(){
   const head=new Uint8Array(4);await handle.read(head,0,4,0);const magic=new DataView(head.buffer).getUint32(0,false),format=head[0]===0x4d&&head[1]===0x5a?'pe':[0xfeedface,0xcefaedfe,0xfeedfacf,0xcffaedfe,0xcafebabe,0xbebafeca,0xcafebabf,0xbfbafeca].includes(magic)?'macho':'unknown';
   const containerKind=/\.(pkg|dmg)$/i.exec(binary)?.[1].toLowerCase();
   if(head[0]===0x23&&head[1]===0x21)throw new Error('MAIN_EXECUTABLE_IS_SCRIPT');if(format==='unknown'&&!containerKind)throw new Error('UNSUPPORTED_EXECUTABLE_FORMAT');detectedFormat=containerKind??format;stage='structure';
-  const source={path:binary,size,read:async(o,n)=>{if(o<0||o+n>size)invalid();const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}};
+  const source={path:binary,size,read:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: invalid·read. */ async(o,n)=>{if(o<0||o+n>size)invalid();const b=new Uint8Array(n);let done=0;while(done<n){const r=await handle.read(b,done,n-done,o+done);if(!r.bytesRead)invalid();done+=r.bytesRead;}return b;}};
   if(containerKind&&process.platform!=='darwin')throw new Error('MACOS_REQUIRED');
   stage='hash';const initialHash=await hashFileHandle(handle,size);stage='structure';
   const result=containerKind?await inspectMacContainer(source,containerKind,exec,native):await inspectExecutable(source,format);result.source='local';
@@ -213,7 +213,7 @@ async function main(){
   }
   stage='stability';const finalHash=await hashFileHandle(handle,size),after=await handle.stat({bigint:true}),current=await fs.stat(binary,{bigint:true});result.stability=verifyFileStability(before,after,current,initialHash,finalHash);
   stage='output';await fs.writeFile(out,JSON.stringify(result,null,2),{flag:'wx',encoding:'utf8'});console.log('Read-only inspection complete. New JSON report written. No file uploaded or executed. A valid signature is not a malware-free verdict.');
- }catch(e){const code=inspectionFailureCode(e,stage);console.error('Inspection stopped: '+code+'. No target was executed or uploaded.');console.error('Diagnostic: '+JSON.stringify({toolVersion:INSPECTOR_VERSION,stage,code,targetKind,detectedFormat,platform:process.platform,...(e.stability?{stability:Object.fromEntries(['identityChanged','sizeChanged','modifiedTimeChanged','metadataChanged','contentHashChanged'].map(k=>[k,e.stability[k]===true]))}:{})}));process.exitCode=1;}finally{await handle?.close();}
+ }catch(e){const code=inspectionFailureCode(e,stage);console.error('Inspection stopped: '+code+'. No target was executed or uploaded.');console.error('Diagnostic: '+JSON.stringify({toolVersion:INSPECTOR_VERSION,stage,code,targetKind,detectedFormat,platform:process.platform,...(e.stability?{stability:Object.fromEntries(['identityChanged','sizeChanged','modifiedTimeChanged','metadataChanged','contentHashChanged'].map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ k=>[k,e.stability[k]===true]))}:{})}));process.exitCode=1;}finally{await handle?.close();}
 }
 if(typeof process!=='undefined'&&process.versions?.node&&process.argv[1]){
  const fs=await import('node:fs/promises'),url=await import('node:url');

@@ -11,8 +11,8 @@ try {
  await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock(784293)');
  await c.query('CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())');
  const applied=(await c.query('SELECT name FROM schema_migrations')).rows;
- if(applied.some(row=>String(row.name).startsWith('prisma-postgres/')!==!!profile))throw new Error('Migration provider differs from existing schema; refusing mixed profiles');
- for(const file of (await readdir(directory)).filter(x=>/^\d+.*\.sql$/.test(x)).sort()){
+ if(applied.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: startsWith·String. */ row=>String(row.name).startsWith('prisma-postgres/')!==!!profile))throw new Error('Migration provider differs from existing schema; refusing mixed profiles');
+ for(const file of (await readdir(directory)).filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ x=>/^\d+.*\.sql$/.test(x)).sort()){
  const name=profile+file;
  const sql=await readFile(directory+file,'utf8'), checksums=migrationChecksums(sql),checksum=checksums.canonical;
  const old=await c.query('SELECT checksum FROM schema_migrations WHERE name=$1',[name]);

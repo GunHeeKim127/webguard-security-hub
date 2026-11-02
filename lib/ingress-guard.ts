@@ -1,24 +1,24 @@
 import ipaddr from 'ipaddr.js';
 import {createHash,timingSafeEqual} from 'node:crypto';
 import {tokenHash} from './password';
-export function threatSessionHash(cookie:string|null|undefined){
- const values=(cookie??'').split(';').map(p=>p.trim()).filter(p=>p.startsWith('wg_session='));
+/** threatSessionHash: 위협 기록에 사용할 세션 해시를 만듭니다 주요 호출: filter·map·split. */ export function threatSessionHash(cookie:string|null|undefined){
+ const values=(cookie??'').split(';').map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: trim. */ p=>p.trim()).filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith. */ p=>p.startsWith('wg_session='));
  if(values.length!==1)return null;const token=values[0].slice('wg_session='.length);return /^[a-f0-9]{64}$/.test(token)?tokenHash(token):null;
 }
 export type ThreatReason='probe'|'injection'|'traversal';
 export type IpBlock={address:string,strikes:number,blacklisted:boolean,blocked_until:string|null,retry_after:number,last_reason:string};
 export type GuardQuery=(sql:string,values:unknown[])=>Promise<{rows:any[]}>;
-export function normalizeIp(raw:string|undefined){try{if(!raw||raw.includes('%'))return null;return ipaddr.process(raw).toString();}catch{return null;}}
-export function clientAddress(peer:string|undefined,headers:Pick<Headers,'get'>,env:Readonly<Record<string,string|undefined>>=process.env){
+/** normalizeIp: 주소를 비교 가능한 IP 표현으로 정규화합니다 주요 호출: includes·toString·process. */ export function normalizeIp(raw:string|undefined){try{if(!raw||raw.includes('%'))return null;return ipaddr.process(raw).toString();}catch{return null;}}
+/** clientAddress: 신뢰 가능한 요청 근거에서 접속 주소를 결정합니다 주요 호출: normalizeIp·filter·map. */ export function clientAddress(peer:string|undefined,headers:Pick<Headers,'get'>,env:Readonly<Record<string,string|undefined>>=process.env){
  const address=normalizeIp(peer);if(!address)return null;
- const configured=(env.TRUSTED_PROXY_IPS??'').split(',').map(v=>v.trim()).filter(Boolean),proxies=configured.map(v=>normalizeIp(v));
- if(proxies.some(ip=>!ip))return null;
+ const configured=(env.TRUSTED_PROXY_IPS??'').split(',').map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: trim. */ v=>v.trim()).filter(Boolean),proxies=configured.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: normalizeIp. */ v=>normalizeIp(v));
+ if(proxies.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ ip=>!ip))return null;
  if(!proxies.includes(address))return address; // Ignore all forwarded-IP headers from ordinary clients.
  const secret=env.WEBGUARD_PROXY_SECRET,token=headers.get('x-webguard-proxy-token');
  if(!secret||secret.length<32||secret.length>256||!token||token.length>256||!timingSafeEqual(createHash('sha256').update(secret).digest(),createHash('sha256').update(token).digest()))return null;
  return normalizeIp(headers.get('x-webguard-client-ip')??undefined);
 }
-export function detectThreat(rawTarget:string):ThreatReason|null{
+/** detectThreat: 허용된 요청 신호로 검토가 필요한 이벤트를 분류합니다 주요 호출: slice·decodeURIComponent·split. */ export function detectThreat(rawTarget:string):ThreatReason|null{
  let text=rawTarget.slice(0,8192);for(let i=0;i<2;i++){try{const decoded=decodeURIComponent(text);if(decoded===text)break;text=decoded;}catch{break;}}
  const path=text.split('?')[0];
  if(/^\/(?:\.env(?:[./]|$)|\.git(?:\/|$)|wp-admin(?:\/|$)|wp-login\.php(?:\?|$)|phpmyadmin(?:\/|$))/i.test(path))return 'probe';
@@ -28,10 +28,10 @@ export function detectThreat(rawTarget:string):ThreatReason|null{
  return null;
 }
 export const ACTIVE_BLOCK_SQL="SELECT host(address) AS address,strikes,blacklisted,blocked_until,last_reason,ceil(greatest(0,extract(epoch FROM blocked_until-now())))::int AS retry_after FROM public.ip_blocks WHERE address=$1::inet AND (blacklisted OR blocked_until>now())";
-export async function activeBlock(query:GuardQuery,address:string):Promise<IpBlock|null>{
+/** activeBlock: 현재 유효한 차단 상태를 확인합니다 주요 호출: query. */ export async function activeBlock(query:GuardQuery,address:string):Promise<IpBlock|null>{
  const row=(await query(ACTIVE_BLOCK_SQL,[address])).rows[0];return row??null;
 }
-export async function recordThreat(query:GuardQuery,address:string,reason:ThreatReason,sessionHash:string|null=null):Promise<IpBlock>{
+/** recordThreat: 위협 관찰과 차단 관련 상태를 기록합니다 주요 호출: query·activeBlock·reject. */ export async function recordThreat(query:GuardQuery,address:string,reason:ThreatReason,sessionHash:string|null=null):Promise<IpBlock>{
  const result=await query(`WITH changed AS (
   INSERT INTO public.ip_blocks(address,strikes,blacklisted,blocked_until,last_reason)
   VALUES($1::inet,1,false,now()+interval '5 minutes',$2)

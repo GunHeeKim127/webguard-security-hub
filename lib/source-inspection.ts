@@ -2,22 +2,22 @@ import {createHash} from 'node:crypto';
 import {technologyFindings,reactPackageFindings,technologyCatalogVersion,type TechnologyObservation} from './web-technology';
 import type {AssessmentReport,Finding} from './assessment/types';
 import {sourceSqlFindings} from './source-sql-review';
-const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
+const object=/** object: 지원 소스 입력이 필요한 객체 구조인지 확인합니다 주요 호출: isArray. */ (v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const packages=['react','react-dom','next','react-server-dom-webpack','react-server-dom-parcel','react-server-dom-turbopack','typescript'] as const;
-const exact=(v:unknown)=>typeof v==='string'&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(v)?v:null;
-export function inspectSource(text:string,locale:'ko'|'en'):AssessmentReport{
+const exact=/** exact: 값의 형식이나 처리 조건을 확인합니다 */ (v:unknown)=>typeof v==='string'&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(v)?v:null;
+/** inspectSource: 제공된 소스 텍스트의 지원 보안 단서를 정적으로 검토합니다 주요 호출: trim·byteLength·includes. */ export function inspectSource(text:string,locale:'ko'|'en'):AssessmentReport{
  if(typeof text!=='string'||!text.trim()||Buffer.byteLength(text)>65536||text.includes('\0'))throw new Error('INPUT_INVALID');
- const t=(ko:string,en:string)=>locale==='ko'?ko:en,findings:Finding[]=[],observations:TechnologyObservation['products']=[],versions=new Map<string,Set<string|null>>(),languages=new Set<string>();
- const add=(name:string,value:unknown)=>{if(!packages.includes(name as typeof packages[number]))return;const entries=versions.get(name)??new Set();entries.add(exact(value));versions.set(name,entries);};
+ const t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en,findings:Finding[]=[],observations:TechnologyObservation['products']=[],versions=new Map<string,Set<string|null>>(),languages=new Set<string>();
+ const add=/** add: 고정된 관찰과 개선 안내를 현재 진단 결과에 추가합니다 주요 호출: includes·get·add. */ (name:string,value:unknown)=>{if(!packages.includes(name as typeof packages[number]))return;const entries=versions.get(name)??new Set();entries.add(exact(value));versions.set(name,entries);};
  let parsed:unknown;
  if(/^[\s\uFEFF]*[\[{]/.test(text)){try{parsed=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('INPUT_INVALID');}}
  if(object(parsed)){
   for(const group of ['dependencies','devDependencies','optionalDependencies'])if(object(parsed[group]))for(const [name,value]of Object.entries(parsed[group]))add(name,object(value)?value.version:value);
   if(object(parsed.packages))for(const [path,value]of Object.entries(parsed.packages)){if(!object(value))continue;const name=path.split('node_modules/').at(-1);if(name)add(name,value.version);}
-  if(object(parsed.require)&&('php' in parsed.require||Object.keys(parsed.require).some(k=>k.includes('/'))))languages.add('PHP');
+  if(object(parsed.require)&&('php' in parsed.require||Object.keys(parsed.require).some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ k=>k.includes('/'))))languages.add('PHP');
   if(object(parsed.config)&&object(parsed.config.platform)&&'php' in parsed.config.platform)languages.add('PHP');
   if(object(parsed.runtime)){if('php' in parsed.runtime){languages.add('PHP');observations.push({product:'PHP',language:'PHP',version:exact(parsed.runtime.php)});}if('node' in parsed.runtime)observations.push({product:'Node.js',language:'JavaScript / TypeScript',version:exact(parsed.runtime.node)});}
-  if(object(parsed.engines)&&'node' in parsed.engines&&!observations.some(p=>p.product==='Node.js'))observations.push({product:'Node.js',language:'JavaScript / TypeScript',version:null});
+  if(object(parsed.engines)&&'node' in parsed.engines&&!observations.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ p=>p.product==='Node.js'))observations.push({product:'Node.js',language:'JavaScript / TypeScript',version:null});
  }else if(parsed!==undefined)throw new Error('INPUT_INVALID');
  else {
   if(/<\?php\b/i.test(text))languages.add('PHP');
@@ -32,8 +32,8 @@ export function inspectSource(text:string,locale:'ko'|'en'):AssessmentReport{
   findings.push(...reactPackageFindings(name,version,locale));
  }
  if(versions.has('next'))observations.push({product:'Next.js',language:'JavaScript / TypeScript',version:null});
- if(versions.has('react')&&!versions.has('next')&&!packages.filter(p=>p.startsWith('react-server-dom-')).some(p=>versions.has(p)))findings.push({id:'source:rsc-applicability',title:t('React 서버 기능 사용 여부 미확인','React server-feature usage unknown'),status:'not_assessed',severity:'info',evidence:['reactCoreDeclared=true','rscUsageVerified=false'],remediation:t('React 코어 선언만으로 RSC 사용을 판단하지 않습니다. 서버 기능을 사용한다면 실제 react-server-dom 패키지와 버전 자료를 추가하세요. 브라우저 전용 React에는 서버 전용 취약점을 적용하지 않습니다.','React core does not establish RSC usage. If server features are used, provide the deployed react-server-dom package and version. Server-only issues do not apply to client-only React.')});
- if(languages.has('PHP')&&!observations.some(p=>p.product==='PHP'))observations.push({product:'PHP',language:'PHP',version:null});
+ if(versions.has('react')&&!versions.has('next')&&!packages.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 주요 호출: startsWith. */ p=>p.startsWith('react-server-dom-')).some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: has. */ p=>versions.has(p)))findings.push({id:'source:rsc-applicability',title:t('React 서버 기능 사용 여부 미확인','React server-feature usage unknown'),status:'not_assessed',severity:'info',evidence:['reactCoreDeclared=true','rscUsageVerified=false'],remediation:t('React 코어 선언만으로 RSC 사용을 판단하지 않습니다. 서버 기능을 사용한다면 실제 react-server-dom 패키지와 버전 자료를 추가하세요. 브라우저 전용 React에는 서버 전용 취약점을 적용하지 않습니다.','React core does not establish RSC usage. If server features are used, provide the deployed react-server-dom package and version. Server-only issues do not apply to client-only React.')});
+ if(languages.has('PHP')&&!observations.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ p=>p.product==='PHP'))observations.push({product:'PHP',language:'PHP',version:null});
  for(const language of languages)findings.unshift({id:'source:language:'+language,title:t('언어 단서: ','Language hint: ')+language,status:'info',severity:'info',evidence:[`languageHint=${language}`,'syntaxOrDeclarationOnly=true'],remediation:t('문법·의존성 선언의 단서입니다. 주석·혼합 언어·생성 파일일 수 있어 실제 실행 언어를 확정하지 않습니다.','Syntax or dependency hints only. Comments, mixed languages or generated files may differ from actual runtime.')});
  if(observations.length)for(const f of technologyFindings({catalogVersion:technologyCatalogVersion,responseEligible:true,products:observations},locale)){
   if(f.id==='technology:coverage')continue;

@@ -21,7 +21,7 @@ if(databaseProvider()==='prisma-postgres'){
 const config=projectDatabase('migration'),role=process.env.PROJECT_RUNTIME_ROLE!;
 const pool=new Pool({...config,connectionTimeoutMillis:5000,statement_timeout:10000});
 let createdFile=false,committed=false;
-const c=await pool.connect().catch(async()=>{await pool.end();console.error('Production database connection failed; check the local migration settings.');process.exit(1);});
+const c=await pool.connect().catch(/** catch 콜백: 비동기 실패를 후속 처리합니다 주요 호출: end·error·exit. */ async()=>{await pool.end();console.error('Production database connection failed; check the local migration settings.');process.exit(1);});
 try{
  await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock(784294)');
  if((await c.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[role])).rowCount)throw new Error('Role already exists; refusing to overwrite');

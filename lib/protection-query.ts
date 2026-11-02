@@ -6,7 +6,7 @@ import {protectionDbError} from './protection-db-error';
 // this one indexed, read-only lookup room to finish instead of discarding it
 // at the general 5s query limit and immediately starting the same work again.
 export const PROTECTION_READ_TIMEOUT_MS=10000;
-export async function protectionQuery(pool:Pick<Pool,'connect'>,text:string,values:unknown[],managed:boolean){
+/** protectionQuery: 접근 보호 조회의 오류와 복구 경계를 적용합니다 주요 호출: now·connect·query. */ export async function protectionQuery(pool:Pick<Pool,'connect'>,text:string,values:unknown[],managed:boolean){
  const started=performance.now();
  let phase='acquire';
  let client:PoolClient|undefined;

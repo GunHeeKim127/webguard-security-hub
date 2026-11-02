@@ -7,7 +7,7 @@
     "build": "next build --webpack && node scripts/verify-client-boundary.mjs",
     "start": "tsx scripts/serve.ts",
     "security:unblock": "tsx --env-file=.env.migration.local scripts/unblock-ip.ts",
-    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts tests/deployment.test.ts tests/phase2.test.ts tests/file-inspection.test.ts tests/phase2-fixtures.test.ts tests/endpoint-compatibility.test.ts tests/mobile-fixtures.test.ts",
+    "test": "tsx --test tests/security.test.ts tests/i18n.test.ts tests/inspection.test.ts tests/web-assessment.test.ts tests/ingress.test.ts tests/access.test.ts tests/tunnel.test.ts tests/deployment.test.ts tests/phase2.test.ts tests/file-inspection.test.ts tests/phase2-fixtures.test.ts tests/endpoint-compatibility.test.ts tests/mobile-fixtures.test.ts tests/network-policy.test.ts tests/virtual-formats.test.ts",
     "fixtures:mobile": "tsx scripts/generate-mobile-review-fixtures.ts",
     "test:mobile:fixtures": "tsx --test tests/mobile-fixtures.test.ts",
     "typecheck": "tsc --noEmit",
@@ -26,7 +26,9 @@
     "db:setup:production": "tsx --env-file=.env.migration.production.local scripts/setup-production.ts",
     "db:migrate:production": "tsx --env-file=.env.migration.production.local scripts/migrate.ts",
     "db:archive": "tsx --env-file=.env.migration.local scripts/archive-diagnostics.ts",
-    "db:archive:production": "tsx --env-file=.env.migration.production.local scripts/archive-diagnostics.ts"
+    "db:archive:production": "tsx --env-file=.env.migration.production.local scripts/archive-diagnostics.ts",
+    "verify:docs": "node scripts/verify-public-docs.mjs",
+    "verify:function-docs": "node scripts/verify-function-docs.mjs"
   },
   "dependencies": {
     "@emotion/cache": "11.14",
@@ -37,6 +39,7 @@
     "@next/env": "16.4.2",
     "@prisma/ppg": "1.0.1",
     "@vercel/functions": "3.10.1",
+    "@xmldom/xmldom": "0.9.12",
     "ipaddr.js": "^2.2.0",
     "next": "^16.0.0",
     "openai": "^6.0.0",

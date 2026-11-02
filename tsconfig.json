@@ -21,7 +21,9 @@
       }
     ],
     "skipLibCheck": true,
-    "allowJs": true
+    "allowJs": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": [
     "next-env.d.ts",
@@ -33,6 +35,7 @@
     ".next-verify/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "work"
   ]
 }

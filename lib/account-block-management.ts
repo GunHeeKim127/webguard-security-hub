@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import type {GuardQuery} from './ingress-guard';
-const uuid=(v:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
-export async function releaseAccountBlock(query:GuardQuery,userId:string,actorId:string|null,reference:string|null=null){
+const uuid=/** uuid: 식별자가 허용된 UUID 형식인지 확인합니다 */ (v:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
+/** releaseAccountBlock: 권한 있는 계정 차단 해제와 감사 기록을 처리합니다 주요 호출: uuid·digest·update. */ export async function releaseAccountBlock(query:GuardQuery,userId:string,actorId:string|null,reference:string|null=null){
  if(!uuid(userId)||(actorId!==null&&!uuid(actorId)))throw new Error('INPUT_INVALID');
  const audit='account_unblocked_target:'+createHash('sha256').update(userId.toLowerCase()).digest('hex');
  const result=await query(`WITH released_block AS (

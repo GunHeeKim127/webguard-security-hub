@@ -3,14 +3,14 @@ import {maintenanceAuthorized,archiveDiagnostics} from '../../../../lib/retentio
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=60;
-export async function GET(req:Request){
+/** GET: 인증된 유지보수 요청의 보관 이관 작업을 실행합니다。 */ export async function GET(req:Request){
  const headers={'Cache-Control':'no-store'};
  if(!process.env.CRON_SECRET||process.env.CRON_SECRET.length<32)return Response.json({code:'MAINTENANCE_NOT_CONFIGURED'},{status:503,headers});
  if(!maintenanceAuthorized(req.headers.get('authorization'),process.env.CRON_SECRET))return Response.json({code:'UNAUTHORIZED'},{status:401,headers});
  try{
   let moved=0,complete=false;const deadline=Date.now()+45000;
   for(let batch=0;batch<20&&Date.now()<deadline;batch++){
-   const result=await archiveDiagnostics(sql=>db.query(sql)) as {moved:number,skipped:boolean};
+   const result=await archiveDiagnostics(/** archiveDiagnostics 콜백: archiveDiagnostics에서 전달한 값을 처리하는 콜백입니다 주요 호출: query. */ sql=>db.query(sql)) as {moved:number,skipped:boolean};
    moved+=result.moved;if(result.skipped||result.moved===0){complete=!result.skipped;break;}
   }
   return Response.json({ok:true,result:{moved,complete}},{headers});

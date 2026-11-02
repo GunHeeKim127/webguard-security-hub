@@ -12,9 +12,9 @@ if(!email||process.argv.length!==3||!/^\S+@\S+\.\S+$/.test(email)){
 }else if(!process.stdin.isTTY){
  console.error('비밀번호 보호를 위해 직접 열린 터미널에서 실행해 주세요.');process.exitCode=1;
 }else{
- const output=new Writable({write(_chunk,_encoding,done){done();}});
+ const output=new Writable({/** write: 전달된 자료를 결과·상태·출력에 반영합니다 주요 호출: done. */ write(_chunk,_encoding,done){done();}});
  const terminal=createInterface({input:process.stdin,output,terminal:true,historySize:0});
- const abort=new AbortController();terminal.on('SIGINT',()=>abort.abort());terminal.on('close',()=>abort.abort());
+ const abort=new AbortController();terminal.on('SIGINT',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 주요 호출: abort. */ ()=>abort.abort());terminal.on('close',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 주요 호출: abort. */ ()=>abort.abort());
  let pool:Pool|undefined;
  try{
   console.log(`계정: ${email} / 대상: ${process.env.DATABASE_PROVIDER==='prisma-postgres'?'Prisma 운영 DB':'로컬 PostgreSQL'}`);

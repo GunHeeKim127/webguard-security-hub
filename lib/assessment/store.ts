@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import type {AssessmentReport} from './types';
 export type AssessmentQuery=(sql:string,values:unknown[])=>Promise<{rows:any[];rowCount?:number|null}>;
-export async function saveAssessment(query:AssessmentQuery,userId:string,targetKey:string,label:string,report:AssessmentReport){
+/** saveAssessment: 사용자에 속한 자산과 검사 실행 결과를 저장합니다 주요 호출: query·randomUUID·stringify. */ export async function saveAssessment(query:AssessmentQuery,userId:string,targetKey:string,label:string,report:AssessmentReport){
  const result=await query(`WITH asset AS (
  INSERT INTO public.assessment_assets(id,user_id,module_id,target_key,label) VALUES($1,$2,$3,$4,$5)
  ON CONFLICT(user_id,module_id,target_key) DO UPDATE SET label=EXCLUDED.label,updated_at=clock_timestamp()
@@ -13,6 +13,6 @@ export async function saveAssessment(query:AssessmentQuery,userId:string,targetK
  ) SELECT saved.id,saved.asset_id,saved.created_at FROM saved CROSS JOIN logged`,[randomUUID(),userId,report.moduleId,targetKey,label,randomUUID(),JSON.stringify(report)]);
  return result.rows[0];
 }
-export function trafficSignals(row:{requests:number;login_failures:number;probes:number;server_errors:number}){
+/** trafficSignals: 허용된 집계 지표에서 검토 신호를 계산합니다 주요 호출: Number. */ export function trafficSignals(row:{requests:number;login_failures:number;probes:number;server_errors:number}){
  return {loginFailures:Number(row.login_failures)>=5,probes:Number(row.probes)>=3,serverErrors:Number(row.server_errors)>=5,highVolume:Number(row.requests)>=1000};
 }

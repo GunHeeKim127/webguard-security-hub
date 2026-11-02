@@ -1,1 +1,1 @@
-export function suspiciousPath(path:string){return /^\/(?:\.env(?:\.|$)|\.git(?:\/|$)|wp-admin(?:\/|$)|wp-login\.php$|phpmyadmin(?:\/|$))/i.test(path);}
+/** suspiciousPath: 참조 경로에 검토할 형식이 있는지 확인합니다 */ export function suspiciousPath(path:string){return /^\/(?:\.env(?:\.|$)|\.git(?:\/|$)|wp-admin(?:\/|$)|wp-login\.php$|phpmyadmin(?:\/|$))/i.test(path);}

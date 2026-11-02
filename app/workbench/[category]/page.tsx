@@ -5,7 +5,7 @@ import {currentUser} from '../../../lib/security';
 import {requestLocale} from '../../../lib/request-locale';
 import Workbench from '../workbench-client';
 export const dynamic='force-dynamic';
-export default async function Page({params}:{params:Promise<{category:string}>}){
+/** Page: 해당 경로의 서버 페이지를 구성합니다 주요 호출: notFound·currentUser·redirect. */ export default async function Page({params}:{params:Promise<{category:string}>}){
  const {category}=await params;
  if(category!=='web'&&category!=='mobile'&&category!=='endpoint'&&category!=='virtualization'&&category!=='network'&&category!=='results')notFound();
  const user=await currentUser();if(!user)redirect('/');

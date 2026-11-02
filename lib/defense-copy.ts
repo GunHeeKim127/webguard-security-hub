@@ -30,4 +30,4 @@ const rows:Record<string,string[]>={
  manual_reset:['관리자 해제','Administrator reset','管理者による解除','管理员解除','Reinicio del administrador','Réinitialisation administrateur'],
  unavailable:['접속 보호 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요.','Access protection is unavailable. Try again later.','接続保護を確認できません。後で再試行してください。','无法确认访问保护状态，请稍后重试。','Protección no disponible. Inténtalo más tarde.','Protection indisponible. Réessayez plus tard.']
 };
-export function defenseText(locale:Locale,key:string){return rows[key]?.[order.indexOf(locale)]??key;}
+/** defenseText: 접근 방어 오류 코드에 맞는 사용자 안내를 반환합니다 주요 호출: indexOf. */ export function defenseText(locale:Locale,key:string){return rows[key]?.[order.indexOf(locale)]??key;}

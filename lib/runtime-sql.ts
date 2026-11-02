@@ -1,6 +1,6 @@
 // Defense against accidental use of the runtime client for DDL/admin work.
 // This is an application boundary, NOT a replacement for DB ACLs or protection after key theft.
-export function assertManagedRuntimeSql(sql:string){
+/** assertManagedRuntimeSql: 런타임에 허용된 SQL 경계를 검증합니다 주요 호출: replace. */ export function assertManagedRuntimeSql(sql:string){
  if(/\bwebguard_archive\b/i.test(sql))throw new Error('Managed runtime archive access rejected');
  const structure=sql.replace(/'(?:''|[^'])*'/g,"''").replace(/"/g,'');
  // Reject alternate literal syntax and side-effectful SELECT helpers as well.

@@ -4,13 +4,13 @@ import {tokenHash} from '../../../lib/password';
 export const runtime='nodejs';
 export const maxDuration=15;
 // Server-to-server only. Tokens must never be embedded in a browser script.
-export async function POST(req:Request){try{
+/** POST: 인증된 자산의 허용 집계 입력을 수신합니다。 */ export async function POST(req:Request){try{
  const bearer=req.headers.get('authorization');if(!bearer||!/^Bearer [0-9a-f]{64}$/.test(bearer))throw new HttpError(401,'Login required');
  const data=await body(req);
  const keys=['assetId','requests','loginFailures','probes','serverErrors'];
- if(Object.keys(data).some(k=>!keys.includes(k))||typeof data.assetId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.assetId))throw new HttpError(400,'Invalid scan ID');
+ if(Object.keys(data).some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ k=>!keys.includes(k))||typeof data.assetId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.assetId))throw new HttpError(400,'Invalid scan ID');
  for(const k of keys.slice(1))if(!Number.isInteger(data[k])||data[k]<0||data[k]>1000)throw new HttpError(400,'Invalid scan ID');
- if(data.requests<1||[data.loginFailures,data.probes,data.serverErrors].some(n=>n>data.requests))throw new HttpError(400,'Invalid scan ID');
+ if(data.requests<1||[data.loginFailures,data.probes,data.serverErrors].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ n=>n>data.requests))throw new HttpError(400,'Invalid scan ID');
  const owner=await db.query("SELECT id,user_id FROM public.assessment_assets WHERE id=$1 AND ingest_token_hash=$2 AND module_id='web.compare' AND updated_at>=now()-interval '30 days'",[data.assetId,tokenHash(bearer.slice(7))]);
  if(!owner.rowCount)throw new HttpError(401,'Login required');
  await limit('telemetry:'+data.assetId,60,60);

@@ -4,7 +4,7 @@ import {hashPassword,tokenHash} from '../../../lib/password';
 import {registrationInput} from '../../../lib/registration';
 import {body,sameOrigin,limit,event,failure,HttpError} from '../../../lib/security';
 import {authSourceBucket} from '../../../lib/auth-rate-identity';
-export async function POST(req:Request){try{
+/** POST: 회원가입 입력을 검증하고 일반 회원 등록을 처리합니다。 */ export async function POST(req:Request){try{
  sameOrigin(req);if(process.env.PUBLIC_REGISTRATION_ENABLED==='false')throw new HttpError(403,'Insufficient permission');await limit(authSourceBucket('register',req),10,600);await limit('register:global',100,600);
  const input=registrationInput(await body(req));if(!input)throw new HttpError(400,'Invalid registration');
  await limit('register:'+tokenHash(input.email),3,3600);

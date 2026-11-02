@@ -17,11 +17,13 @@ import time
 
 
 def run(args, timeout=15):
+    """run: Execute a bounded child command without interactive input and return its captured result."""
     return subprocess.run(args, stdin=subprocess.DEVNULL, capture_output=True,
                           text=True, timeout=timeout, check=False)
 
 
 def checked(args):
+    """checked: Run a preparation command and reject a nonzero exit before using its output."""
     result = run(args)
     if result.returncode:
         raise RuntimeError("PREPARATION_FAILED: " + Path(args[0]).name)
@@ -58,6 +60,7 @@ def private_workspace():
 
 
 def inspect_key_path(path):
+    """inspect_key_path: Inspect observed key path ownership, permissions and links without assuming a safe directory."""
     """Fixed metadata only. Do not emit private paths, key contents or log lines."""
     observed = {"symlink": path.is_symlink(), "exists": path.exists(), "issues": []}
     try:
@@ -83,6 +86,7 @@ def inspect_key_path(path):
 
 
 def reason_guidance(codes):
+    """reason_guidance: Map fixed observation codes to path review guidance without exposing paths."""
     messages = {
         "unsafe-key-directory": "Check the configured key path and its resolved parent directories: owner and group/other write permissions. A directory name alone does not determine safety.",
         "unsafe-key-file": "Check the key file owner and group/other write permissions; moving the file alone may not resolve the issue.",
@@ -98,17 +102,20 @@ def reason_guidance(codes):
 
 
 def path_notice():
+    """path_notice: Return the scope notice for location-dependent observations."""
     return {"severity": "info", "messageKo": "설정된 키 파일 경로가 사용자가 의도한 경로인지 확인해 주세요. 경로 지정 자체는 오류나 취약점 판정이 아닙니다.",
             "message": "Confirm that the configured key-file path is intentional. A configured path alone is not an error or vulnerability finding."}
 
 
 def result_status(case, observed_expected, positive_control):
+    """result_status: Classify the case only when its expected observation and positive control support the result."""
     if case != "allowed_key" and not positive_control:
         return "INCONCLUSIVE"
     return "PASS" if observed_expected else "FAIL"
 
 
 def missing_file_confirmed(path_missing, denied, restored_exit, restored_key_accepted, isolated_key_source):
+    """missing_file_confirmed: Confirm a missing-file denial using the failed case and successful restored control."""
     # A paired intervention is stronger than depending on a version-specific
     # missing-file log phrase: same key/server/path fails absent and works present.
     return (path_missing and denied and restored_exit == 0
@@ -116,6 +123,7 @@ def missing_file_confirmed(path_missing, denied, restored_exit, restored_key_acc
 
 
 def main():
+    """main: Run isolated loopback authentication cases and clean temporary keys and child servers."""
     if sys.platform != "linux" or os.geteuid() != 0:
         raise RuntimeError("Run in the existing Linux root session")
     for tool in ("/usr/sbin/sshd", "/usr/bin/ssh", "/usr/bin/ssh-keygen", "/usr/bin/true"):

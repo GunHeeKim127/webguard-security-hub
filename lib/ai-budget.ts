@@ -2,7 +2,7 @@ import {HttpError} from './request';
 type Query=(sql:string,values:unknown[])=>Promise<{rows:{window?:string}[]}>;
 // Reserve before sending an external request, so simultaneous calls cannot exceed the budget.
 // A failed request refunds only its original window; it cannot alter a later reset window.
-export async function withAiBudget<T>(query:Query,bucket:string,work:()=>Promise<T>):Promise<T>{
+/** withAiBudget: AI 작업의 사용 예산 경계를 적용합니다 주요 호출: query·work·warn. */ export async function withAiBudget<T>(query:Query,bucket:string,work:()=>Promise<T>):Promise<T>{
  const reserved=await query(`INSERT INTO rate_limits(bucket,hits,reset_at) VALUES($1,1,now()+interval '1 hour')
  ON CONFLICT(bucket) DO UPDATE SET
   hits=CASE WHEN rate_limits.reset_at<=now() THEN 1 ELSE rate_limits.hits+1 END,

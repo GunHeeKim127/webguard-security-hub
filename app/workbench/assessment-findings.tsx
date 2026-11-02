@@ -1,27 +1,28 @@
 'use client';
+import {memo} from 'react';
 import {Alert,Box,Button,Chip,Paper,Stack,Typography} from '@mui/material';
 import type {AssessmentReport,Finding} from '../../lib/assessment/types';
 import {explainFinding,orderedFindings,statusCopy} from '../../lib/assessment/explanation';
 import {findingContext} from '../../lib/assessment/finding-context';
 type Props={report:AssessmentReport;locale:'ko'|'en';listId?:string};
-export function AssessmentInputSummary({report,locale}:Props){
+/** AssessmentInputSummaryView: 입력 검증 근거와 검사 한계를 표시합니다 */ function AssessmentInputSummaryView({report,locale}:Props){
  const ko=locale==='ko',integrity=report.integrity,web=report.moduleId==='web.compare'&&report.targetKind!=='supplied-source';
  if(report.targetKind==='supplied-source')return <Alert severity="info" sx={{my:2,overflowWrap:'anywhere'}}>{ko?'서버가 수신한 소스·의존성 텍스트의 정적 검토입니다. 실제 배포 상태나 전체 코드 안전성을 검증하지 않습니다. 수신 텍스트 SHA-256: ':'Static review of received source / dependency text, not live deployment or full code safety verification. Received text SHA-256: '}{integrity?.sha256??(ko?'기록 없음':'unavailable')}</Alert>;
  const text=web?(ko?'공개된 웹 응답의 일부만 확인했습니다. 로그인 후 화면이나 사이트 전체 취약점을 검사한 결과는 아닙니다.':'Only part of the public web response was checked, not signed-in pages or the whole site.'):!integrity?(ko?'과거 결과에는 입력과 결과를 연결하는 검증 근거가 없습니다. 현재 검사 방식으로 다시 확인하세요.':'This older result has no input-integrity evidence. Reassess using a current method.'):integrity.status==='unverified-summary'?(ko?'기기에서 만든 요약으로 검사했습니다. 서버가 원본 파일과 같은지 직접 대조하지는 않았습니다.':'This assessment uses an on-device summary. The server has not independently matched it to the original file.'):integrity.basis==='received-utf8-text'?(ko?'전달받은 설정 내용으로 검사했습니다. 현재 기기에 실제로 적용된 상태인지는 별도로 확인해야 합니다.':'The received configuration text was checked. Its effective state on the device requires a separate check.'):(ko?'서버가 전송받은 파일을 다시 읽어 검사했습니다. 제작자의 진위나 악성코드가 없다는 사실까지 보증하지는 않습니다.':'The server re-read the received file. This does not guarantee publisher authenticity or absence of malware.');
  return <Alert severity={!web&&integrity?.status!=='server-recomputed'?'warning':'info'} sx={{my:2}}>{text}</Alert>;
 }
-export function AssessmentOverview({report,locale}:Props){
- const ko=locale==='ko',warnings=orderedFindings(report.findings).filter(f=>f.status==='warning'),unknown=report.findings.filter(f=>f.status==='not_assessed');
+/** AssessmentOverviewView: 보완 필요 항목과 미확인 개수를 요약합니다 주요 호출: filter·orderedFindings·map. */ function AssessmentOverviewView({report,locale}:Props){
+ const ko=locale==='ko',warnings=orderedFindings(report.findings).filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ f=>f.status==='warning'),unknown=report.findings.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ f=>f.status==='not_assessed');
  return <Paper variant="outlined" sx={{my:2,p:2,borderColor:warnings.length?'warning.main':'divider'}}>
   <Typography variant="h6">{ko?'결과를 쉽게 보면':'Your result at a glance'}</Typography>
   <Typography sx={{mt:1}}>{warnings.length?(ko?`보완하거나 검토할 항목이 ${warnings.length}개 있습니다.`:`${warnings.length} items need review or improvement.`):unknown.length===report.findings.length&&unknown.length>0?(ko?'이 자료만으로는 검사 항목을 판단할 수 없습니다.':'The supplied input is insufficient to decide these checks.'):(ko?'이번에 확인한 범위에서는 보완이 필요한 신호가 발견되지 않았습니다.':'No warning signals were found within the assessed scope.')}</Typography>
-  {!!warnings.length&&<Box component="ul" sx={{pl:2.5,my:1}}>{warnings.slice(0,3).map(f=><Typography component="li" key={f.id}>{explainFinding(f,report.moduleId,locale).title}</Typography>)}{warnings.length>3&&<Typography component="li">{ko?`그 밖에 ${warnings.length-3}개 — 아래 항목을 확인하세요.`:`${warnings.length-3} more — see the items below.`}</Typography>}</Box>}
+  {!!warnings.length&&<Box component="ul" sx={{pl:2.5,my:1}}>{warnings.slice(0,3).map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: explainFinding. */ f=><Typography component="li" key={f.id}>{explainFinding(f,report.moduleId,locale).title}</Typography>)}{warnings.length>3&&<Typography component="li">{ko?`그 밖에 ${warnings.length-3}개 — 아래 항목을 확인하세요.`:`${warnings.length-3} more — see the items below.`}</Typography>}</Box>}
   <Typography variant="body2" sx={{mt:1}}>{unknown.length?(ko?`아직 확인하지 못한 항목도 ${unknown.length}개 있습니다. 정보가 부족하거나 현재 검사 방식이 지원하지 않는 내용이며, 문제가 없다는 뜻은 아닙니다.`:`${unknown.length} items remain unverified because information or inspection support is missing. They are not passes.`):(ko?'추가 미검사 항목은 없지만, 이 검사가 파일·기기·사이트 전체의 안전을 보장하지는 않습니다.':'No listed items remain unassessed, but this check does not guarantee overall safety.')}</Typography>
   <Typography variant="body2" color="text.secondary" sx={{mt:1}}>{ko?'아래에서 보완·검토할 내용 → 아직 확인하지 못한 내용 → 참고·기준 충족 항목 순서로 볼 수 있습니다. 설정은 자동으로 바뀌지 않습니다.':'Items needing review appear first, followed by unverified items and other observations. Settings are never changed automatically.'}</Typography>
   <Button href="#assessment-finding-list" size="small" sx={{mt:1}}>{ko?'설명과 다음에 할 일 보기 ↓':'See explanations and next steps ↓'}</Button>
  </Paper>;
 }
-function FindingCard({finding:f,report,locale}:Props&{finding:Finding}){
+/** FindingCard: 한 진단 항목의 관찰·기준·다음 행동을 표시합니다 주요 호출: explainFinding·findingContext·join. */ function FindingCard({finding:f,report,locale}:Props&{finding:Finding}){
  const ko=locale==='ko',copy=explainFinding(f,report.moduleId,locale),context=findingContext(f,report,locale),warning=f.status==='warning',unknown=f.status==='not_assessed';
  return <Paper variant="outlined" component="article" sx={{p:2,minWidth:0,borderColor:warning?'warning.main':'divider'}}>
   <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap"><Chip size="small" color={warning?'warning':f.status==='pass'?'success':'default'} label={statusCopy[f.status][locale]}/>{warning&&<Typography variant="caption">{ko?'확인 우선순위: ':'Review priority: '}{f.severity==='high'?(ko?'높음':'High'):f.severity==='low'?(ko?'낮음':'Low'):(ko?'보통':'Normal')}</Typography>}</Stack>
@@ -40,12 +41,17 @@ function FindingCard({finding:f,report,locale}:Props&{finding:Finding}){
   </Box>
  </Paper>;
 }
-export default function AssessmentFindings(props:Props){
- const ko=props.locale==='ko',all=orderedFindings(props.report.findings),warnings=all.filter(f=>f.status==='warning'),unknown=all.filter(f=>f.status==='not_assessed'),other=all.filter(f=>f.status==='pass'||f.status==='info');
- const cards=(items:Finding[])=><Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr',lg:'1fr 1fr'},gap:2,mt:1.5}}>{items.map(f=><FindingCard key={f.id} {...props} finding={f}/>)}</Box>;
+/** AssessmentFindings: 진단 항목을 보완 필요·미확인·참고 순서로 렌더링합니다 주요 호출: orderedFindings·filter·cards. */ function AssessmentFindings(props:Props){
+ const ko=props.locale==='ko',all=orderedFindings(props.report.findings),warnings=all.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ f=>f.status==='warning'),unknown=all.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ f=>f.status==='not_assessed'),other=all.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ f=>f.status==='pass'||f.status==='info');
+ const cards=/** cards: 전달된 진단 항목들을 결과 카드로 렌더링합니다 주요 호출: map. */ (items:Finding[])=><Box sx={{display:'grid',gridTemplateColumns:{xs:'1fr',lg:'1fr 1fr'},gap:2,mt:1.5}}>{items.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ f=><FindingCard key={f.id} {...props} finding={f}/>)}</Box>;
  return <Stack id={props.listId??'assessment-finding-list'} gap={3} sx={{scrollMarginTop:24}}>
   {!!warnings.length&&<Box><Typography variant="h6">{ko?`보완·검토할 내용 ${warnings.length}개`:`Review or improve (${warnings.length})`}</Typography>{cards(warnings)}</Box>}
   {!!unknown.length&&<Box component="details" open={!warnings.length} sx={{'& > summary':{cursor:'pointer',fontWeight:700,color:'primary.main'}}}><Typography component="summary">{ko?`추가 확인이 필요한 내용 ${unknown.length}개 — 문제가 없다는 뜻은 아닙니다`:`Not yet verified (${unknown.length}) — these are not passes`}</Typography>{cards(unknown)}</Box>}
   {!!other.length&&<Box component="details" sx={{'& > summary':{cursor:'pointer',fontWeight:700,color:'primary.main'}}}><Typography component="summary">{ko?`참고·기준 충족 항목 ${other.length}개 보기`:`Observations and baseline results (${other.length})`}</Typography>{cards(other)}</Box>}
  </Stack>;
 }
+
+export default memo(AssessmentFindings);
+
+export const AssessmentInputSummary=memo(AssessmentInputSummaryView);
+export const AssessmentOverview=memo(AssessmentOverviewView);
