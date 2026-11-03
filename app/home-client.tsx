@@ -1,7 +1,7 @@
 'use client';
 import Link from './navigation-link';
 import {useEffect,useRef,useState} from 'react';
-import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,LinearProgress,IconButton,InputAdornment} from '@mui/material';
+import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,IconButton,InputAdornment} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
 import {messages,eventLabel,type MessageKey} from '../lib/messages';
 import {errorText} from '../lib/errors-i18n';
@@ -14,6 +14,7 @@ import {assessmentText} from '../lib/assessment-copy';
 import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
 import InspectionHelp from './workbench/inspection-help';
+import PageLoading from './page-loading';
 import DefensePanel from './defense-panel';
 import LoginIllustration from './login-illustration';
 import {defenseText} from '../lib/defense-copy';
@@ -81,13 +82,13 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
   if(!r.ok){setCode('SWITCH_ERROR');return;}setLocale(value);setAdvice('');
  }catch{setCode('NETWORK_ERROR');}finally{setSwitching(false);}}
  const roleLabel=data?(['admin','analyst','viewer'].includes(data.user.role)?t[data.user.role as 'admin'|'analyst'|'viewer']:t.viewer):'';
- const languageControl=<FormControl size="small" sx={{minWidth:150}} disabled={busy||switching}>
+ const languageControl=<FormControl size="small" sx={{minWidth:{xs:112,sm:150}}} disabled={busy||switching}>
   <InputLabel id="language-label">{t.language}</InputLabel>
   <Select labelId="language-label" id="language-select" label={t.language} value={locale} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: changeLanguage. */ e=>void changeLanguage(e.target.value)}>
    {locales.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ l=><MenuItem key={l} value={l} lang={l}>{localeNames[l]}</MenuItem>)}
   </Select>
  </FormControl>;
- return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:3,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
+ return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:data?3:1.5,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
   {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
    <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
    <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
@@ -96,11 +97,11 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
   </Stack>
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
   {data&&message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
-  {bootLoading?<Paper sx={{p:4,maxWidth:520}}><Typography role="status" mb={2}>{ops.refresh}</Typography><LinearProgress aria-label={ops.refresh}/></Paper>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
+  {bootLoading?<PageLoading message={ops.refresh}/>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
    <Paper component="section" elevation={0} sx={{p:{xs:3,sm:4,md:5},border:'1px solid #26394b',background:'linear-gradient(145deg,#142537,#101d2d)'}}>
-   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" mb={5}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ WEBGUARD</Typography>{languageControl}</Stack>
+   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" sx={{mb:{xs:2,md:5}}}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ WEBGUARD</Typography>{languageControl}</Stack>
    <Typography variant="overline" color="primary">{t.operations}</Typography>
-   <Typography component="h1" variant="h4" fontWeight={800} sx={{mt:1,mb:2}}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={4} sx={{lineHeight:1.7}}>{registrationCopy[locale].help}</Typography>
+   <Typography component="h1" variant="h4" fontWeight={800} sx={{mt:1,mb:2}}>{t.loginTitle}</Typography><Typography color="text.secondary" mb={{xs:2,md:4}} sx={{lineHeight:1.7}}>{registrationCopy[locale].help}</Typography>
    {message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
    <Box component="form" noValidate onSubmit={/** onSubmit 콜백: onSubmit 이벤트의 입력·상태 처리를 실행합니다 주요 호출: preventDefault·namedItem·setCode. */ async e=>{
     e.preventDefault();setPasswordVisible(false);const form=e.currentTarget;const email=form.elements.namedItem('email') as HTMLInputElement;const password=form.elements.namedItem('password') as HTMLInputElement;
@@ -109,11 +110,11 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
     if(await post('/api/login',{email:email.value,password:password.value}))window.location.replace('/workbench');
    }}><Stack spacing={2}>
     <TextField name="email" label={t.email} type="email" autoComplete="username" required/>
-    <TextField name="password" label={t.password} type={passwordVisible?'text':'password'} autoComplete="current-password" required slotProps={{input:{endAdornment:<InputAdornment position="end"><IconButton type="button" aria-label={locale==='ko'?(passwordVisible?'비밀번호 숨기기':'비밀번호 보기'):(passwordVisible?'Hide password':'Show password')} aria-pressed={passwordVisible} edge="end" onMouseDown={/** onMouseDown 콜백: 토글 사용 시 비밀번호 입력 포커스를 유지합니다. */ e=>e.preventDefault()} onClick={/** onClick 콜백: 비밀번호 값과 전송 방식은 유지하고 표시만 전환합니다. */ ()=>setPasswordVisible(!passwordVisible)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{passwordVisible&&<path d="m3 3 18 18"/>}</svg></IconButton></InputAdornment>}}}/>
+    <TextField name="password" label={t.password} type={passwordVisible?'text':'password'} autoComplete="current-password" required slotProps={{input:{endAdornment:<InputAdornment position="end"><IconButton type="button" aria-label={locale==='ko'?(passwordVisible?'비밀번호 숨기기':'비밀번호 보기'):(passwordVisible?'Hide password':'Show password')} aria-pressed={passwordVisible} edge="end" onMouseDown={/** onMouseDown 콜백: 토글 사용 시 비밀번호 입력 포커스를 유지합니다. */ e=>e.preventDefault()} onClick={/** onClick 콜백: 비밀번호 값과 전송 방식은 유지하고 표시만 전환합니다. */ ()=>setPasswordVisible(!passwordVisible)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{!passwordVisible&&<path d="m3 3 18 18"/>}</svg></IconButton></InputAdornment>}}}/>
     <Button type="submit" variant="contained" disabled={busy||switching}>{busy?t.loading:t.login}</Button><Button component={Link} href="/signup" disabled={busy}>{registrationCopy[locale].title}</Button><Button component={Link} href="/help">{locale==='ko'?'사용 가이드':'User guide'}</Button>
    </Stack></Box>
    </Paper>
-   <Box sx={{minWidth:0,textAlign:'center',px:{xs:2,md:0}}}><Box sx={{maxWidth:{xs:300,md:580},mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>
+   <Box data-login-illustration="true" sx={{display:{xs:'none',md:'block'},minWidth:0,textAlign:'center',px:{md:0}}}><Box sx={{maxWidth:580,mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>
   </Box>:<>
    <Stack direction="row" gap={2} mb={3} alignItems="center" flexWrap="wrap">
     <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>
@@ -160,6 +161,6 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
      <Typography sx={{whiteSpace:'pre-wrap'}}>{advice}</Typography></Box></Alert>}
    </Paper>
   </>}
-  <Typography color="text.secondary" variant="body2" sx={{mt:4}}>{t.disclaimer}</Typography>
+  <Typography color="text.secondary" variant="body2" sx={{mt:4,display:data?'block':{xs:'none',md:'block'}}}>{t.disclaimer}</Typography>
  </Container></ThemeProvider>;
 }
