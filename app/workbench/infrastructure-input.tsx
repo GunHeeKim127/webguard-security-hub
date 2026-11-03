@@ -1,4 +1,5 @@
 'use client';
+import InspectionProblem from './inspection-problem';
 import {singleFileSelection,singleFileMessage} from '../../lib/single-file';
 import {configurationFileText} from '../../lib/configuration-file';
 import {infrastructureFileIssue} from '../../lib/infrastructure-format';
@@ -32,7 +33,7 @@ import {Alert,Button,Checkbox,FormControlLabel,MenuItem,Stack,TextField,Typograp
   <FormControlLabel label={t('현재 설정 파일을 이 검사에 한해 읽도록 허용합니다.','Allow reading this configuration for this inspection.')} control={<Checkbox checked={consent} disabled={!file||disabled||reading} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setConsent. */ e=>setConsent(e.target.checked)}/>}/>
   <Button disabled={disabled||reading||!!file&&!consent} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: read. */ ()=>void read()}>{reading?t('설정 읽는 중','Reading configuration'):t('허용한 설정 읽기','Read permitted configuration')}</Button>
   {file&&!consent&&!reading&&!disabled&&<Alert severity="info" role="status">{value.trim()?t('설정을 입력란에 반영했습니다. 아래 권한 확인 후 진단하세요. 파일을 다시 읽으려면 읽기를 다시 허용하세요.','Configuration is in the input below. Confirm authorization and assess. Renew read permission to read the file again.'):t('설정 파일을 읽으려면 위의 읽기 허용에 체크해 주세요.','To read the configuration file, allow reading above.')}</Alert>}
-  {error&&<Alert severity="warning">{error}</Alert>}
+  <InspectionProblem locale={locale} message={error}/>
   <TextField label={policy?(mode==='bind9'?'BIND 9 named.conf':'Cisco IOS configuration'):kind==='virtualization.vmx'?t('VMX·OVF·libvirt XML·VirtualBox 설정','VMX / OVF / libvirt XML / VirtualBox configuration'):t('GNS3 2.x 프로젝트 JSON · 직접 입력 가능','GNS3 2.x project JSON · paste supported')} value={displayed} multiline minRows={6} maxRows={16} disabled={disabled||reading} onChange={/** onChange 콜백: 수동 입력으로 바꾸면 파일 동의와 이전 입력 오류를 초기화합니다. */ e=>{generation.current++;setFile(null);setConsent(false);setError('');if(input.current)input.current.value='';emit(e.target.value);}} helperText={t('최대 64 KiB(전송 형식 포함). 실제 실행·취약점 스캔이 아닌 제공된 설정의 정적 점검입니다.','Up to 64 KiB including transport envelope. Static review only; no execution or vulnerability scan.')}/>
  </Stack>;
 }

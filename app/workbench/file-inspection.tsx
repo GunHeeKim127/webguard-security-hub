@@ -1,4 +1,5 @@
 'use client';
+import InspectionProblem from './inspection-problem';
 import {singleFileSelection,singleFileMessage} from '../../lib/single-file';
 import {useEffect,useRef,useState} from 'react';
 import {Alert,Box,Button,Checkbox,FormControlLabel,LinearProgress,MenuItem,Stack,TextField,Typography} from '@mui/material';
@@ -80,7 +81,7 @@ type Props={moduleId:'application.pe'|'application.macho'|'application.package',
    {file&&!consent&&!reading&&!disabled&&summary===null&&<Alert severity="info" role="status">{t('점검을 시작하려면 위의 현재 파일 읽기 동의에 체크해 주세요.','To start inspection, confirm permission to read the current file above.')}</Alert>}
    <Stack direction="row" gap={1}><Button variant="outlined" disabled={reading||disabled||!!file&&!consent} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: read. */ ()=>void read()}>{t('허용한 파일 점검','Inspect permitted file')}</Button><Button disabled={disabled||(!reading&&!summary&&!consent)} onClick={stop}>{t('취소·허용 초기화','Cancel / clear consent')}</Button></Stack>
    {reading&&<><LinearProgress/><Typography role="status">{t('허용한 파일을 기기에서 읽는 중입니다. 취소하면 읽기를 중단합니다.','Reading the permitted file on your device. Cancel stops inspection.')}</Typography></>}
-   {error&&<Alert severity="warning">{error}</Alert>}
+   <InspectionProblem locale={locale} message={error}/>
    {summary!==null&&<Alert severity={mode==='server'?'info':'warning'}>{mode==='server'?t('원본 전송 준비 완료. 아직 서버 검증 전입니다. 아래 권한 확인 후 저장하면 원본을 전송해 서버에서 재분석합니다.','Original prepared; not yet server verified. Confirm permission below and save to upload for server analysis.'):t('기기 내 점검 완료. 원본은 전송하지 않았습니다. 아래 요약만 별도의 저장 버튼으로 전송됩니다.','On-device inspection complete. Original not transmitted. Only the summary below is sent when you separately save.')}<Box component="details" sx={{mt:1}}><Box component="summary" sx={{cursor:'pointer'}}>{mode==='server'?t('전송할 원본 정보 펼치기','Expand original upload information'):t('전송될 요약 펼치기','Expand outgoing summary')}</Box><Typography component="pre" variant="caption" sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify(summary,null,2)}</Typography></Box></Alert>}
   </Stack>
  </Box>;

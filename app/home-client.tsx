@@ -15,6 +15,9 @@ import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
 import InspectionHelp from './workbench/inspection-help';
 import PageLoading from './page-loading';
+import WebTargetField from './web-target-field';
+import InspectionProblem from './workbench/inspection-problem';
+import {webTargetInput,webTargetReason} from '../lib/web-target-input';
 import DefensePanel from './defense-panel';
 import LoginIllustration from './login-illustration';
 import {defenseText} from '../lib/defense-copy';
@@ -37,10 +40,10 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
  const t=messages[locale],ops=operationsMessages[locale],scanCopy=scanUI[locale];
  /** resetAccountView: 계정에 종속된 화면 정보를 초기화합니다 주요 호출: abort·setData·setAdvice. */ function resetAccountView(loading=false){accountGeneration.current++;generation.current++;scanRequest.current?.abort();scanRequest.current=null;setData(null);setAdvice('');setAdviceInfo(null);setAuthorized(false);setTargetValue('');setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setBusy(false);setBootLoading(loading);}
  /** changeTarget: 점검 대상을 바꾸고 관련 작업 상태를 갱신합니다 주요 호출: abort·setBusy·setTargetValue. */ function changeTarget(value:string){if(value===targetValue)return;generation.current++;if(scanRequest.current){scanRequest.current.abort();setBusy(false);}scanRequest.current=null;setTargetValue(value);setAuthorized(false);setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setAdvice('');}
- const normalizedTarget=targetValue.trim().includes('://')?targetValue.trim():'https://'+targetValue.trim();
+ const targetInput=webTargetInput(targetValue),normalizedTarget=targetInput.normalized;
  const publicTargets=data?.overview.targetPolicy==='public';
  let targetApproved=false;try{scanTarget(normalizedTarget,publicTargets?undefined:data?.overview.approvedHosts??[]);targetApproved=true;}catch{}
- const blockReason=!targetValue.trim()?scanCopy.address:!authorized?scanCopy.permission:!canAssess(data?.user.role??'')?t.viewerHelp:!publicTargets&&data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?(publicTargets?assessmentText(locale,'targetInvalid'):scanCopy.unapproved):'';
+ const blockReason=targetInput.issue?webTargetReason(targetInput.issue,locale):!authorized?scanCopy.permission:!canAssess(data?.user.role??'')?t.viewerHelp:!publicTargets&&data?.overview.approvedCount===0?ops.notConfigured:!targetApproved?(publicTargets?assessmentText(locale,'targetInvalid'):scanCopy.unapproved):'';
  /** runScan: 선택한 대상의 검사 요청과 진행 상태를 관리합니다 주요 호출: abort·setTargetValue·setLogs. */ async function runScan(){
   const url=normalizedTarget;scanRequest.current?.abort();const request=new AbortController(),run=++generation.current;scanRequest.current=request;
   setTargetValue(url);setLogs([]);setCode('');setAdvice('');setInspection({state:'running',target:url});setBusy(true);markOperation('scan','running');
@@ -96,7 +99,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
    </Stack>
   </Stack>
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
-  {data&&message&&<Alert severity="warning" sx={{mb:3}} role="alert">{message}</Alert>}
+  {data&&<InspectionProblem locale={locale==='ko'?'ko':'en'} message={message}/>}
   {bootLoading?<PageLoading message={ops.refresh}/>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
    <Paper component="section" elevation={0} sx={{p:{xs:3,sm:4,md:5},border:'1px solid #26394b',background:'linear-gradient(145deg,#142537,#101d2d)'}}>
    <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap" sx={{mb:{xs:2,md:5}}}><Typography color="primary" fontWeight={700} sx={{letterSpacing:1}}>◈ WEBGUARD</Typography>{languageControl}</Stack>
@@ -124,7 +127,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
    <Box>
     <Paper sx={{p:3}}><Typography variant="h6">{assessmentText(locale,'title')}</Typography><Typography color="text.secondary" my={2}>{assessmentText(locale,'scope')}</Typography>
      <Box component="form" noValidate onSubmit={/** onSubmit 콜백: onSubmit 이벤트의 입력·상태 처리를 실행합니다 주요 호출: preventDefault·runScan. */ e=>{e.preventDefault();if(blockReason||busy||switching)return;void runScan();}}><Stack spacing={2}>
-      <TextField name="url" type="url" disabled={busy&&!scanRequest.current} value={targetValue} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: changeTarget. */ e=>changeTarget(e.target.value)} label={t.url} placeholder="https://example.com" required/>
+      <WebTargetField locale={locale} value={targetValue} disabled={busy&&!scanRequest.current} onChange={changeTarget}/>
       <FormControlLabel control={<Checkbox checked={authorized} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setAuthorized. */ e=>setAuthorized(e.target.checked)}/>} label={assessmentText(locale,'ownership')}/>
       {publicTargets&&<Alert severity="info">{assessmentText(locale,'publicNotice')}</Alert>}
       <Button type="submit" variant="contained" disabled={busy||switching||!!blockReason} aria-describedby={blockReason?'scan-block-reason':undefined}>{busy?t.loading:assessmentText(locale,'title')}</Button>

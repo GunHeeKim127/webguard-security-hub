@@ -1,4 +1,19 @@
 import test from 'node:test';
+import {webTargetInput,webTargetReason} from '../lib/web-target-input';
+import {scanTarget} from '../lib/scan-policy';
+
+test('domain input rejects detailed pages without silently changing the requested scope',/** test: 클라이언트 안내가 서버의 HTTPS 기본 주소 계약을 유지하고 비밀값을 재표시하지 않는지 검증합니다. */ ()=>{
+ for(const raw of ['example.com',' https://example.com/ ','https://example.com:443']){
+  const parsed=webTargetInput(raw);assert.equal(parsed.issue,null);assert.equal(parsed.normalized,'https://example.com');assert.doesNotThrow(/** doesNotThrow: 허용된 주소를 기존 서버 정책으로 교차 확인합니다. */ ()=>scanTarget(parsed.normalized));
+ }
+ for(const raw of ['example.com/login','https://example.com/?token=PRIVATE_QUERY','https://example.com/#account']){
+  const parsed=webTargetInput(raw);assert.equal(parsed.issue,'detail');assert.equal(parsed.domain,'https://example.com');assert(!webTargetReason(parsed.issue,'ko').includes('PRIVATE_QUERY'));assert.throws(/** throws: 상세 주소는 서버에서도 거절되어야 합니다. */ ()=>scanTarget(parsed.normalized));
+ }
+ for(const raw of ['https://127.0.0.1','https://[::1]','https://user:PRIVATE_PASSWORD@example.com/path','https://example.com:8443','not a domain','https://'+ 'a'.repeat(301)]){
+  const parsed=webTargetInput(raw);assert.equal(parsed.issue,'invalid');assert.equal(parsed.domain,undefined);
+ }
+ assert.equal(webTargetInput('http://example.com').issue,'https');assert.equal(webTargetInput('').issue,'empty');
+});
 import assert from 'node:assert/strict';
 import { publicAddress,target,findings,scan } from '../lib/scanner';
 import dns from 'node:dns/promises';

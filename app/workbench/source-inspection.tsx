@@ -1,4 +1,5 @@
 'use client';
+import InspectionProblem from './inspection-problem';
 import {singleFileSelection,singleFileMessage} from '../../lib/single-file';
 
 import {useEffect,useRef,useState} from 'react';
@@ -35,7 +36,7 @@ import InspectionHelp from './inspection-help';
   <FormControlLabel control={<Checkbox checked={consent} disabled={!file||disabled||busy} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setConsent. */ e=>setConsent(e.target.checked)}/>} label={t('현재 파일의 읽기와 이번 검사에 한한 서버 전송에 동의합니다.','Allow reading and sending this file to the server for this inspection.')}/>
   {file&&!consent&&!busy&&!disabled&&<Alert severity="info" role="status">{report?t('검사가 완료됐습니다. 같은 파일을 다시 검사하려면 읽기·서버 전송에 다시 동의해 주세요.','Inspection is complete. To inspect again, renew consent to reading and server transmission.'):t('검사를 시작하려면 위의 파일 읽기·서버 전송 동의에 체크해 주세요.','To start inspection, confirm file reading and server transmission above.')}</Alert>}
   <Button variant="contained" disabled={disabled||busy||!!file&&!consent} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: inspect. */ ()=>void inspect()}>{busy?t('검사 중','Inspecting'):t('허용한 파일 검사','Inspect permitted file')}</Button>
-  {error&&<Alert severity="warning" role="alert">{error}</Alert>}
+  <InspectionProblem locale={locale} message={error}/>
   {report&&<><AssessmentInputSummary report={report} locale={locale}/><AssessmentFindings report={report} locale={locale} listId="source-finding-list"/></>}
  </Stack></Paper>;
 }
