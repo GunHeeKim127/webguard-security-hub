@@ -110,7 +110,7 @@ try{
  assert.equal((await call('/api/scans','POST',{url:'https://169.254.169.254',authorized:true},admin)).status,400);console.log('PASS metadata SSRF attempt denied by live API');
  const streamed=await fetch(base+'/api/scans',{method:'POST',headers:{origin:base,cookie:admin,'Content-Type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({url:'https://169.254.169.254',authorized:true})});
  assert.equal(streamed.status,200);assert(streamed.headers.get('content-type')?.includes('application/x-ndjson'));const scanEvents=(await streamed.text()).trim().split('\n').map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: parse. */ line=>JSON.parse(line));
- assert.deepEqual(scanEvents.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ e=>e.type),['progress','error']);assert.equal(scanEvents[0].stage,'target');assert.equal(scanEvents[1].errorCode,'TARGET_REJECTED');assert.equal((await projectAdmin.query('SELECT count(*) FROM scans')).rows[0].count,'0');console.log('PASS streamed SSRF rejection, real stage event and no saved result');
+ assert.deepEqual(scanEvents.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 */ e=>e.type),['progress','error']);assert.equal(scanEvents[0].stage,'target');assert.equal(scanEvents[1].errorCode,'TARGET_POLICY_REJECTED');assert.equal((await projectAdmin.query('SELECT count(*) FROM scans')).rows[0].count,'0');console.log('PASS streamed SSRF rejection, real stage event and no saved result');
 
 
  // Verify both legacy de-duplication and the exact production save path without external traffic.
