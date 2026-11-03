@@ -1,4 +1,12 @@
 import test from 'node:test';
+import {assessmentReportText} from '../lib/assessment/report-text';
+import type {AssessmentReport} from '../lib/assessment/types';
+test('draft report preserves uncertainty, bounds injected lines and never mutates results',/** test: 초안이 안전 판정이나 조치 완료를 만들어내지 않고 원본을 보존하는지 확인합니다. */ ()=>{
+ const report:AssessmentReport={schemaVersion:1,moduleId:'linux.ssh',moduleVersion:'1',ruleVersion:'1',targetKind:'config',observedAt:'2026-11-03',scope:['Supplied settings only'],limitations:['No live authentication'],findings:[{id:'passwordauthentication',title:'Password',status:'not_assessed',severity:'info',evidence:['value=unknown\nFORGED SECTION\u202e'],remediation:'Check configuration'}]};
+ const original=JSON.stringify(report),text=assessmentReportText(report,'ko');
+ assert.match(text,/초안/);assert.match(text,/아직 확인하지 못함: 1/);assert.match(text,/No live authentication/);assert(!text.includes('\nFORGED SECTION'));assert(!text.includes('\u202e'));assert.match(text,/조치 완료는 수정 후 재검증/);assert.equal(JSON.stringify(report),original);
+ const en=assessmentReportText(report,'en');assert.match(en,/Not yet verified: 1/);assert.match(en,/not a safety certificate/);
+});
 import {inspectSource} from '../lib/source-inspection';
 import {sourceSqlFindings} from '../lib/source-sql-review';
 
