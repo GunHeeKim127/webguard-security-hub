@@ -7,6 +7,27 @@ import {scan} from '../lib/scanner';
 import dns from 'node:dns/promises';
 import https from 'node:https';
 import {EventEmitter} from 'node:events';
+import {scanFailureCode,scanFailureText} from '../lib/scan-failure';
+import {httpStatusExplanation} from '../lib/http-status-explanation';
+import {displayedFinding,technologyCoverageCopy} from '../lib/technology-observation-copy';
+import {inspectionSummary} from '../lib/inspection';
+import {errorCode} from '../lib/errors-i18n';
+test('connection classifications disclose only safe causes and retain unknown uncertainty',/** test: 내부 오류 원문 유출 없이 원인 분류와 중단을 검증합니다. */ ()=>{
+ for(const [code,expected] of [['ENOTFOUND','TARGET_DNS_FAILED'],['CERT_HAS_EXPIRED','TARGET_TLS_FAILED'],['ECONNREFUSED','TARGET_CONNECTION_REFUSED'],['ETIMEDOUT','TARGET_TIMEOUT']] as const){
+  const value=scanFailureCode(Object.assign(new Error('private-secret-marker'),{code}));assert.equal(value,expected);assert.equal(errorCode(value,400),value);assert(!scanFailureText('ko',expected).includes('private-secret-marker'));
+ }
+ assert.equal(scanFailureCode(new Error('unknown-private-marker')),'TARGET_REJECTED');assert.equal(errorCode('TARGET_REJECTED',400),'TARGET_REJECTED');
+ const controller=new AbortController();controller.abort();assert.equal(scanFailureCode(new Error('unknown'),controller.signal),'TARGET_CANCELLED');
+});
+test('error responses do not count absent headers as established defects',/** test: 응답 실패와 설정 미흡의 의미를 분리합니다. */ ()=>{
+ for(const status of [401,403,404,405,429,500,503]){assert.equal(httpStatusExplanation(status,'ko').eligible,false);assert.equal(inspectionSummary({state:'success',target:'example.test',result:{status,checks:[{header:'csp',present:false}]}}).missing,null);}
+ assert.equal(httpStatusExplanation(200,'ko').eligible,true);assert.match(httpStatusExplanation(404,'ko').action,/상세 경로/);assert.match(httpStatusExplanation(405,'en').action,/does not switch to GET/);
+});
+test('legacy technology coverage display is truthful without modifying saved evidence',/** test: 저장 자료를 바꾸지 않고 관찰 완료와 판단 보류를 구별합니다. */ ()=>{
+ const original={id:'desktop:technology:coverage',title:'coverage',status:'not_assessed' as const,severity:'info' as const,evidence:['responseEligible=true','observedProducts=0'],remediation:''};
+ assert.equal(displayedFinding(original).status,'info');assert.equal(original.status,'not_assessed');assert.match(technologyCoverageCopy(true,0,'ko').reason,/건너뛴 것이 아닙니다/);
+ assert.equal(displayedFinding({...original,evidence:[...original.evidence,'responseEligible=false']}).status,'not_assessed');
+});
 const now=Date.parse('2026-10-16T00:00:00Z');
 const by=/** by: 검증 시나리오에서 by에 필요한 입력·호출·기대 결과 처리를 제공합니다 주요 호출: find·assessWeb. */ (headers:Record<string,string|string[]>,id:string)=>assessWeb(headers).find(/** find 콜백: 조건에 맞는 첫 항목을 찾습니다 */ f=>f.id===id)!;
 test('present but insecure header values produce review findings',/** test 콜백: 테스트: present but insecure header values produce review findings 주요 호출: equal·by·assert. */ ()=>{
@@ -106,7 +127,7 @@ test('technology observation keeps fixed hints only and treats hidden/error page
  const headers={'x-powered-by':'PHP/8.4.26 private-token-example','set-cookie':['PRIVATE_SESSION=secret; HttpOnly'],'server':'private-host-name'};
  const data=observeTechnology(headers,200);assert.equal(data.products[0].product,'PHP');assert(!JSON.stringify(data).includes('private'));assert(!JSON.stringify(data).includes('secret'));
  assert.equal(observeTechnology(headers,302).products.length,0);assert.equal(observeTechnology(headers,500).products.length,0);
- const hidden=technologyFindings(observeTechnology({},200),'en');assert.equal(hidden.length,1);assert.equal(hidden[0].status,'not_assessed');
+ const hidden=technologyFindings(observeTechnology({},200),'en');assert.equal(hidden.length,1);assert.equal(hidden[0].status,'info');
  assert.equal(observeTechnology({'x-powered-by':'PHP/8.4.27','server':'PHP/8.4.26'},200).products[0].version,null);
  const next=technologyFindings(observeTechnology({'x-powered-by':'Next.js','vary':'RSC, Accept-Encoding'},200),'en');assert(next.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ f=>f.id.includes('CVE-2025-55182')&&f.status==='not_assessed'));
 });

@@ -28,6 +28,6 @@ const rows:Record<string,string[]>={
  injection:['URL 삽입 공격 패턴','URL injection pattern','URL挿入攻撃パターン','URL注入模式','Patrón de inyección URL','Motif d’injection URL'],
  traversal:['경로 이탈 패턴','Path traversal pattern','パストラバーサル','路径穿越模式','Patrón de recorrido de rutas','Motif de traversée de chemins'],
  manual_reset:['관리자 해제','Administrator reset','管理者による解除','管理员解除','Reinicio del administrador','Réinitialisation administrateur'],
- unavailable:['접속 보호 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요.','Access protection is unavailable. Try again later.','接続保護を確認できません。後で再試行してください。','无法确认访问保护状态，请稍后重试。','Protección no disponible. Inténtalo más tarde.','Protection indisponible. Réessayez plus tard.']
+ unavailable:['이 진단 사이트의 서버가 접속 차단 여부 확인을 완료하지 못해 요청을 보류했습니다. 검사 대상 주소의 오류나 공격 판정이 확정된 것은 아닙니다. 입력을 유지하고 잠시 후 한 번 다시 시도하세요. 반복되면 발생 시각과 PROTECTION_UNAVAILABLE 코드를 운영 담당자에게 알려 주세요.','This inspection service could not complete its access-block check and paused the request. This does not establish an invalid target address or an attack. Keep your input and retry once later. If it persists, report the time and PROTECTION_UNAVAILABLE to the operator.','接続保護を確認できません。後で再試行してください。','无法确认访问保护状态，请稍后重试。','Protección no disponible. Inténtalo más tarde.','Protection indisponible. Réessayez plus tard.']
 };
 /** defenseText: 접근 방어 오류 코드에 맞는 사용자 안내를 반환합니다 주요 호출: indexOf. */ export function defenseText(locale:Locale,key:string){return rows[key]?.[order.indexOf(locale)]??key;}

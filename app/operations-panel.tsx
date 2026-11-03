@@ -44,6 +44,7 @@ import {assessmentText} from '../lib/assessment-copy';
      <Stack direction="row" gap={1} flexWrap="wrap" mt={2}>
       <Chip size="small" label={`${t.database}: ${t.connected}`} color="success" variant="outlined"/>
       <Chip size="small" label={`${t.aiStatus}: ${data.aiEnabled?t.configured:t.notAvailable}`} variant="outlined"/>
+      {!data.aiEnabled&&<Typography variant="caption" color="text.secondary">{locale==='ko'?'AI 연결이 운영 설정에서 준비되지 않았습니다. 일반 회원의 진단 권한 제한이 아니며 기본 진단과 저장 기록은 사용할 수 있습니다.':'AI is not ready in the service configuration. This is not a member-permission restriction; baseline checks and saved results remain available.'}</Typography>}
       {data.aiEnabled&&<Typography variant="caption" color="text.secondary" alignSelf="center">{t.notVerified}</Typography>}
       {summary.missing!==null&&<Chip size="small" color={summary.missing?'warning':'success'} label={`${t.missing}: ${summary.missing}`}/>}
      </Stack>

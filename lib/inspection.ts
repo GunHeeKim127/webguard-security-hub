@@ -10,5 +10,5 @@ export type Dashboard={user:{email:string,role:string},scans:SavedScan[],events:
 /** inspectionSummary: 해당 자료의 관찰·검토 결과를 계산합니다 주요 호출: filter. */ export function inspectionSummary(inspection:Inspection){
  // A failed/pending attempt never borrows a previous successful result.
  const complete=inspection.state==='success'&&!!inspection.result;
- return {complete,httpStatus:complete?inspection.result!.status:null,missing:complete?inspection.result!.checks.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ c=>!c.present).length:null};
+ return {complete,httpStatus:complete?inspection.result!.status:null,missing:complete&&inspection.result!.status>=200&&inspection.result!.status<300?inspection.result!.checks.filter(/** filter 콜백: 조건에 맞는 항목만 고릅니다 */ c=>!c.present).length:null};
 }

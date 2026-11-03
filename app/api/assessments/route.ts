@@ -8,6 +8,7 @@ import {assessmentInput} from '../../../lib/assessment/input';
 import {runAssessment,scannerCatalog} from '../../../lib/assessment/registry';
 import {saveAssessment,trafficSignals} from '../../../lib/assessment/store';
 import {authSourceBucket} from '../../../lib/auth-rate-identity';
+import {scanFailureCode} from '../../../lib/scan-failure';
 import {assessmentCategories,categoryFor,type AssessmentCategory} from '../../../lib/assessment/categories';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -42,7 +43,7 @@ const uuid=/** uuid: 식별자가 허용된 UUID 형식인지 확인합니다 */
  let input;try{input=assessmentInput(data);}catch{throw new HttpError(400,'Invalid assessment input');}
  const locale=requestLocale(req.headers).locale==='ko'?'ko':'en';
  const signal=AbortSignal.any([req.signal,AbortSignal.timeout(20000)]);
- let report;try{report=await runAssessment(input,{signal,locale});}catch{await event('assessment_rejected',user.id);throw new HttpError(400,input.moduleId==='web.compare'?'Target rejected or unreachable. Check allowlist, public DNS and TLS.':'Invalid assessment input');}
+ let report;try{report=await runAssessment(input,{signal,locale});}catch(error){await event('assessment_rejected',user.id);throw new HttpError(400,input.moduleId==='web.compare'?scanFailureCode(error,signal):'Invalid assessment input');}
  signal.throwIfAborted();
  const key=input.moduleId==='web.compare'?new URL(input.url!).hostname:input.label.toLowerCase();
  const saved=await saveAssessment(/** saveAssessment 콜백: saveAssessment에서 전달한 값을 처리하는 콜백입니다 주요 호출: query. */ (sql,values)=>db.query(sql,values),user.id,key,input.label,report);
