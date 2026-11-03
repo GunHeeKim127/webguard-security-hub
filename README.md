@@ -8,3 +8,5 @@
 - [Virtualization·Network 지원 안내](docs/INFRASTRUCTURE_CHECKS.md)
 
 환경 파일·키·실제 고객 파일/결과·내부 운영 자료는 저장소에 올리지 않습니다. 내부 운영 정보는 별도로 관리합니다.
+
+- [2단계 제출 범위·완료 근거·보류 항목](docs/PHASE2_SUBMISSION.md)
