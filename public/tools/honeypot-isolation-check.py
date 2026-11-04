@@ -14,6 +14,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def emit(value):
@@ -21,7 +22,7 @@ def emit(value):
     print(json.dumps(value), flush=True)
 
 
-def inside(expected_namespace):
+def inside(expected_namespace, soak_seconds=0):
     """Create a nonprivileged, chrooted decoy inside a fresh network namespace."""
     import ctypes
     import resource
@@ -112,8 +113,8 @@ def inside(expected_namespace):
                     pipe.write(json.dumps({'port': port, 'unprivileged': True,
                                            'empty_root': True}) + '\n')
                     pipe.flush()
-                    server.timeout = 5
-                    for _ in range(5):
+                    server.timeout = 10
+                    for _ in range(5 + soak_seconds // 5):
                         server.handle_request()
                     server.server_close()
                     pipe.write(json.dumps(counts) + '\n')
@@ -137,7 +138,14 @@ def inside(expected_namespace):
                     assert response.status == expected
                     assert len(response.read()) < 100
                     connection.close()
-                assert json.loads(pipe.readline()) == {'normal': 1, 'probe': 3, 'method_denied': 1}
+                for _ in range(soak_seconds // 5):
+                    time.sleep(5)
+                    connection = http.client.HTTPConnection('127.0.0.1', ready['port'], timeout=5)
+                    connection.request('GET', '/')
+                    response = connection.getresponse()
+                    assert response.status == 200 and response.read() == b'Lab decoy'
+                    connection.close()
+                assert json.loads(pipe.readline()) == {'normal': 1 + soak_seconds // 5, 'probe': 3, 'method_denied': 1}
             _, status = os.waitpid(child, 0)
             child = None
             assert os.waitstatus_to_exitcode(status) == 0
@@ -154,7 +162,8 @@ def inside(expected_namespace):
             'samplePublicEgressDenied': True, 'samplePrivateEgressDenied': True,
             'unprivilegedChroot': True, 'fixedResponses': True,
             'noRawRequestLogs': True, 'productionTrafficForwarded': False,
-            'hostConfigurationChanged': False, 'cleanup': 'complete'}
+            'hostConfigurationChanged': False, 'soakSeconds': soak_seconds,
+            'additionalHealthChecks': soak_seconds // 5, 'cleanup': 'complete'}
 
 
 def main():
@@ -162,25 +171,38 @@ def main():
     if sys.platform != 'linux' or not hasattr(os, 'geteuid') or os.geteuid() != 0:
         emit({'ok': False, 'code': 'OWNED_LINUX_LAB_ROOT_REQUIRED'})
         return 2
-    if len(sys.argv) == 3 and sys.argv[1] == '--inside':
+    if len(sys.argv) == 4 and sys.argv[1] == '--inside':
         try:
-            emit(inside(sys.argv[2]))
+            soak_seconds = int(sys.argv[3])
+            assert soak_seconds == 0 or 60 <= soak_seconds <= 3600 and soak_seconds % 5 == 0
+            emit(inside(sys.argv[2], soak_seconds))
             return 0
         except BaseException:
             emit({'ok': False, 'code': 'ISOLATION_OR_LAB_CHECK_FAILED'})
             return 1
-    if len(sys.argv) != 1 or not shutil.which('unshare') or not shutil.which('ip'):
+    soak_seconds = 0
+    if len(sys.argv) == 3 and sys.argv[1] == '--soak-seconds':
+        try:
+            soak_seconds = int(sys.argv[2])
+            assert 60 <= soak_seconds <= 3600 and soak_seconds % 5 == 0
+        except (ValueError, AssertionError):
+            emit({'ok': False, 'code': 'SOAK_REQUIRES_60_TO_3600_MULTIPLE_OF_5'})
+            return 2
+    elif len(sys.argv) != 1:
+        emit({'ok': False, 'code': 'UNSUPPORTED_ARGUMENTS'})
+        return 2
+    if not shutil.which('unshare') or not shutil.which('ip'):
         emit({'ok': False, 'code': 'UNSHARE_AND_IP_REQUIRED'})
         return 2
     namespace = os.readlink('/proc/self/ns/net')
     try:
         child = subprocess.Popen(['unshare', '--net', sys.executable, '-I', '-S',
-                                  os.path.abspath(__file__), '--inside', namespace],
+                                  os.path.abspath(__file__), '--inside', namespace, str(soak_seconds)],
                                  env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'},
                                  stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                  stderr=subprocess.DEVNULL, text=True, start_new_session=True)
         try:
-            output, _ = child.communicate(timeout=40)
+            output, _ = child.communicate(timeout=40 + soak_seconds)
         except BaseException:
             os.killpg(child.pid, signal.SIGKILL)
             child.communicate()

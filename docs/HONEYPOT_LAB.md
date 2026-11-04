@@ -11,7 +11,11 @@ sha256sum honeypot-isolation-check.py
 sudo python3 -I -S honeypot-isolation-check.py
 ```
 
-도구 SHA-256: `91b0b3e198284675d95748b064e624947949ef4a3afde4eabfdbdc5bc1a87f5a`
+현재 도구 SHA-256: `1ecb7200985b734a7037dc3e3e6a4bf3956c822fe3fdf50e8f507c86db8cccfe`
+
+## 일정 시간 실행 대조
+
+단기 시험 이후 `sudo python3 -I -S honeypot-isolation-check.py --soak-seconds 300`으로 5분간 더 실행할 수 있습니다. 처음 5개 시험에 더해 5초마다 namespace 내부 정상 응답을 대조합니다. 성공 결과의 `soakSeconds`는 300, `additionalHealthChecks`는 60, `cleanup`은 `complete`여야 합니다. 허용 시간은 60~3600초이며 5의 배수입니다. 외부 접속을 열거나 운영 트래픽을 전달하지 않습니다. 이것은 일정 시간의 격리 실습이며 상시 공개 허니팟 운영을 의미하지 않습니다.
 
 ## 확인하는 것
 

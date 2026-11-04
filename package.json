@@ -27,6 +27,7 @@
     "db:migrate:production": "tsx --env-file=.env.migration.production.local scripts/migrate.ts",
     "db:archive": "tsx --env-file=.env.migration.local scripts/archive-diagnostics.ts",
     "db:archive:production": "tsx --env-file=.env.migration.production.local scripts/archive-diagnostics.ts",
+    "db:verify-recovery:production": "tsx --env-file=.env.migration.production.local scripts/verify-recovery.ts --run",
     "verify:docs": "node scripts/verify-public-docs.mjs",
     "verify:function-docs": "node scripts/verify-function-docs.mjs"
   },
