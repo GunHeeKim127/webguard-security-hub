@@ -60,6 +60,7 @@ async function main() {
  const localEnv = {...osEnv, PGHOST: '127.0.0.1', PGPORT: String(port), PGDATABASE: 'postgres', PGUSER: 'postgres', PGPASSWORD: password, PGSSLMODE: 'disable'};
  const source = new Pool({...settings, max: 1, connectionTimeoutMillis: 15000, query_timeout: 120000});
  let local: Pool | undefined, client: PoolClient | undefined, initialized = false;
+ let verified: Record<string, unknown> | undefined;
  const control = /** control: 자체 임시 DB만 기동·중지하고 명령 출력의 비밀 노출을 막습니다. */ (args: string[]) => new Promise<void>(/** controlPromise: pg_ctl 종료 코드만 확인합니다. */ (resolve, reject) => {
   const child = spawn(binary('pg_ctl'), args, {windowsHide: true, stdio: 'ignore', env: osEnv});
   child.once('error', reject);
@@ -97,20 +98,17 @@ async function main() {
    await check.query('CREATE ROLE restore_unprivileged NOLOGIN');
    const acl = (await check.query("SELECT has_table_privilege('restore_unprivileged','public.users','SELECT') AS users,has_schema_privilege('restore_unprivileged','webguard_archive','USAGE') AS archive")).rows[0];
    assert(!acl.users && !acl.archive);
-   const result = {verifiedAt: new Date().toISOString(), fullLogicalData: true, consistentReadOnlySnapshot: true, verifiedTls: Boolean(settings.ssl), tableCount: signatures.size, allCountsAndDigestsMatch: true, ownerForeignKeysValid: true, unprivilegedReadDenied: true, localScramAuthentication: true, restoreDurationMs: Date.now() - restoreStart, totalDurationMs: Date.now() - began, productionWrites: false, providerRolesRestored: false, providerPitrTested: false, longTermStabilityProven: false};
-   await writeFile(path.join(root, 'verification.json'), JSON.stringify(result, null, 2));
-   console.log(JSON.stringify(result));
+   verified = {verifiedAt: new Date().toISOString(), fullLogicalData: true, consistentReadOnlySnapshot: true, verifiedTls: Boolean(settings.ssl), tableCount: signatures.size, allCountsAndDigestsMatch: true, ownerForeignKeysValid: true, unprivilegedReadDenied: true, localScramAuthentication: true, restoreDurationMs: Date.now() - restoreStart, productionWrites: false, providerRolesRestored: false, providerPitrTested: false, longTermStabilityProven: false};
   } finally { check.release(); }
  } finally {
   if (client) { await client.query('ROLLBACK').catch(/** rollback: 실패한 읽기 스냅샷의 정리 오류는 별도 데이터로 노출하지 않습니다. */ () => {}); client.release(); }
   await source.end(); await local?.end();
-  if (initialized) {
-   let running = true;
-   try { await control(['-D', dir, 'status']); }
-   catch { running = false; }
-   if (running) await control(['-D', dir, '-m', 'fast', '-w', 'stop']);
-  }
+  if (initialized) await control(['-D', dir, '-m', 'fast', '-w', 'stop']);
  }
+ assert(verified);
+ const result = {...verified, totalDurationMs: Date.now() - began, cleanupComplete: true};
+ await writeFile(path.join(root, 'verification.json'), JSON.stringify(result, null, 2));
+ console.log(JSON.stringify(result));
 }
 
 main().catch(/** failure: 접속 문자열·데이터·도구 stderr 대신 고정 실패 안내만 출력합니다. */ () => {
