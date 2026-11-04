@@ -4,7 +4,7 @@
 
 ## 준비와 실행
 
-Linux VM의 Python 3, `unshare`, `ip`와 root 권한이 필요합니다. 패키지는 자동 설치하지 않습니다. VM에서 [격리 검증 도구](https://webguard-security-hub.vercel.app/tools/honeypot-isolation-check.py)를 다운로드하고 다음과 같이 실행합니다. 다운로드는 아래 해시와 일치해야 합니다.
+Linux VM의 Python 3, `unshare`, `ip`와 root 권한이 필요합니다. 패키지는 자동 설치하지 않습니다. VM에서 [격리 검증 도구](https://securitywebguard.vercel.app/tools/honeypot-isolation-check.py)를 다운로드하고 다음과 같이 실행합니다. 다운로드는 아래 해시와 일치해야 합니다.
 
 ```sh
 sha256sum honeypot-isolation-check.py

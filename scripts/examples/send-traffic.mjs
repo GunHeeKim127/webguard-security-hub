@@ -1,5 +1,5 @@
 // Run on your own server only. Never import this into client-side code.
-const origin=process.env.WEBGUARD_ORIGIN??'https://webguard-security-hub.vercel.app';
+const origin=process.env.WEBGUARD_ORIGIN??'https://securitywebguard.vercel.app';
 const assetId=process.env.WEBGUARD_ASSET_ID,token=process.env.WEBGUARD_INGEST_TOKEN;
 const u=new URL(origin);if(u.protocol!=='https:'||u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Set a HTTPS WebGuard origin');
 if(!assetId||!token||!/^[0-9a-f]{64}$/.test(token))throw Error('Set the asset ID and server-only ingestion token');

@@ -2,7 +2,7 @@
 
 허가된 자산의 설정·파일을 검토하고, 보완할 내용과 확인하지 못한 범위를 안내하는 보안 점검 서비스입니다. 검사 결과는 전체 안전성이나 악성코드 부재를 인증하지 않습니다.
 
-- [서비스 열기](https://webguard-security-hub.vercel.app/)
+- [서비스 열기](https://securitywebguard.vercel.app/)
 - 사이트의 사용 가이드에서 지원 파일과 검사 순서를 확인하세요. 파일은 한 번에 하나만 선택합니다.
 - [최신 진행 현황·남은 작업](docs/PROGRESS_HANDOFF_2026-11-02.md)
 - [Virtualization·Network 지원 안내](docs/INFRASTRUCTURE_CHECKS.md)

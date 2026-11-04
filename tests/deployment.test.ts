@@ -91,7 +91,7 @@ test('instance burst rejection happens before database work and does not permane
  assert.equal(queries,600);assert.equal(rejected?.status,429);assert.equal((await rejected?.json()).errorCode,'RATE_LIMITED');assert(Number(rejected?.headers.get('retry-after'))>0);
 });
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
-import {assertManagedRuntimeSql} from '../lib/runtime-sql';
+import {assertManagedRuntimeSql,assertRuntimeParameters} from '../lib/runtime-sql';
 import {runtimePoolConfig} from '../lib/runtime-pool-config';
 import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from '../lib/protection-query';
 import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
@@ -211,8 +211,8 @@ test('localhost database works locally and is refused explicitly on Vercel',/** 
 test('Vercel production keeps the official HTTPS origin and Secure session cookies',/** test 콜백: 테스트: Vercel production keeps the official HTTPS origin and Secure session cookies 주요 호출: deepEqual·accessOrigins·equal. */ ()=>{
  const before={...process.env};try{
   delete process.env.APP_ORIGIN;delete process.env.APP_ADDITIONAL_ORIGINS;process.env.VERCEL='1';process.env.VERCEL_ENV='production';
-  assert.deepEqual(accessOrigins(),['https://webguard-security-hub.vercel.app']);
-  assert.equal(secureOriginCookie(new Request('https://webguard-security-hub.vercel.app/api/login',{headers:{origin:'https://webguard-security-hub.vercel.app'}})),true);
+  assert.deepEqual(accessOrigins(),['https://securitywebguard.vercel.app']);
+  assert.equal(secureOriginCookie(new Request('https://securitywebguard.vercel.app/api/login',{headers:{origin:'https://securitywebguard.vercel.app'}})),true);
   assert.throws(/** throws 콜백: throws에서 전달한 값을 처리하는 콜백입니다 주요 호출: secureOriginCookie. */ ()=>secureOriginCookie(new Request('https://evil.vercel.app',{headers:{origin:'https://evil.vercel.app'}})));
  }finally{process.env=before;}
 });
@@ -233,22 +233,22 @@ test('Vercel client identity uses only the official platform header and is disab
 });
 test('Vercel protection checks persistent blocks and never runs twice on local guarded server',/** test 콜백: 테스트: Vercel protection checks persistent blocks and never runs twice on local guarded server 주요 호출: equal·vercelProtection·get. */ async()=>{
  let calls=0;const query=/** query: 검증 시나리오에서 query에 필요한 입력·호출·기대 결과 처리를 제공합니다 주요 호출: equal. */ async(_sql:string,values:unknown[])=>{calls++;assert.equal(values[0],'203.0.113.2');return {rows:[]};};
- const req=new Request('https://webguard-security-hub.vercel.app/',{headers:{'x-real-ip':'203.0.113.2'}});
+ const req=new Request('https://securitywebguard.vercel.app/',{headers:{'x-real-ip':'203.0.113.2'}});
  assert.equal(await vercelProtection(req,query,{}),null);assert.equal(calls,0);
  assert.equal(await vercelProtection(req,query,{VERCEL:'1'}),null);assert.equal(calls,1);
  const blocked=await vercelProtection(req,/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>({rows:[{blacklisted:false,strikes:2,retry_after:123}]}),{VERCEL:'1'});assert.equal(blocked?.status,429);assert.equal(blocked?.headers.get('retry-after'),'123');
  const blacklisted=await vercelProtection(req,/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>({rows:[{blacklisted:true,strikes:6}]}),{VERCEL:'1'});assert.equal(blacklisted?.status,403);
 });
 test('Vercel protection detects probes, fails closed, and leaves readiness reachable',/** test 콜백: 테스트: Vercel protection detects probes, fails closed, and leaves readiness reachable 주요 호출: vercelProtection·equal·assert. */ async()=>{
- let calls=0;const attacked=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/.env',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: startsWith. */ async sql=>{calls++;return {rows:sql.startsWith('SELECT')?[]:[{blacklisted:false,strikes:1,retry_after:300}]};},{VERCEL:'1'});
+ let calls=0;const attacked=await vercelProtection(new Request('https://securitywebguard.vercel.app/.env',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: startsWith. */ async sql=>{calls++;return {rows:sql.startsWith('SELECT')?[]:[{blacklisted:false,strikes:1,retry_after:300}]};},{VERCEL:'1'});
  assert.equal(calls,2);assert.equal(attacked?.status,429);
- const failed=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('private database secret');},{VERCEL:'1'});assert.equal(failed?.status,503);assert(!(await failed!.text()).includes('secret'));
- const missing=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/'),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('not called');},{VERCEL:'1'});assert.equal(missing?.status,503);
- for(const path of ['/api/ready','/api/health'])assert.equal(await vercelProtection(new Request('https://webguard-security-hub.vercel.app'+path),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('not called');},{VERCEL:'1'}),null);
+ const failed=await vercelProtection(new Request('https://securitywebguard.vercel.app/',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('private database secret');},{VERCEL:'1'});assert.equal(failed?.status,503);assert(!(await failed!.text()).includes('secret'));
+ const missing=await vercelProtection(new Request('https://securitywebguard.vercel.app/'),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('not called');},{VERCEL:'1'});assert.equal(missing?.status,503);
+ for(const path of ['/api/ready','/api/health'])assert.equal(await vercelProtection(new Request('https://securitywebguard.vercel.app'+path),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 */ async()=>{throw new Error('not called');},{VERCEL:'1'}),null);
 });
 
 test('Vercel protection retries a transient block read once and still enforces the recovered block',/** test 콜백: 테스트: Vercel protection retries a transient block read once and still enforces the recovered block 주요 호출: equal·vercelProtection. */ async()=>{
- const req=new Request('https://webguard-security-hub.vercel.app/api/scans',{method:'POST',headers:{'x-real-ip':'2001:db8::2'}});
+ const req=new Request('https://securitywebguard.vercel.app/api/scans',{method:'POST',headers:{'x-real-ip':'2001:db8::2'}});
  let reads=0;const query=/** query: 검증 시나리오에서 query에 필요한 입력·호출·기대 결과 처리를 제공합니다 주요 호출: assert·startsWith·equal. */ async(sql:string,values:unknown[])=>{assert(sql.startsWith('SELECT'));assert.equal(values[0],'2001:db8::2');if(++reads===1)throw new Error('Query read timeout');return {rows:[]};};
  assert.equal(await vercelProtection(req,query,{VERCEL:'1'}),null);assert.equal(reads,2);
  reads=0;const blocked=await vercelProtection(req,/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: assign. */ async()=>{if(++reads===1)throw Object.assign(new Error('private connection text'),{code:'ECONNRESET'});return {rows:[{blacklisted:true,strikes:6}]};},{VERCEL:'1'});
@@ -256,7 +256,7 @@ test('Vercel protection retries a transient block read once and still enforces t
 });
 
 test('Vercel protection stops after a failed retry, rejects permanent errors immediately, and logs no secrets',/** test 콜백: 테스트: Vercel protection stops after a failed retry, rejects permanent errors immediately, and logs no secrets 주요 호출: vercelProtection·equal·json. */ async()=>{
- const req=new Request('https://webguard-security-hub.vercel.app/api/scans',{headers:{'x-real-ip':'203.0.113.2'}});
+ const req=new Request('https://securitywebguard.vercel.app/api/scans',{headers:{'x-real-ip':'203.0.113.2'}});
  let calls=0;const logs:unknown[][]=[],warn=console.warn;console.warn=/** test 콜백: 테스트: Vercel protection stops after a failed retry, rejects permanent errors immediately, and logs no secrets 주요 호출: push. */ (...args:unknown[])=>{logs.push(args);};
  try{
   const unavailable=await vercelProtection(req,/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: assign. */ async()=>{calls++;throw Object.assign(new Error('secret-db-password'),{code:'ECONNRESET'});},{VERCEL:'1'});
@@ -267,6 +267,17 @@ test('Vercel protection stops after a failed retry, rejects permanent errors imm
 });
 
 test('Vercel protection never retries a threat write after an ambiguous connection error',/** test 콜백: 테스트: Vercel protection never retries a threat write after an ambiguous connection error 주요 호출: vercelProtection·equal. */ async()=>{
- let calls=0;const response=await vercelProtection(new Request('https://webguard-security-hub.vercel.app/.env',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: startsWith·assign. */ async sql=>{calls++;if(sql.startsWith('SELECT'))return {rows:[]};throw Object.assign(new Error('write connection interrupted'),{code:'ECONNRESET'});},{VERCEL:'1'});
+ let calls=0;const response=await vercelProtection(new Request('https://securitywebguard.vercel.app/.env',{headers:{'x-real-ip':'203.0.113.2'}}),/** vercelProtection 콜백: vercelProtection에서 전달한 값을 처리하는 콜백입니다 주요 호출: startsWith·assign. */ async sql=>{calls++;if(sql.startsWith('SELECT'))return {rows:[]};throw Object.assign(new Error('write connection interrupted'),{code:'ECONNRESET'});},{VERCEL:'1'});
  assert.equal(calls,2);assert.equal(response?.status,503);
+});
+
+test('runtime SQL denies credential catalogs, encoded identifiers and extra privileged helpers',/** test: 운영 쿼리에 필요 없는 자격 정보·권한 함수 경로를 전송 전에 거절합니다. */ ()=>{
+ for(const sql of ['SELECT * FROM pg_catalog.pg_authid','SELECT * FROM pg_shadow','SELECT * FROM pg_user_mappings','SELECT * FROM pg_stat_activity','SELECT pg_logical_emit_message(true,$1,$2)','SELECT pg_ls_waldir()','SELECT lo_create(1)','SELECT dblink_connect($1)','SELECT public.unreviewed_writer($1)',String.raw`SELECT U&"pg_\0073leep"(1)`])assert.throws(/** throws: 금지된 SQL 구조만 검사하며 실제 운영 DB에 보내지 않습니다. */ ()=>assertManagedRuntimeSql(sql));
+ for(const sql of ['SELECT pg_get_constraintdef(oid) FROM pg_catalog.pg_constraint','SELECT pg_get_userbyid(datdba) FROM pg_database','SELECT public.register_viewer($1,$2,$3)','SELECT public.archive_diagnostics_30d()',"SELECT 'pg_authid' AS label"])assert.doesNotThrow(/** doesNotThrow: 고정된 정상 준비·등록·보관 쿼리는 유지합니다. */ ()=>assertManagedRuntimeSql(sql));
+});
+
+test('runtime bound values match placeholders and remain data even with SQL payloads',/** test: 누락·여분·건너뛴 바인딩을 거절하고 값의 SQL 모양은 실행 구조로 해석하지 않습니다. */ ()=>{
+ assert.doesNotThrow(/** doesNotThrow: 공격 문자열과 경로도 바인딩 값으로만 취급합니다. */ ()=>assertRuntimeParameters('SELECT $1,$2,$1',["'); DROP TABLE users; --",String.raw`a\b`]));
+ assert.doesNotThrow(/** doesNotThrow: 상수 문자열 속 자리 표시는 파라미터가 아닙니다. */ ()=>assertRuntimeParameters("SELECT '$1' AS label",undefined));
+ for(const [sql,values] of [['SELECT $1',undefined],['SELECT $2',[1,2]],['SELECT 1',[1]],['SELECT $0',[1]],['SELECT $01',[1]],['SELECT $129',Array(129).fill(1)]] as [string,unknown[]|undefined][])assert.throws(/** throws: 일치하지 않는 바인딩은 드라이버 호출 전에 거절합니다. */ ()=>assertRuntimeParameters(sql,values));
 });

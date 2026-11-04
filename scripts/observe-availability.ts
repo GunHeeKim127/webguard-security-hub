@@ -8,7 +8,7 @@ const start=Date.now(),until=start+minutes*60000,results:Array<{at:string;health
 await mkdir('work',{recursive:true});
 const stopFile='work/availability-observation.stop';await writeFile('work/availability-monitor.json',JSON.stringify({pid:process.pid,startedAt:new Date(start).toISOString(),minutes,seconds,stopFile}));
 /** probe: 고정된 운영 상태 URL만 제한 시간 안에 읽고 오류 본문은 수집하지 않습니다. */
-async function probe(path:string){try{const response=await fetch('https://webguard-security-hub.vercel.app'+path,{cache:'no-store',signal:AbortSignal.timeout(15000)});await response.body?.cancel();return response.status;}catch{return null;}}
+async function probe(path:string){try{const response=await fetch('https://securitywebguard.vercel.app'+path,{cache:'no-store',signal:AbortSignal.timeout(15000)});await response.body?.cancel();return response.status;}catch{return null;}}
 do{
  const began=Date.now(),[health,ready,protection]=await Promise.all([probe('/api/health'),probe('/api/ready'),probe('/api/locale')]);results.push({at:new Date().toISOString(),health,ready,protection,durationMs:Date.now()-began});
  const summary={startedAt:new Date(start).toISOString(),observedMinutes:(Date.now()-start)/60000,samples:results.length,failed:results.filter(/** filter: 실패 상태만 집계하며 고객 데이터는 취급하지 않습니다. */ row=>row.health!==200||row.ready!==200||row.protection!==200).length,scope:'public health/readiness and guarded locale only; not authenticated login/save',results};

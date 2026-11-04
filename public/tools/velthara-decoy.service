@@ -4,7 +4,7 @@ After=local-fs.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -I -S /usr/local/lib/velthara/isolated-decoy-service.py --serve --port 8765
+ExecStart=/usr/bin/python3 -I -S /opt/velthara-decoy/isolated-decoy-service.py --serve --port 8765
 Restart=on-failure
 RestartSec=5
 SuccessExitStatus=130
