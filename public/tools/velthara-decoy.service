@@ -1,0 +1,31 @@
+[Unit]
+Description=VELTHARA loopback-only isolated decoy
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -I -S /usr/local/lib/velthara/isolated-decoy-service.py --serve --port 8765
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=130
+KillMode=control-group
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_NET_ADMIN CAP_SETUID CAP_SETGID CAP_SYS_CHROOT
+MemoryMax=256M
+TasksMax=16
+CPUQuota=20%
+
+[Install]
+WantedBy=multi-user.target

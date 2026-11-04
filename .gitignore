@@ -10,6 +10,8 @@ env.*
 *.tsbuildinfo
 coverage/
 work/
+__pycache__/
+*.pyc
 
 .next-verify/
 .env.local
