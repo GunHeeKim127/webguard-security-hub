@@ -1,5 +1,15 @@
 import test from 'node:test';
 import {httpQueryAdapter,prismaHttp,managedHttpConfig,coalescedReadProbe} from '../lib/prisma-http';
+import {coalescedReadiness} from '../lib/readiness-coordinator';
+
+test('simultaneous readiness reads share work without caching success or failure',/** test: 겹치는 상태 조회의 DB 부하만 줄이고 다음 권한 검사나 실패 복구는 생략하지 않습니다. */ async()=>{
+ let calls=0,finish!:(value:{ready:boolean})=>void;
+ const read=coalescedReadiness(/** probe: 동시 요청이 완료를 기다리는 실제 준비 검사 계약을 모의합니다. */ ()=>{calls++;return new Promise<{ready:boolean}>(/** promise: 시험에서 준비 검사의 완료 시점을 제어합니다. */ resolve=>{finish=resolve;});});
+ const first=read(),second=read();await Promise.resolve();assert.equal(calls,1);assert.equal(first,second);finish({ready:false});assert.deepEqual(await first,{ready:false});
+ const third=read();await Promise.resolve();assert.equal(calls,2);finish({ready:true});assert.deepEqual(await third,{ready:true});
+ let failures=0;const retry=coalescedReadiness(/** retryProbe: 실패 뒤에도 새 검사를 수행하는지 확인합니다. */ async()=>{if(++failures===1)throw new Error('unavailable');return 'fresh';});
+ await assert.rejects(retry());assert.equal(await retry(),'fresh');assert.equal(failures,2);
+});
 
 test('slow HTTP operations keep their original request alive and share one fixed read recovery',/** test 콜백: 테스트: slow HTTP operations keep their original request alive and share one fixed read recovery 주요 호출: coalescedReadProbe·httpQueryAdapter·all. */ async()=>{
  let probes=0,queries=0;const complete:Array<()=>void>=[];let probeDone!:(v:any)=>void;
@@ -91,7 +101,7 @@ test('instance burst rejection happens before database work and does not permane
  assert.equal(queries,600);assert.equal(rejected?.status,429);assert.equal((await rejected?.json()).errorCode,'RATE_LIMITED');assert(Number(rejected?.headers.get('retry-after'))>0);
 });
 import {accessOrigins,secureOriginCookie} from '../lib/access-origins';
-import {assertManagedRuntimeSql,assertRuntimeParameters} from '../lib/runtime-sql';
+import {assertManagedRuntimeSql,assertRuntimeParameters,assertReadinessSql} from '../lib/runtime-sql';
 import {runtimePoolConfig} from '../lib/runtime-pool-config';
 import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from '../lib/protection-query';
 import {ACTIVE_BLOCK_SQL} from '../lib/ingress-guard';
@@ -186,7 +196,7 @@ test('Prisma readiness reports provider-managed permissions without asserting se
  const before={...process.env};try{
   process.env.DATABASE_PROVIDER='prisma-postgres';process.env.PROJECT_DATABASE='postgres';process.env.DATABASE_URL='postgres://provider-user:provider-password@pooled.db.prisma.io/postgres';
   const queries:string[]=[];const ready=await deploymentReadiness(/** deploymentReadiness 콜백: deploymentReadiness에서 전달한 값을 처리하는 콜백입니다 주요 호출: push. */ async sql=>{queries.push(sql);return {rows:[{schema_ready:true,writes_ready:true,...moduleSchema}]};});
-  assert.deepEqual(ready,{ready:true,code:'READY',permissionModel:'provider-managed'});assert(!queries.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ sql=>sql.includes('rolsuper')));
+  assert.deepEqual(ready,{ready:true,code:'READY',permissionModel:'provider-managed'});assert.equal(queries.length,4);assert(queries[0].includes("to_regclass('public.assessment_remediations')"));assert(queries[3].includes('public.assessment_remediation_events LIMIT 0'));assert(!queries.some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 주요 호출: includes. */ sql=>sql.includes('rolsuper')));
  }finally{process.env=before;}
 });
 test('cloud PostgreSQL URL preserves project identity and enforces verified TLS',/** test 콜백: 테스트: cloud PostgreSQL URL preserves project identity and enforces verified TLS 주요 호출: cloudEnv·projectDatabase·deepEqual. */ ()=>{
@@ -280,4 +290,9 @@ test('runtime bound values match placeholders and remain data even with SQL payl
  assert.doesNotThrow(/** doesNotThrow: 공격 문자열과 경로도 바인딩 값으로만 취급합니다. */ ()=>assertRuntimeParameters('SELECT $1,$2,$1',["'); DROP TABLE users; --",String.raw`a\b`]));
  assert.doesNotThrow(/** doesNotThrow: 상수 문자열 속 자리 표시는 파라미터가 아닙니다. */ ()=>assertRuntimeParameters("SELECT '$1' AS label",undefined));
  for(const [sql,values] of [['SELECT $1',undefined],['SELECT $2',[1,2]],['SELECT 1',[1]],['SELECT $0',[1]],['SELECT $01',[1]],['SELECT $129',Array(129).fill(1)]] as [string,unknown[]|undefined][])assert.throws(/** throws: 일치하지 않는 바인딩은 드라이버 호출 전에 거절합니다. */ ()=>assertRuntimeParameters(sql,values));
+});
+
+test('readiness permits metadata function signatures but rejects actual state-changing calls',/** test: 보관·가입 함수의 권한 조회 문자열을 실행으로 오인하지 않고 실제 호출은 차단합니다. */ ()=>{
+ assert.doesNotThrow(/** doesNotThrow: 함수 권한 메타데이터만 읽는 정상 준비 쿼리를 유지합니다. */ ()=>assertReadinessSql("SELECT has_function_privilege('public.register_viewer(uuid,text,text)','EXECUTE')"));
+ for(const sql of ['SELECT public.register_viewer($1,$2,$3)','SELECT public.archive_diagnostics_30d()',"INSERT INTO public.events(category) VALUES('test')"])assert.throws(/** throws: 읽기 전용 연결 경로에 변경 쿼리를 보내지 않습니다. */ ()=>assertReadinessSql(sql));
 });

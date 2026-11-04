@@ -11,7 +11,8 @@ import assert from 'node:assert/strict';
 import {cachedAdvice,adviceKey} from '../lib/advice-cache';
 import {withAiBudget} from '../lib/ai-budget';
 import {saveScan} from '../lib/scan-store';
-import {assertManagedRuntimeSql} from '../lib/runtime-sql';
+import {assertManagedRuntimeSql,assertReadinessSql} from '../lib/runtime-sql';
+import {deploymentReadiness} from '../lib/deployment-readiness';
 import {hashPassword,verifyPassword,tokenHash} from '../lib/password';
 import {resetAccountPassword} from './support/reset-account-password';
 import {saveAssessment} from '../lib/assessment/store';
@@ -45,6 +46,17 @@ try{
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
  assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'13');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
+ const priorEnvironment={...process.env};
+ try{
+  Object.assign(process.env,env);let probes=0;
+  const executeReadiness=/** executeReadiness: 실제 제한 역할로 준비 쿼리의 SQL 경계와 권한 검사를 실행합니다. */ async(sql:string)=>{probes++;assertReadinessSql(sql);return runtime.query(sql);};
+  assert.equal((await deploymentReadiness(executeReadiness)).ready,true);assert.equal(probes,5);
+  await projectAdmin.query('REVOKE SELECT ON public.assessment_remediations FROM webguard_hub_dev_app');
+  try{assert.equal((await deploymentReadiness(executeReadiness)).code,'DATABASE_CONNECTION_OR_PERMISSIONS_FAILED');}
+  finally{await projectAdmin.query('GRANT SELECT ON public.assessment_remediations TO webguard_hub_dev_app');}
+  assert.equal((await deploymentReadiness(executeReadiness)).ready,true);
+  console.log('PASS consolidated readiness probes keep actual table permission checks and reject missing remediation SELECT access');
+ }finally{process.env=priorEnvironment;}
  // Reproduce an upstream read lasting over the general 5s client deadline.
  // Locks exist only in this disposable DB; no production writes or traffic.
  const guardPool=new Pool({connectionString:env.DATABASE_URL,query_timeout:5000});projectPools.push(guardPool);
@@ -72,6 +84,7 @@ try{
  for(const role of ['admin','viewer','analyst'])await script('scripts/create-user.ts',{BOOTSTRAP_EMAIL:role+'@example.test',BOOTSTRAP_PASSWORD:password,BOOTSTRAP_ROLE:role});
  let log='';server=spawn(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/serve.ts','--hostname','127.0.0.1','--port',String(webPort)],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});server.stdout?.on('data',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 */ d=>log+=d);server.stderr?.on('data',/** on 콜백: on에서 전달한 값을 처리하는 콜백입니다 */ d=>log+=d);
  let ready=false;for(let i=0;i<60;i++){if(server.exitCode!==null)throw new Error(log);try{if((await call('/api/health')).ok){ready=true;break;}}catch{}await new Promise(/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: setTimeout. */ r=>setTimeout(r,500));}assert(ready,log);
+ assert.equal((await call('/api/ready')).status,200);console.log('PASS compiled readiness API uses the guarded read-only connection and accepts metadata signatures');
  /** login: 검증 시나리오에서 login에 필요한 입력·호출·기대 결과 처리를 제공합니다 주요 호출: call·equal·text. */ async function login(role:string){const r=await call('/api/login','POST',{email:role+'@example.test',password});assert.equal(r.status,200,await r.clone().text());const cookie=r.headers.get('set-cookie')!;assert(cookie.includes('HttpOnly'));assert(cookie.includes('SameSite=Strict'));return cookie.split(';')[0];}
  const admin=await login('admin'),viewer=await login('viewer');
  const deviceBase=`http://localhost:${webPort}`;

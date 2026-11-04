@@ -23,3 +23,10 @@ export function assertRuntimeParameters(sql:string,values:unknown[]|undefined){
  const used=new Set(parameters.map(/** map: SQL 구조에서 실제로 참조한 값 자리만 수집합니다. */ p=>Number(p[1])));
  if(used.size!==count)throw new Error('Runtime SQL parameters rejected');
 }
+
+/** assertReadinessSql: 함수 서명을 담은 상수와 실제 함수 호출을 구분해 준비 검사에 읽기만 허용합니다. */
+export function assertReadinessSql(sql:string){
+ assertManagedRuntimeSql(sql);assertRuntimeParameters(sql,undefined);
+ const structure=sql.replace(/'(?:''|[^'])*'/g,"''");
+ if(!/^\s*SELECT\b/i.test(structure)||/\b(?:register_viewer|archive_diagnostics_30d)\s*\(/i.test(structure))throw new Error('Readiness requires fixed read-only SQL');
+}

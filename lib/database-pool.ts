@@ -3,7 +3,7 @@ import {Pool,type QueryResultRow} from 'pg';
 import {attachDatabasePool,waitUntil} from '@vercel/functions';
 import {runtimePoolConfig} from './runtime-pool-config';
 import {databaseProvider} from './database-provider';
-import {assertManagedRuntimeSql,assertRuntimeParameters} from './runtime-sql';
+import {assertManagedRuntimeSql,assertRuntimeParameters,assertReadinessSql} from './runtime-sql';
 import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from './protection-query';
 import {freshConnector,leaseQuery} from './fresh-pool';
 import {prismaHttp} from './prisma-http';
@@ -24,6 +24,7 @@ const shared=globalThis as unknown as {wgPool?:Pool;wgFresh?:Pick<Pool,'connect'
 /** http: 관리형 HTTP 방식의 DB 조회 인터페이스를 준비합니다 주요 호출: prismaHttp·projectDatabase. */ function http(){return shared.wgHttp??(shared.wgHttp=prismaHttp(projectDatabase('runtime').connectionString,/** prismaHttp 콜백: prismaHttp에서 전달한 값을 처리하는 콜백입니다 주요 호출: waitUntil·then. */ task=>waitUntil(task.then(/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 */ ()=>{},/** then 콜백: 앞선 비동기 결과를 후속 처리합니다 */ ()=>{}))));}
 const useHttp=/** useHttp: 현재 환경에서 HTTP DB 연결을 사용할지 확인합니다 주요 호출: databaseProvider. */ ()=>databaseProvider()==='prisma-postgres'&&process.env.VERCEL==='1';
 export const database={
+ readinessQuery:/** readinessQuery: 고정 읽기 준비 검사만 수명 제한된 PostgreSQL 연결로 실행해 SDK 백그라운드 작업을 만들지 않습니다. */ <R extends QueryResultRow=any>(text:string)=>{assertReadinessSql(text);return leaseQuery<R>(connector(),text);},
  query:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: assertManagedRuntimeSql·useHttp·query. */ <R extends QueryResultRow=any>(text:string,values?:unknown[])=>{assertManagedRuntimeSql(text);assertRuntimeParameters(text,values);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
  protectionQuery:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: databaseProvider·assertManagedRuntimeSql·useHttp. */ (text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);assertRuntimeParameters(text,values);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
 };
