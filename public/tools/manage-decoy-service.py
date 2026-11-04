@@ -170,6 +170,22 @@ def install(enable):
         raise
 
 
+def boot_evidence():
+    """Compare installation time and systemd activation against the current boot."""
+    boot = next(int(row.split()[1]) for row in pathlib.Path('/proc/stat').read_text().splitlines() if row.startswith('btime '))
+    activated = int(command('systemctl', 'show', NAME, '-p', 'ActiveEnterTimestampMonotonic', '--value').strip())
+    before_boot = UNIT.stat().st_mtime < boot and TOOL.stat().st_mtime < boot
+    near_boot = 0 < activated <= 120 * 1000000
+    try:
+        enabled = command('systemctl', 'is-enabled', NAME).strip() == 'enabled'
+    except subprocess.CalledProcessError as error:
+        if error.returncode != 1:
+            raise
+        enabled = False
+    return {'installedBeforeCurrentBoot': before_boot, 'serviceStartedNearBoot': near_boot,
+            'enabledAtBoot': enabled, 'actualRebootTested': before_boot and near_boot and enabled}
+
+
 def main():
     """Require explicit local installation or verification; never alter other services."""
     if sys.platform != 'linux' or os.geteuid() != 0:
@@ -193,7 +209,7 @@ def main():
         else:
             _, checks = verify_worker()
             result = {'ok': True, 'scope': 'owned Linux VM loopback service only', **checks,
-                      'changed': False, 'actualRebootTested': False}
+                      'changed': False, **boot_evidence()}
         print(json.dumps(result))
         return 0
     except BaseException as error:
