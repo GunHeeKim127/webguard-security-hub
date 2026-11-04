@@ -36,5 +36,9 @@ try{
  await c.query(`GRANT SELECT, INSERT ON public.assessment_assets,public.assessment_runs TO ${quoted}`);
  await c.query(`GRANT UPDATE(label,updated_at,ingest_token_hash) ON public.assessment_assets TO ${quoted}`);
  await c.query(`GRANT SELECT, INSERT, UPDATE ON public.assessment_traffic TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT ON public.assessment_remediations TO ${quoted}`);
+ await c.query(`GRANT UPDATE(state,owner_label,note,version,updated_at) ON public.assessment_remediations TO ${quoted}`);
+ await c.query(`GRANT SELECT, INSERT ON public.assessment_remediation_events TO ${quoted}`);
+ await c.query(`REVOKE ALL ON FUNCTION public.archive_diagnostics_base_30d() FROM ${quoted}`);
  await c.query('COMMIT');console.log('Project runtime privileges applied; migration history is not exposed to runtime.');
 }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();await pool.end();}

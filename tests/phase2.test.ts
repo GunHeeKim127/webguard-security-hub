@@ -1,6 +1,21 @@
 import test from 'node:test';
 import {assessmentReportText} from '../lib/assessment/report-text';
 import type {AssessmentReport} from '../lib/assessment/types';
+import {remediationInput,remediationBaseline,remediationVerification,type RemediationRecord} from '../lib/assessment/remediation';
+import {assessmentTrend,reportBundleHtml} from '../lib/assessment/report-bundle';
+test('remediation distinguishes manual closure, incompatible retest and actual later evidence',/** test: 사용자 종료 선언이 재검증을 대체하지 않고 호환성·시각·중복을 확인합니다. */ ()=>{
+ const report:AssessmentReport={schemaVersion:1,moduleId:'linux.ssh',moduleVersion:'1',ruleVersion:'1',targetKind:'config',observedAt:'2026-11-04',scope:[],limitations:[],findings:[{id:'root',title:'Root',status:'warning',severity:'medium',evidence:[],remediation:''}]};
+ const row:RemediationRecord={id:'a',asset_id:'b',run_id:'old',finding_id:'root',state:'closed',owner_label:'',note:'Reviewed',version:1,baseline:remediationBaseline(report,'root'),created_at:'2026-11-04T00:00:00Z',updated_at:'2026-11-04T00:00:00Z'};
+ const run={id:'new',created_at:'2026-11-04T00:01:00Z',report:{...report,findings:[{...report.findings[0],status:'pass' as const}]}};
+ assert.equal(remediationVerification(row,{...run,id:'old'}),'pending');assert.equal(remediationVerification(row,run),'passed');assert.equal(remediationVerification(row,{...run,report:{...run.report,ruleVersion:'2'}}),'incompatible');assert.equal(remediationVerification(row,{...run,report:{...run.report,findings:[]}}),'unknown');
+ assert.equal(remediationVerification(row,{...run,report:{...run.report,findings:[...run.report.findings,...run.report.findings]}}),'unknown');
+ const html=reportBundleHtml([run], [{...row,note:'<script>alert(1)</script>\nFORGED'}],'en');assert(!html.includes('<script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('Closed · user decision'));assert(html.includes('default-src'));
+ const trend=assessmentTrend([run,{id:'old',created_at:'2026-11-03',report}]);assert.equal(trend[0].improved,1);assert.equal(trend[1].comparable,false);
+});
+test('remediation input rejects invented verification, extra identity and unsafe versions',/** test: 사용자 입력으로 검증 판정·계정·원본 근거를 위조하지 못하게 합니다. */ ()=>{
+ const input={assetId:'11111111-1111-4111-8111-111111111111',runId:'22222222-2222-4222-8222-222222222222',findingId:'root',state:'open',ownerLabel:'',note:'',version:0};
+ assert.equal(remediationInput(input).state,'open');for(const change of [{state:'verified'},{userId:'other'},{version:2147483647},{state:'closed'},{note:'a'.repeat(1001)}])assert.throws(/** throws: 잘못된 조치 입력을 거절합니다. */ ()=>remediationInput({...input,...change}));
+});
 test('draft report preserves uncertainty, bounds injected lines and never mutates results',/** test: 초안이 안전 판정이나 조치 완료를 만들어내지 않고 원본을 보존하는지 확인합니다. */ ()=>{
  const report:AssessmentReport={schemaVersion:1,moduleId:'linux.ssh',moduleVersion:'1',ruleVersion:'1',targetKind:'config',observedAt:'2026-11-03',scope:['Supplied settings only'],limitations:['No live authentication'],findings:[{id:'passwordauthentication',title:'Password',status:'not_assessed',severity:'info',evidence:['value=unknown\nFORGED SECTION\u202e'],remediation:'Check configuration'}]};
  const original=JSON.stringify(report),text=assessmentReportText(report,'ko');

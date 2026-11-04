@@ -43,7 +43,7 @@ try{
  const projectAdmin=new Pool({connectionString:`postgresql://postgres@127.0.0.1:${pgPort}/webguard_hub_dev`});
  projectPools.push(projectAdmin);
  await script('scripts/migrate.ts');await script('scripts/migrate.ts');await script('scripts/grant-runtime.ts');
- assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'12');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
+ assert.equal((await projectAdmin.query('SELECT count(*) FROM schema_migrations')).rows[0].count,'13');console.log('PASS per-project setup, migrations, grants and idempotent rerun');
  const runtime=new Pool({connectionString:env.DATABASE_URL});
  // Reproduce an upstream read lasting over the general 5s client deadline.
  // Locks exist only in this disposable DB; no production writes or traffic.
@@ -97,6 +97,22 @@ try{
  const memberRetest=await call('/api/assessments','POST',{...memberInput,text:'PermitRootLogin no'},newCookie);assert.equal(memberRetest.status,200);assert.equal((await memberRetest.json()).asset_id,memberSaved.asset_id);
  const memberHistory=await (await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,newCookie)).json();assert.equal(memberHistory.runs.length,2);
  assert.equal((await call('/api/assessments?assetId='+memberSaved.asset_id,'GET',undefined,admin)).status,404);
+ const remediationRuntime=new Pool({connectionString:env.DATABASE_URL});projectPools.push(remediationRuntime);
+ const actionInput={assetId:memberSaved.asset_id,runId:memberSaved.id,findingId:'permitrootlogin',state:'in_progress',ownerLabel:'Reviewer',note:'Use approved keys before changing policy',version:0};
+ assert.equal((await call('/api/remediations','POST',actionInput)).status,401);
+ assert.equal((await call('/api/remediations','POST',actionInput,admin)).status,404);
+ const actionResponse=await call('/api/remediations','POST',actionInput,newCookie);assert.equal(actionResponse.status,200);const actionSaved=await actionResponse.json();assert.equal(actionSaved.version,1);
+ assert.equal((await call('/api/remediations','POST',actionInput,newCookie)).status,409);
+ assert.equal((await call('/api/remediations','POST',{...actionInput,version:1,state:'closed',note:''},newCookie)).status,400);
+ assert.equal((await call('/api/remediations','POST',{...actionInput,version:1,state:'verified'},newCookie)).status,400);
+ const closeAction=await call('/api/remediations','POST',{...actionInput,version:1,state:'closed',note:'Manual closure; retest separately'},newCookie);assert.equal(closeAction.status,200);assert.equal((await closeAction.json()).version,2);
+ const actionList=await (await call('/api/remediations?assetId='+memberSaved.asset_id,'GET',undefined,newCookie)).json();assert.equal(actionList.items.length,1);assert.equal(actionList.history.length,2);assert.equal(actionList.items[0].state,'closed');
+ assert.equal((await call('/api/remediations?assetId='+memberSaved.asset_id,'GET',undefined,admin)).status,404);
+ for(const format of ['html','txt']){const reportResponse=await call('/api/reports?assetId='+memberSaved.asset_id+'&format='+format,'GET',undefined,newCookie);assert.equal(reportResponse.status,200);const content=await reportResponse.text();assert(content.includes('Manual closure; retest separately'));assert(!content.includes('new@example.test'));assert(reportResponse.headers.get('content-disposition')?.includes('attachment'));}
+ assert.equal((await call('/api/reports?assetId='+memberSaved.asset_id,'GET',undefined,admin)).status,404);
+ assert.equal((await call('/api/reports?assetId='+memberSaved.asset_id)).status,401);
+ await assert.rejects(remediationRuntime.query('UPDATE public.assessment_remediation_events SET snapshot=$1',['{}']),{code:'42501'});
+ console.log('PASS remediation ownership, missing closure note rejection, immutable history, optimistic conflict, manual/verified separation and report ownership');
  assert.equal(Object.hasOwn(await (await call('/api/dashboard','GET',undefined,newCookie)).json(),'ipBlocks'),false);
  const memberPage=await (await call('/workbench/endpoint','GET',undefined,newCookie+'; wg_locale=ko')).text();assert(memberPage.includes('일반 회원'));assert(memberPage.includes('최근 30일'));assert(!memberPage.includes('진단은 admin/analyst'));
  assert.equal((await call('/api/register','POST',{email:'new@example.test',password:signupPassword})).status,202);
@@ -461,6 +477,15 @@ try{
  const revivedHistory=await (await call('/api/assessments?assetId='+revived.asset_id,'GET',undefined,newAdmin)).json();assert.equal(revivedHistory.runs.length,1);assert.equal(revivedHistory.runs[0].id,revived.id);
  assert.equal((await call('/api/assessments?assetId='+revived.asset_id,'GET',undefined,newViewer)).status,404);
  console.log('PASS 30-day API filtering, private backup, authenticated maintenance, atomic rollback, idempotent archive, owner isolation and stable asset revival');
+ await projectAdmin.query("UPDATE public.assessment_remediations SET updated_at=now()-interval '31 days' WHERE id=$1",[actionSaved.id]);
+ await projectAdmin.query("UPDATE public.assessment_remediation_events SET created_at=now()-interval '31 days' WHERE remediation_id=$1",[actionSaved.id]);
+ const hiddenActionResponse=await call('/api/remediations?assetId='+memberSaved.asset_id,'GET',undefined,memberMatrixCookie);assert.equal(hiddenActionResponse.status,200);const hiddenActions=await hiddenActionResponse.json();assert.equal(hiddenActions.items.length,0);assert.equal(hiddenActions.history.length,0);
+ await projectAdmin.query("CREATE FUNCTION webguard_archive.fail_remediation_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.kind='remediation' THEN RAISE EXCEPTION 'test rollback'; END IF; RETURN NEW; END $$");
+ await projectAdmin.query('CREATE TRIGGER remediation_rollback_test BEFORE INSERT ON webguard_archive.diagnostic_records FOR EACH ROW EXECUTE FUNCTION webguard_archive.fail_remediation_test()');
+ await assert.rejects(remediationRuntime.query('SELECT public.archive_diagnostics_30d()'));assert.equal((await projectAdmin.query('SELECT count(*) FROM public.assessment_remediations WHERE id=$1',[actionSaved.id])).rows[0].count,'1');assert.equal((await projectAdmin.query('SELECT count(*) FROM public.assessment_remediation_events WHERE remediation_id=$1',[actionSaved.id])).rows[0].count,'2');
+ await projectAdmin.query('DROP TRIGGER remediation_rollback_test ON webguard_archive.diagnostic_records');await projectAdmin.query('DROP FUNCTION webguard_archive.fail_remediation_test()');
+ await remediationRuntime.query('SELECT public.archive_diagnostics_30d()');assert.equal((await projectAdmin.query("SELECT count(*) FROM webguard_archive.diagnostic_records WHERE kind IN ('remediation','remediation_event')")).rows[0].count,'3');
+ await assert.rejects(remediationRuntime.query('SELECT public.archive_diagnostics_base_30d()'),{code:'42501'});console.log('PASS remediation 30-day hiding, atomic archive rollback, private retention and no runtime bypass of combined maintenance');
  await pool.query('CREATE DATABASE webguard_copy_fixture');
  const targetUrl=`postgresql://postgres@127.0.0.1:${pgPort}/webguard_copy_fixture`;
  const cloudEnv={PROJECT_DATABASE:'webguard_copy_fixture',PROJECT_RUNTIME_ROLE:'webguard_fixture_app',MIGRATION_DATABASE_URL:targetUrl};
@@ -496,6 +521,7 @@ try{
   await managed.query(await readFile('sql/migrations/prisma-postgres/006_infrastructure_modules.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/007_account_blocks.sql','utf8'));
   await managed.query(await readFile('sql/migrations/prisma-postgres/008_private_management_references.sql','utf8'));
+  await managed.query(await readFile('sql/migrations/prisma-postgres/009_remediation.sql','utf8'));
   await managed.query("UPDATE scans SET created_at=now()-interval '31 days' WHERE id=$1",[legacyScan]);
   assert.equal((await managed.query('SELECT public.archive_diagnostics_30d() AS result')).rows[0].result.moved,1);
   assert.equal((await managed.query('SELECT count(*) FROM webguard_archive.diagnostic_records WHERE source_id=$1',[legacyScan])).rows[0].count,'1');

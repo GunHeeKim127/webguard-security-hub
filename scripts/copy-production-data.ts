@@ -13,19 +13,23 @@ const s=await source.connect().catch(/** catch 콜백: 비동기 실패를 후�
 const t=await target.connect().catch(/** catch 콜백: 비동기 실패를 후속 처리합니다 주요 호출: release·end·error. */ async()=>{s.release();await source.end();await target.end();console.error('Production target database connection failed.');process.exit(1);});
 try{
  await s.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
- await t.query('BEGIN');await t.query('LOCK TABLE public.users,public.scans,public.assessment_assets,public.assessment_runs,public.assessment_traffic IN ACCESS EXCLUSIVE MODE');
- if((await t.query('SELECT (SELECT count(*) FROM public.users)+(SELECT count(*) FROM public.scans)+(SELECT count(*) FROM public.assessment_assets)+(SELECT count(*) FROM public.assessment_runs)+(SELECT count(*) FROM public.assessment_traffic) AS count')).rows[0].count!=='0')throw new Error('Target already contains data; refusing to overwrite');
+ await t.query('BEGIN');await t.query('LOCK TABLE public.users,public.scans,public.assessment_assets,public.assessment_runs,public.assessment_traffic,public.assessment_remediations,public.assessment_remediation_events IN ACCESS EXCLUSIVE MODE');
+ if((await t.query('SELECT (SELECT count(*) FROM public.users)+(SELECT count(*) FROM public.scans)+(SELECT count(*) FROM public.assessment_assets)+(SELECT count(*) FROM public.assessment_runs)+(SELECT count(*) FROM public.assessment_traffic)+(SELECT count(*) FROM public.assessment_remediations)+(SELECT count(*) FROM public.assessment_remediation_events) AS count')).rows[0].count!=='0')throw new Error('Target already contains data; refusing to overwrite');
  const users=(await s.query('SELECT id,email,password_hash,role FROM public.users LIMIT 10001')).rows;
  const scans=(await s.query('SELECT id,user_id,hostname,result,created_at FROM public.scans LIMIT 10001')).rows;
  const assets=(await s.query('SELECT id,user_id,module_id,target_key,label,created_at,updated_at FROM public.assessment_assets LIMIT 10001')).rows;
  const runs=(await s.query('SELECT id,user_id,asset_id,report,created_at FROM public.assessment_runs LIMIT 10001')).rows;
  const traffic=(await s.query('SELECT user_id,asset_id,window_at,requests,login_failures,probes,server_errors FROM public.assessment_traffic LIMIT 10001')).rows;
- if([users,scans,assets,runs,traffic].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ rows=>rows.length>10000))throw new Error('Use a reviewed backup/restore for larger datasets');
+ const remediations=(await s.query('SELECT id,user_id,asset_id,run_id,finding_id,state,owner_label,note,version,baseline,created_at,updated_at FROM public.assessment_remediations LIMIT 10001')).rows;
+ const remediationEvents=(await s.query('SELECT id,user_id,asset_id,remediation_id,snapshot,created_at FROM public.assessment_remediation_events LIMIT 10001')).rows;
+ if([users,scans,assets,runs,traffic,remediations,remediationEvents].some(/** some 콜백: 조건을 만족하는 항목이 있는지 확인합니다 */ rows=>rows.length>10000))throw new Error('Use a reviewed backup/restore for larger datasets');
  for(const u of users)await t.query('INSERT INTO public.users(id,email,password_hash,role) VALUES($1,$2,$3,$4)',[u.id,u.email,u.password_hash,u.role]);
  for(const r of scans)await t.query('INSERT INTO public.scans(id,user_id,hostname,result,created_at) VALUES($1,$2,$3,$4,$5)',[r.id,r.user_id,r.hostname,r.result,r.created_at]);
  for(const a of assets)await t.query('INSERT INTO public.assessment_assets(id,user_id,module_id,target_key,label,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)',[a.id,a.user_id,a.module_id,a.target_key,a.label,a.created_at,a.updated_at]);
  for(const r of runs)await t.query('INSERT INTO public.assessment_runs(id,user_id,asset_id,report,created_at) VALUES($1,$2,$3,$4,$5)',[r.id,r.user_id,r.asset_id,r.report,r.created_at]);
  for(const r of traffic)await t.query('INSERT INTO public.assessment_traffic(user_id,asset_id,window_at,requests,login_failures,probes,server_errors) VALUES($1,$2,$3,$4,$5,$6,$7)',[r.user_id,r.asset_id,r.window_at,r.requests,r.login_failures,r.probes,r.server_errors]);
+ for(const r of remediations)await t.query('INSERT INTO public.assessment_remediations(id,user_id,asset_id,run_id,finding_id,state,owner_label,note,version,baseline,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',[r.id,r.user_id,r.asset_id,r.run_id,r.finding_id,r.state,r.owner_label,r.note,r.version,r.baseline,r.created_at,r.updated_at]);
+ for(const r of remediationEvents)await t.query('INSERT INTO public.assessment_remediation_events(id,user_id,asset_id,remediation_id,snapshot,created_at) VALUES($1,$2,$3,$4,$5,$6)',[r.id,r.user_id,r.asset_id,r.remediation_id,r.snapshot,r.created_at]);
  await t.query("INSERT INTO public.events(category) VALUES('production_data_imported')");
  await s.query('COMMIT');await t.query('COMMIT');
  console.log(`Copied ${users.length} accounts, ${scans.length} legacy results, ${assets.length} assets and ${runs.length} assessment runs. Source unchanged. Sessions and ingestion keys were not copied.`);

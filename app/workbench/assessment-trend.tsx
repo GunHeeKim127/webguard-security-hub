@@ -1,0 +1,8 @@
+'use client';
+import {Box,Table,TableBody,TableCell,TableHead,TableRow,Typography} from '@mui/material';
+import {assessmentTrend,type ReportRun} from '../../lib/assessment/report-bundle';
+/** AssessmentTrend: 조회한 실행의 실제 비교 가능 여부와 개선·악화·미확인을 함께 표시합니다. */
+export default function AssessmentTrend({runs,locale}:{runs:ReportRun[];locale:'ko'|'en'}){
+ if(runs.length<2)return null;const ko=locale==='ko';
+ return <Box component="details" sx={{my:2,'& summary':{cursor:'pointer',color:'primary.main'}}}><Typography component="summary">{ko?'최근 실행 추세 · 최대 10개':'Recent run trend · up to 10'}</Typography><Typography variant="body2" sx={{my:1}}>{ko?'호환되는 바로 이전 실행과 비교합니다. 자료·규칙이 다르면 개선으로 집계하지 않습니다.':'Compared with the immediately preceding compatible run; different rules or evidence do not count as improvements.'}</Typography><Box sx={{overflowX:'auto'}}><Table size="small" aria-label={ko?'실행별 개선 추세':'Run comparison trend'}><TableHead><TableRow>{(ko?['검사 시각','개선','악화','비교 불가']:['Observed at','Improved','Regressed','Unknown']).map(/** map: 추세 표 머리글을 표시합니다. */ label=><TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{assessmentTrend(runs).map(/** map: 비교 불가를 숫자 0과 구분해 표시합니다. */ (row,index)=><TableRow key={index}><TableCell>{new Date(row.at).toLocaleString(locale)}{!row.comparable&&<Typography variant="caption" display="block">{ko?'이전 자료 없음 또는 기준 불일치':'No prior evidence or incompatible baseline'}</Typography>}</TableCell><TableCell>{row.improved??'—'}</TableCell><TableCell>{row.regressed??'—'}</TableCell><TableCell>{row.unknown??'—'}</TableCell></TableRow>)}</TableBody></Table></Box></Box>;
+}
