@@ -61,3 +61,18 @@ test('managed readiness cancels and joins a pending recovery before returning',/
   await new Promise(/** wait: 원래 읽기는 고정된 짧은 지연 후 완료합니다. */ resolve=>setTimeout(resolve,40));return response(valid);
  },5,200);assert.equal(aborted,true);
 });
+
+test('managed block lookup binds an address and still rejects the recovered blacklist',/** test: 실제 전송 프레임과 접속 차단 결과를 함께 대조합니다. */ async()=>{
+ const {managedBlockRead}=await import('../lib/managed-readiness');const {vercelProtection}=await import('../lib/vercel-protection');const {ACTIVE_BLOCK_SQL}=await import('../lib/ingress-guard');let calls=0;
+ const send:typeof fetch=/** send: 주소가 SQL 문자열에 합쳐지지 않고 매개변수로 전송되는지 확인합니다. */ async(_url,init)=>{
+  calls++;const body=String(init?.body),descriptor=JSON.parse(body.slice(body.indexOf('{'),body.lastIndexOf('}')+1));assert.equal(descriptor.query,ACTIVE_BLOCK_SQL);assert.deepEqual(descriptor.parameters,[{type:'text',value:'203.0.113.2'}]);
+  return response([{columns:[{name:'blacklisted',typeOid:16},{name:'strikes',typeOid:23},{name:'retry_after',typeOid:23}]},{values:['t','6','0']},{complete:true}]);
+ };
+ const rejected=await vercelProtection(new Request('https://owned.example/workbench',{headers:{'x-real-ip':'203.0.113.2'}}),/** query: 정확한 차단 조회만 새 전송에 연결합니다. */ (sql,values)=>managedBlockRead(connection,sql,values,send),{VERCEL:'1'});
+ assert.equal(rejected?.status,403);assert.equal((await rejected!.json()).errorCode,'IP_BLACKLISTED');assert.equal(calls,1);
+});
+test('managed block lookup never accepts threat writes or unnormalized addresses',/** test: 고정 읽기 경로에 쓰기·변형 주소를 전달하지 않습니다. */ async()=>{
+ const {managedBlockRead}=await import('../lib/managed-readiness');const {ACTIVE_BLOCK_SQL}=await import('../lib/ingress-guard');let calls=0;
+ const send:typeof fetch=/** send: 금지된 입력이면 실행되지 않아야 합니다. */ async()=>{calls++;return response(valid);};
+ for(const [sql,values] of [['UPDATE ip_blocks SET strikes=0',[]],[ACTIVE_BLOCK_SQL,['attacker.invalid']],[ACTIVE_BLOCK_SQL,["203.0.113.2'); SELECT 1"]],[ACTIVE_BLOCK_SQL,[]]] as [string,unknown[]][]){await assert.rejects(managedBlockRead(connection,sql,values,send));}assert.equal(calls,0);
+});

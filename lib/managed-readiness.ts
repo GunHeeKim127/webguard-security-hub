@@ -1,17 +1,19 @@
 import {randomUUID} from 'node:crypto';
 import {types} from 'pg';
-import {assertReadinessSql} from './runtime-sql';
+import {assertReadinessSql,assertManagedRuntimeSql,assertRuntimeParameters} from './runtime-sql';
+import {ACTIVE_BLOCK_SQL,normalizeIp} from './ingress-guard';
 
 /** readinessFailure: 제공자 원문·접속키 없이 고정 오류와 필요한 SQLSTATE만 전달합니다. */
 function readinessFailure(code='08006'){return Object.assign(new Error('Readiness transport failed'),{code});}
-/** managedReadinessQuery: 고정 SELECT만 취소 가능한 HTTPS 요청으로 실행합니다. 프로토콜은 고정한 @prisma/ppg 1.0.1의 HTTP 전송과 대조합니다. */
-export async function managedReadinessQuery(connectionString:string,sql:string,signal?:AbortSignal,send:typeof fetch=fetch,timeoutMs=8000){
- assertReadinessSql(sql);
+/** fixedManagedRead: 허용된 고정 SELECT만 취소 가능한 HTTPS 요청으로 실행합니다. 프로토콜은 고정한 @prisma/ppg 1.0.1의 HTTP 전송과 대조합니다. */
+async function fixedManagedRead(connectionString:string,sql:string,values:unknown[],signal:AbortSignal|undefined,send:typeof fetch,timeoutMs:number){
+ if(sql===ACTIVE_BLOCK_SQL){assertManagedRuntimeSql(sql);assertRuntimeParameters(sql,values);if(values.length!==1||typeof values[0]!=='string'||normalizeIp(values[0])!==values[0])throw readinessFailure('WG_PROTOCOL');}
+ else{assertReadinessSql(sql);if(values.length)throw readinessFailure('WG_PROTOCOL');}
  const source=new URL(connectionString);
  if(!['postgres:','postgresql:'].includes(source.protocol)||source.hostname!=='pooled.db.prisma.io'||!source.username||!source.password)throw readinessFailure();
  const endpoint=new URL('https://db.prisma.io/v0/statement');endpoint.searchParams.set('db',source.pathname.slice(1));
  const boundary='WebGuard'+randomUUID(),descriptor='urn:prisma:query:descriptor';
- const body=`--${boundary}\r\nContent-Disposition: form-data; name="${descriptor}"\r\nContent-Type: application/json; profile="${descriptor}"\r\n\r\n${JSON.stringify({query:sql})}\r\n--${boundary}--\r\n`;
+ const body=`--${boundary}\r\nContent-Disposition: form-data; name="${descriptor}"\r\nContent-Type: application/json; profile="${descriptor}"\r\n\r\n${JSON.stringify({query:sql,...(values.length?{parameters:values.map(/** map: 접속 주소는 SQL에 합치지 않고 텍스트 매개변수로 바인딩합니다. */ value=>({type:'text',value}))}:{})})}\r\n--${boundary}--\r\n`;
  const controller=new AbortController(),abort=/** abort: 상위 준비 검사 종료 시 헤더·본문 대기도 중단합니다. */ ()=>controller.abort();
  signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
  const timer=setTimeout(abort,timeoutMs);let reader:ReadableStreamDefaultReader<Uint8Array>|undefined,responseReceived=false;
@@ -51,14 +53,28 @@ export async function managedReadinessQuery(connectionString:string,sql:string,s
  }
 }
 
-/** managedReadiness: 느린 준비 조회에만 고정 SELECT 1 연결 확인을 한 번 보내고 두 요청을 모두 정리합니다. 원래 문장 재전송이나 백그라운드 작업은 만들지 않습니다. */
-export async function managedReadiness(connectionString:string,sql:string,signal?:AbortSignal,send:typeof fetch=fetch,probeDelayMs=2000,timeoutMs=8000){
+/** recoverManagedRead: 느린 고정 읽기에만 SELECT 1 연결 확인을 한 번 보내고 두 요청을 모두 정리합니다. 원래 문장 재전송이나 백그라운드 작업은 만들지 않습니다. */
+async function recoverManagedRead(connectionString:string,sql:string,values:unknown[],signal:AbortSignal|undefined,send:typeof fetch,probeDelayMs:number,timeoutMs:number){
  const controller=new AbortController(),abort=/** abort: 전체 준비 검사 취소를 원래 요청과 고정 연결 확인에 함께 전달합니다. */ ()=>controller.abort();
  signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
  let pending:Promise<unknown>|undefined;
  const timer=setTimeout(/** probe: 느린 읽기마다 고정된 연결 확인만 한 번 실행합니다. */ ()=>{
-  pending=managedReadinessQuery(connectionString,'SELECT 1 AS webguard_read_probe',controller.signal,send,timeoutMs).catch(/** catch: 연결 확인 실패로 원래 조회의 권한·결과를 바꾸지 않습니다. */ ()=>null);
+  pending=fixedManagedRead(connectionString,'SELECT 1 AS webguard_read_probe',[],controller.signal,send,timeoutMs).catch(/** catch: 연결 확인 실패로 원래 조회의 권한·결과를 바꾸지 않습니다. */ ()=>null);
  },probeDelayMs);
- try{return await managedReadinessQuery(connectionString,sql,controller.signal,send,timeoutMs);}
+ try{return await fixedManagedRead(connectionString,sql,values,controller.signal,send,timeoutMs);}
  finally{clearTimeout(timer);controller.abort();signal?.removeEventListener('abort',abort);await pending;}
+}
+
+/** managedReadinessQuery: 고정 준비 SELECT의 HTTPS 전송만 수행하고 상위 수명·취소를 적용합니다. */
+export async function managedReadinessQuery(connectionString:string,sql:string,signal?:AbortSignal,send:typeof fetch=fetch,timeoutMs=8000){
+ assertReadinessSql(sql);return fixedManagedRead(connectionString,sql,[],signal,send,timeoutMs);
+}
+/** managedReadiness: 준비 SELECT에 한해 느린 연결 확인을 적용하고 모든 요청의 정리를 기다립니다. */
+export async function managedReadiness(connectionString:string,sql:string,signal?:AbortSignal,send:typeof fetch=fetch,probeDelayMs=2000,timeoutMs=8000){
+ assertReadinessSql(sql);return recoverManagedRead(connectionString,sql,[],signal,send,probeDelayMs,timeoutMs);
+}
+/** managedBlockRead: 정확히 일치하는 차단 조회와 정규화된 주소 하나만 허용합니다. 위협 쓰기에는 사용하지 않습니다. */
+export async function managedBlockRead(connectionString:string,sql:string,values:unknown[],send:typeof fetch=fetch,probeDelayMs=2000,timeoutMs=10000){
+ if(sql!==ACTIVE_BLOCK_SQL)throw readinessFailure('WG_PROTOCOL');
+ return recoverManagedRead(connectionString,sql,values,undefined,send,probeDelayMs,timeoutMs);
 }

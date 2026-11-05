@@ -4,12 +4,12 @@ import {attachDatabasePool,waitUntil} from '@vercel/functions';
 import {runtimePoolConfig} from './runtime-pool-config';
 import {databaseProvider} from './database-provider';
 import {assertManagedRuntimeSql,assertRuntimeParameters,assertReadinessSql} from './runtime-sql';
-import {protectionQuery,PROTECTION_READ_TIMEOUT_MS} from './protection-query';
+import {protectionQuery} from './protection-query';
 import {freshConnector,leaseQuery} from './fresh-pool';
 import {prismaHttp} from './prisma-http';
 import {projectDatabase} from './project-database';
 import {ACTIVE_BLOCK_SQL} from './ingress-guard';
-import {managedReadiness} from './managed-readiness';
+import {managedReadiness,managedBlockRead} from './managed-readiness';
 const shared=globalThis as unknown as {wgPool?:Pool;wgFresh?:Pick<Pool,'connect'>;wgHttp?:ReturnType<typeof prismaHttp>};
 /** pool: 프로젝트 DB 연결 풀을 준비하거나 재사용합니다 주요 호출: runtimePoolConfig·on·attachDatabasePool. */ function pool(){
  if(!shared.wgPool){
@@ -27,5 +27,5 @@ const useHttp=/** useHttp: 현재 환경에서 HTTP DB 연결을 사용할지 �
 export const database={
  readinessQuery:/** readinessQuery: 관리형 준비 조회는 취소 가능한 HTTPS를 사용하며 일반 PostgreSQL은 검증된 연결을 유지합니다. */ (text:string,signal?:AbortSignal)=>{assertReadinessSql(text);return useHttp()?managedReadiness(projectDatabase('runtime').connectionString,text,signal):leaseQuery(connector(),text);},
  query:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: assertManagedRuntimeSql·useHttp·query. */ <R extends QueryResultRow=any>(text:string,values?:unknown[])=>{assertManagedRuntimeSql(text);assertRuntimeParameters(text,values);return useHttp()?http().query<R>(text,values):leaseQuery<R>(connector(),text,values);},
- protectionQuery:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: databaseProvider·assertManagedRuntimeSql·useHttp. */ (text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);assertRuntimeParameters(text,values);return useHttp()?http().query(text,values,text===ACTIVE_BLOCK_SQL?PROTECTION_READ_TIMEOUT_MS:5000):protectionQuery(connector(),text,values,managed);}
+ protectionQuery:/** 처리 콜백: 처리에서 전달한 값을 처리하는 콜백입니다 주요 호출: databaseProvider·assertManagedRuntimeSql·useHttp. */ (text:string,values:unknown[])=>{const managed=databaseProvider()==='prisma-postgres';assertManagedRuntimeSql(text);assertRuntimeParameters(text,values);return useHttp()?(text===ACTIVE_BLOCK_SQL?managedBlockRead(projectDatabase('runtime').connectionString,text,values):http().query(text,values,5000)):protectionQuery(connector(),text,values,managed);}
 };
