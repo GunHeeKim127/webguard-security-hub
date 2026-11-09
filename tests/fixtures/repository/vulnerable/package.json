@@ -1,0 +1,7 @@
+{
+  "name": "synthetic-review-example",
+  "private": true,
+  "scripts": {
+    "postinstall": "echo synthetic-only-install-hook"
+  }
+}
