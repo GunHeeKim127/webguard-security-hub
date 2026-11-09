@@ -1,8 +1,12 @@
 /** Bounded, non-executing source heuristics. Findings are review signals, not malware verdicts. */
 export type RepositoryFile = {path:string;text:string};
-export type RepositoryFinding = {path:string;line:number;rule:string;severity:'high'|'medium';title:string;remediation:string};
-export type RepositoryReview = {version:1;ruleVersion:string;files:number;bytes:number;findings:RepositoryFinding[];truncated:boolean;observedAt:string};
+export type RepositoryFinding = {path:string;line:number;rule:string;severity:'high'|'medium'|'info';classification:'review'|'reference';title:string;remediation:string};
+export type RepositoryReview = {version:1;ruleVersion:string;files:number;bytes:number;findings:RepositoryFinding[];summary:{code:'review_required'|'reference_only'|'no_signals';reviewCount:number;referenceCount:number};truncated:boolean;observedAt:string};
 export const repositoryLimits={files:30,fileBytes:65536,totalBytes:524288,findings:150} as const;
+/** Lockfiles contain version inventory and may be larger than ordinary source inputs. */
+export const repositoryFileLimit=(path:string)=>/(?:^|\/)package-lock\.json$/i.test(path)?262144:repositoryLimits.fileBytes;
+/** A narrowly matched read-only comparison is a reference signal, never a whole-program safety verdict. */
+function referenceComparison(line:string){return /^\s*\$\w+\s*=\s*@\(\s*Get-NetTCPConnection\s+-State\s+Established\s*\|\s*Where-Object\s*\{\s*\$_\.RemoteAddress\s+-in\s+@\(\s*'\d{1,3}(?:\.\d{1,3}){3}'(?:\s*,\s*'\d{1,3}(?:\.\d{1,3}){3}')*\s*\)\s*\}\s*\)\s*$/i.test(line);}
 export function reviewablePath(path:string){
  return path.length<=240&&!/[\x00-\x1f\x7f\\]/.test(path)&&!path.startsWith('/')&&!path.split('/').some(p=>!p||p==='.'||p==='..')&&
  !/(^|\/)(?:\.env(?:\..*)?|node_modules|\.git|vendor|\.next|dist|build)(\/|$)/i.test(path)&&
@@ -21,16 +25,19 @@ const rules:Rule[]=[
 export function inspectRepositoryFiles(input:unknown,locale:'ko'|'en'='ko'):RepositoryReview{
  if(!Array.isArray(input)||!input.length||input.length>repositoryLimits.files)throw new Error('INPUT_INVALID');
  const seen=new Set<string>();let bytes=0,truncated=false;const findings:RepositoryFinding[]=[];
- const add=(file:RepositoryFile,line:number,rule:string,title:[string,string],fix:[string,string],severity:'high'|'medium')=>{
+ const add=(file:RepositoryFile,line:number,rule:string,title:[string,string],fix:[string,string],severity:'high'|'medium'|'info',classification:'review'|'reference'='review')=>{
   if(findings.length>=repositoryLimits.findings){truncated=true;return;}
-  findings.push({path:file.path,line,rule,severity,title:title[locale==='ko'?0:1],remediation:fix[locale==='ko'?0:1]});
+  findings.push({path:file.path,line,rule,severity,classification,title:title[locale==='ko'?0:1],remediation:fix[locale==='ko'?0:1]});
  };
  for(const value of input){
   if(!value||typeof value!=='object'||typeof value.path!=='string'||typeof value.text!=='string'||!reviewablePath(value.path)||seen.has(value.path)||value.text.includes('\0'))throw new Error('INPUT_INVALID');
   const file=value as RepositoryFile;seen.add(file.path);const size=new TextEncoder().encode(file.text).length;bytes+=size;
-  if(size>repositoryLimits.fileBytes||bytes>repositoryLimits.totalBytes)throw new Error('INPUT_INVALID');
+  if(size>repositoryFileLimit(file.path)||bytes>repositoryLimits.totalBytes)throw new Error('INPUT_INVALID');
   const lines=file.text.split(/\r?\n/);
-  lines.forEach((line,i)=>{for(const rule of rules)if(rule.pattern.test(line))add(file,i+1,rule.id,rule.title,rule.fix,rule.severity);});
+  lines.forEach((line,i)=>{for(const rule of rules)if(rule.pattern.test(line)){
+   if(rule.id==='campaign-ioc'&&referenceComparison(line))add(file,i+1,rule.id,['현재 연결을 공격 IP와 비교하는 참고 코드','Reference code comparing current connections with indicator IPs'],['이 줄은 기존 연결과 IP 문자열을 비교하는 형태입니다. 외부로 접속하거나 악성코드를 실행하는 명령이 탐지된 것은 아닙니다. 다른 줄과 실제 실행 환경의 안전성까지 보증하지 않습니다.','This line compares existing connections with IP strings; no outbound connection or malware execution command was identified here. Other lines and effective runtime remain unverified.'],'info','reference');
+   else add(file,i+1,rule.id,rule.title,rule.fix,rule.severity);
+  }});
   if(/(?:^|\/)package\.json$/i.test(file.path)){
    try {const scripts=JSON.parse(file.text).scripts;for(const key of ['preinstall','install','postinstall','prepare'])if(typeof scripts?.[key]==='string'&&scripts[key].trim()){
     add(file,Math.max(1,lines.findIndex(l=>l.includes('"'+key+'"'))+1),'install-hook',['의존 패키지 설치 시 자동 실행: '+key,'Install-time execution: '+key],['npm 설치도 명령을 실행할 수 있습니다. 스크립트와 의존성을 검토하고 시험 환경에서 scripts 비활성화를 고려하세요.','Installing packages may execute commands. Review scripts/dependencies; consider disabling scripts in a test environment.'],'medium');
@@ -42,5 +49,6 @@ export function inspectRepositoryFiles(input:unknown,locale:'ko'|'en'='ko'):Repo
    lines.forEach((line,i)=>{const match=line.match(/\buses:\s*["']?([\w.-]+\/[\w./-]+)@([^\s"'#]+)/);if(match&&!/^[a-f\d]{40}$/i.test(match[2]))add(file,i+1,'unpinned-action',['Action이 전체 커밋 SHA에 고정되지 않음','Action not pinned to full commit SHA'],['검토한 전체 40자리 커밋 SHA에 고정하고 업데이트를 검토하세요. SHA 고정도 안전성 보증은 아닙니다.','Pin a reviewed full 40-character commit SHA and review updates. Pinning does not guarantee safety.'],'medium');});
   }
  }
- return {version:1,ruleVersion:'2026-11-09.1',files:input.length,bytes,findings,truncated,observedAt:new Date().toISOString()};
+ const reviewCount=findings.filter(f=>f.classification==='review').length,referenceCount=findings.length-reviewCount;
+ return {version:1,ruleVersion:'2026-11-09.2',files:input.length,bytes,findings,summary:{code:reviewCount?'review_required':referenceCount?'reference_only':'no_signals',reviewCount,referenceCount},truncated,observedAt:new Date().toISOString()};
 }
