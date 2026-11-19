@@ -14,6 +14,7 @@ import {assessmentText} from '../lib/assessment-copy';
 import {scanTarget} from '../lib/scan-policy';
 import OperationsPanel from './operations-panel';
 import InspectionHelp from './workbench/inspection-help';
+import JavaWebGuidance from './java-web-guidance';
 import PageLoading from './page-loading';
 import WebTargetField from './web-target-field';
 import InspectionProblem from './workbench/inspection-problem';
@@ -135,6 +136,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
       <InspectionHelp locale={locale==='ko'?'ko':'en'} blockers={[...(blockReason?[blockReason]:[]),...(busy||switching?[locale==='ko'?'현재 작업이 끝날 때까지 기다려 주세요.':'Wait for the current operation to finish.']:[])]} steps={locale==='ko'?['본인 또는 점검 허가가 있는 공개 HTTPS 주소를 입력합니다.','소유·진단 허가 및 분석 동의를 확인합니다.','웹 기본 보안 진단을 누르고 진행 단계와 저장된 결과를 확인합니다.']:['Enter an authorized public HTTPS URL.','Confirm ownership/permission and assessment consent.','Start the web baseline check, then review progress and saved results.']}/>
       <Typography variant="caption" color="text.secondary">{scanCopy.reset}</Typography>
      </Stack></Box>
+     <JavaWebGuidance locale={locale}/>
     </Paper>
     {inspection.state!=='idle'&&<Box sx={{mt:3}}><OperationsPanel locale={locale} data={data} inspection={inspection} operation={operation} activity={activity} logs={logs}/></Box>}
     <Paper sx={{p:3,mt:3}}><Typography variant="h6">{t.eventsTitle}</Typography><Typography color="text.secondary" my={2}>{t.eventsHelp}</Typography>

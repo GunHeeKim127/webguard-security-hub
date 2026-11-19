@@ -16,6 +16,7 @@ import {protectedRequest} from '../../lib/protected-request';
 const FileInspection=dynamic(/** dynamic 콜백: dynamic에서 전달한 값을 처리하는 콜백입니다 주요 호출: import. */ ()=>import('./file-inspection'),{loading:/** dynamic 콜백: dynamic에서 전달한 값을 처리하는 콜백입니다 */ ()=> <p role="status">검사 도구 준비 중… / Preparing inspection tools…</p>});
 import ModuleGuide from './module-guide';
 import InspectionHelp from './inspection-help';
+import JavaWebGuidance from '../java-web-guidance';
 import InspectionProblem from './inspection-problem';
 import WebTargetField from '../web-target-field';
 import {webTargetInput,webTargetReason} from '../../lib/web-target-input';
@@ -131,7 +132,7 @@ const defaults:Record<'web'|'mobile'|'endpoint'|'virtualization'|'network',Modul
  <InspectionHelp locale={locale} steps={saveSteps} blockers={saveBlockers} label={readyToSubmit?t('저장 전 순서 확인','Review steps before saving'):t('왜 진행되지 않나요?','Why can’t I continue?')}/>
  <Button type="submit" variant="contained" disabled={!readyToSubmit}>{busy?t('검사·저장 중','Assessing and saving'):original!==undefined?t('원본 전송·서버 검사·결과 저장','Upload original / server inspect / save'):onDevice?t('요약 전송·결과 저장','Send summary / save results'):t('진단 및 재검증','Assess / retest')}</Button>{busy&&<LinearProgress/>}</Stack>
  </Paper>}
- {view==='web'&&<Box component="details" sx={{mt:3,color:'text.secondary'}}><Typography component="summary" variant="body2" sx={{cursor:'pointer'}}>{t('Java 기반 서버를 점검하려면','Reviewing a Java-based server')}</Typography><Typography variant="body2" mt={1}>{t('URL만으로 JVM을 판정할 수 없습니다. Endpoint의 Java/JVM 점검에서 실행 환경을 확인하세요.','A URL cannot establish the JVM. Review the effective runtime in Endpoint Java/JVM.')}</Typography><Button component={Link} href="/workbench/java" size="small">{t('Java/JVM 점검 열기 →','Open Java/JVM review →')}</Button></Box>}
+ {view==='web'&&<JavaWebGuidance locale={locale}/>}
  {view==='web'&&<SourceInspection locale={locale} disabled={busy||!canRun}/>}
  {view!=='home'&&<Paper id="assessment-results" variant="outlined" sx={{p:{xs:2.5,sm:3.5},mt:4,bgcolor:'background.paper',scrollMarginTop:24}}><Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}><Box><Typography variant="overline" color="text.secondary">ASSESSMENT RESULTS</Typography><Typography variant="h6">{t('최근 30일 자산·재검증 기록','Assets and retests · last 30 days')}</Typography></Box><Button disabled={busy||loading} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: load. */ ()=>void load(selectedRef.current)}>{t('새로고침','Refresh')}</Button></Stack>
  {loading&&<LinearProgress sx={{my:2}}/>}
