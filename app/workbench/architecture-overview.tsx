@@ -2,16 +2,17 @@
 import {Box,Button,ButtonBase,Chip,Paper,Stack,Typography} from '@mui/material';
 import Link from '../navigation-link';
 import type {ModuleId} from '../../lib/assessment/types';
-type Category='web'|'mobile'|'endpoint'|'cloud'|'virtualization'|'network'|'iot'|'container';
-const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,scope:[string,string]}[]=[
+type Category='web'|'mobile'|'endpoint'|'cloud'|'virtualization'|'network'|'iot'|'container'|'repository';
+const categories:{id:Category,title:string,subtitle:string,module?:ModuleId,href?:string,scope:[string,string]}[]=[
  {id:'web',title:'Web',subtitle:'HTTP / TLS / 인증',module:'web.compare',scope:['공개 헤더·TLS·응답 비교','Public headers, TLS and response comparison']},
  {id:'mobile',title:'Mobile',subtitle:'APK / IPA / PWA',module:'application.package',scope:['패키지 정적 점검 · PWA 준비 중','Package baseline · PWA planned']},
- {id:'endpoint',title:'Endpoint',subtitle:'Windows / Linux / macOS',module:'application.pe',scope:['실행 파일·설정 스냅샷 점검','Executable and configuration snapshots']},
+ {id:'endpoint',title:'Endpoint',subtitle:'Windows / Linux / macOS / JVM',module:'application.pe',scope:['실행 파일·시스템·Java 런타임 점검','Executable, system and Java runtime review']},
  {id:'cloud',title:'Cloud',subtitle:'AWS / Azure / GCP',scope:['클라우드 설정·권한 점검 예정','Cloud configuration and access · planned']},
  {id:'virtualization',title:'Virtualization',subtitle:'VMX / OVF / XML / VBOX',module:'virtualization.vmx',scope:['지원 VM 설정·제한 범위 확인','Supported VM configuration review']},
  {id:'network',title:'Network',subtitle:'GNS3 / DNS / Routing',module:'network.gns3',scope:['GNS3·DNS·라우팅 설정 점검','GNS3 / DNS / routing configuration review']},
  {id:'iot',title:'IoT',subtitle:'Firmware / Device Config',scope:['펌웨어·장비 설정 분석 예정','Firmware and device configuration · planned']},
  {id:'container',title:'Container',subtitle:'Docker / Kubernetes',scope:['컨테이너·클러스터 점검 예정','Container and cluster assessment · planned']},
+ {id:'repository',title:'GitHub',subtitle:'Source / Dependencies / Advisories',href:'/workbench/repository',scope:['소스·공급망·공개 취약점 권고 검토','Source, supply chain and public advisory review']},
 ];
 export {categoryFor} from '../../lib/assessment/categories';
 /** ModuleIcon: 모듈 종류에 맞는 아이콘을 렌더링합니다 */ export function ModuleIcon({kind,size=24}:{kind:Category|'shield'|'arrow'|'report',size?:number}){
@@ -24,6 +25,7 @@ export {categoryFor} from '../../lib/assessment/categories';
   network:<><circle cx="12" cy="4" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 6v11M5 17v-5h14v5"/></>,
   iot:<><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx=".5"/><path d="M8 2v3m8-3v3M8 19v3m8-3v3M2 8h3m-3 8h3M19 8h3m-3 8h3"/></>,
   container:<><path d="m12 2 5 3v6l-5 3-5-3V5l5-3Zm-5 9-5 3v6l5 3 5-3m5-9 5 3v6l-5 3-5-3v-6m-5 9v-6l-5-3m10 0 5 3 5-3M7 5l5 3 5-3m-5 3v6"/></>,
+  repository:<><rect x="3" y="3" width="13" height="18" rx="2"/><path d="M7 7h5M7 11h3M16 7h2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3h-2M6 21v-4h10"/></>,
   shield:<path d="m12 2 8 3v6c0 5-4 8-8 11-4-3-8-6-8-11V5l8-3Zm-4 10 3 3 5-6"/>,
   arrow:<path d="M12 4v16m-4-4 4 4 4-4"/>,
   report:<><path d="M6 2h9l4 4v16H6V2Zm9 0v5h4M9 11h7m-7 4h7m-7 4h4"/></>,
@@ -33,14 +35,12 @@ export {categoryFor} from '../../lib/assessment/categories';
 /** ArchitectureOverview: 지원 모듈과 준비 중 모듈의 진입 화면을 표시합니다 주요 호출: t·map. */ export default function ArchitectureOverview({locale}:{locale:'ko'|'en'}){
  const t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en;
  return <Box component="section" aria-label={t('통합 진단 모듈','Unified assessment modules')}>
-  <Button component={Link} href="/workbench/repository" variant="outlined" fullWidth sx={{mb:2}}>{t('GitHub·소스 공급망 진단 작전실 →','GitHub / source supply-chain review →')}</Button>
-  <Button component={Link} href="/workbench/java" variant="outlined" fullWidth sx={{mb:2}}>{t('Endpoint · Java/JVM · Java4Shell 점검 →','Endpoint · Java/JVM · Java4Shell review →')}</Button>
   <Box textAlign="center" sx={{pt:{xs:3,sm:5},pb:3}}><Typography component="h1" sx={{fontSize:{xs:30,sm:38},fontWeight:750,letterSpacing:'-.035em'}}>VELTHARA</Typography><Typography sx={{mt:1,fontSize:{xs:12,sm:14},letterSpacing:'.035em',color:'text.secondary'}}>Unified Asset Security Assessment Platform</Typography><Typography color="text.secondary" sx={{mt:1.5,fontSize:14}}>{t('다양한 디지털 자산의 보안 상태를 한곳에서.','One place to understand security across your digital assets.')}</Typography></Box>
   <Paper variant="outlined" sx={{p:{xs:2.5,sm:3},textAlign:'center',bgcolor:'background.paper',borderRadius:'16px'}}><Stack direction="row" gap={1} justifyContent="center" alignItems="center"><ModuleIcon kind="shield" size={22}/><Typography fontWeight={700}>{t('공통 진단 관리 엔진','Common assessment management engine')}</Typography></Stack><Typography variant="body2" color="text.secondary" sx={{mt:1.25,lineHeight:1.9}}>{t('자산 등록 · 작업 예약 · 결과 표준화 · 위험도 · 재검증','Asset registration · Scheduling · Standardized results · Risk · Retesting')}</Typography><Typography variant="caption" color="text.secondary">{t('현재: 계정별 자산·수동 진단·결과 비교 / 작업 예약 준비 중','Available: private assets, manual assessment and comparison / Scheduling planned')}</Typography></Paper>
   <Box aria-hidden="true" sx={{display:'flex',justifyContent:'center',py:1,color:'#9a9fa2'}}><ModuleIcon kind="arrow" size={20}/></Box>
   <Box sx={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:{xs:1,sm:1.4}}}>
-   {categories.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: t. */ c=>{const available=!!c.module;return <ButtonBase key={c.id} {...(available?{component:Link,href:c.id==='web'?'/?view=web':'/workbench/'+c.id,prefetch:false}:{disabled:true})} aria-label={`${c.title} · ${available?t('검사 화면으로 이동','Go to assessment'):t('준비 중','Planned')}`} sx={{display:'flex',flexDirection:'column',justifyContent:'center',gap:.65,p:1.75,minHeight:{xs:132,sm:126},borderRadius:'16px',bgcolor:'background.paper',border:'1px solid transparent',color:'text.primary',transition:'background-color .16s, border-color .16s','&:hover':{bgcolor:'#183339',borderColor:'primary.main'},'&.Mui-focusVisible':{outline:'3px solid #66e6c3',outlineOffset:3},'&.Mui-disabled':{color:'text.disabled'}}}>
-    <ModuleIcon kind={c.id} size={22}/><Typography component="h2" sx={{fontSize:{xs:16,sm:18},fontWeight:600}}>{c.title}</Typography><Typography sx={{fontSize:{xs:10.5,sm:12},color:'text.secondary',textAlign:'center'}}>{locale==='en'&&c.id==='web'?'HTTP / TLS / Authentication':c.subtitle}</Typography><Typography variant="caption" sx={{fontSize:10.5,color:available?'primary.main':'text.secondary',mt:.25}}>{available?t(c.id==='web'?'웹 진단 작전실 →':c.id==='mobile'?'모바일 진단 작전실 →':c.id==='virtualization'?'VMware 설정 진단 →':c.id==='network'?'GNS3 구성 진단 →':'실행 파일·시스템 진단 작전실 →','Go to assessment operations →'):t('준비 중','Planned')}</Typography>
+   {categories.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: t. */ c=>{const available=!!(c.module||c.href);return <ButtonBase key={c.id} {...(available?{component:Link,href:c.href??(c.id==='web'?'/?view=web':'/workbench/'+c.id),prefetch:false}:{disabled:true})} aria-label={`${c.title} · ${available?t('검사 화면으로 이동','Go to assessment'):t('준비 중','Planned')}`} sx={{display:'flex',flexDirection:'column',justifyContent:'center',gap:.65,p:1.75,minHeight:{xs:132,sm:126},gridColumn:c.id==='repository'?'1 / -1':undefined,borderRadius:'16px',bgcolor:'background.paper',border:'1px solid transparent',color:'text.primary',transition:'background-color .16s, border-color .16s','&:hover':{bgcolor:'#183339',borderColor:'primary.main'},'&.Mui-focusVisible':{outline:'3px solid #66e6c3',outlineOffset:3},'&.Mui-disabled':{color:'text.disabled'}}}>
+    <ModuleIcon kind={c.id} size={22}/><Typography component="h2" sx={{fontSize:{xs:16,sm:18},fontWeight:600}}>{c.title}</Typography><Typography sx={{fontSize:{xs:10.5,sm:12},color:'text.secondary',textAlign:'center'}}>{locale==='en'&&c.id==='web'?'HTTP / TLS / Authentication':c.id==='repository'?t('소스 · 의존성 · 공개 취약점 권고',c.subtitle):c.subtitle}</Typography><Typography variant="caption" sx={{fontSize:10.5,color:available?'primary.main':'text.secondary',mt:.25}}>{available?t(c.id==='repository'?'소스·공급망 진단 작전실 →':c.id==='web'?'웹 진단 작전실 →':c.id==='mobile'?'모바일 진단 작전실 →':c.id==='virtualization'?'VMware 설정 진단 →':c.id==='network'?'GNS3 구성 진단 →':'실행 파일·시스템 진단 작전실 →','Go to assessment operations →'):t('준비 중','Planned')}</Typography>
    </ButtonBase>;})}
   </Box>
   <Box aria-hidden="true" sx={{display:'flex',justifyContent:'center',py:1,color:'#9a9fa2'}}><ModuleIcon kind="arrow" size={20}/></Box>

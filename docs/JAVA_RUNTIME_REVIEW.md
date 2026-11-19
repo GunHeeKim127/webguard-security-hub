@@ -4,7 +4,7 @@ Java4Shell은 CVE-2026-114938이며 JVM의 특정 x86-64 Base64 최적화 경로
 
 ## 어디서 점검하나요?
 
-기본 분류는 **Endpoint의 Java/JVM 실행 환경**입니다. 검사 선택과 Endpoint 화면의 **Java/JVM · Java4Shell 점검** 버튼으로 `/workbench/java`에 들어갑니다. Java 웹 서버도 같은 점검을 사용하도록 웹 화면에 연결했습니다.
+기본 분류는 **Endpoint의 Java/JVM 실행 환경**입니다. 검사 선택 → **Endpoint** → **Java 런타임 보안 점검**에서 `/workbench/java`에 들어갑니다. 최상단에 별도 버튼을 붙이지 않습니다. 웹 비교 화면의 접을 수 있는 Java 서버 안내에서도 연결됩니다.
 
 웹 URL이나 Tomcat·Spring 표시만으로 JVM 버전·공급자·CPU·실효 실행 설정을 알 수 없습니다. 웹 진단에서 Java 기술 흔적을 관찰하면 적용 여부를 **미검사**로 표시하고 JVM 자료를 안내합니다. Java가 숨겨져 있다면 헤더에 표시되지 않을 수도 있습니다.
 
