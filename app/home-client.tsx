@@ -1,5 +1,6 @@
 'use client';
 import Link from './navigation-link';
+import PlatformHeader from './platform-header';
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,IconButton,InputAdornment} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
@@ -38,6 +39,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
  useEffect(/** useEffect 콜백: 의존값에 따른 부수 작업과 정리를 실행합니다 */ ()=>/** useEffect 콜백: 의존값에 따른 부수 작업과 정리를 실행합니다 주요 호출: abort. */ ()=>scanRequest.current?.abort(),[]);
  const [adviceInfo,setAdviceInfo]=useState<{source:string,reasonCode?:string,provider?:string,model?:string,inputTokens?:number,outputTokens?:number}|null>(null);
  const [bootLoading,setBootLoading]=useState(true);
+ useEffect(()=>{if(data&&window.location.hash==='#web-results')document.getElementById('web-results')?.scrollIntoView({block:'start'});},[!!data]);
  const t=messages[locale],ops=operationsMessages[locale],scanCopy=scanUI[locale];
  /** resetAccountView: 계정에 종속된 화면 정보를 초기화합니다 주요 호출: abort·setData·setAdvice. */ function resetAccountView(loading=false){accountGeneration.current++;generation.current++;scanRequest.current?.abort();scanRequest.current=null;setData(null);setAdvice('');setAdviceInfo(null);setAuthorized(false);setTargetValue('');setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setBusy(false);setBootLoading(loading);}
  /** changeTarget: 점검 대상을 바꾸고 관련 작업 상태를 갱신합니다 주요 호출: abort·setBusy·setTargetValue. */ function changeTarget(value:string){if(value===targetValue)return;generation.current++;if(scanRequest.current){scanRequest.current.abort();setBusy(false);}scanRequest.current=null;setTargetValue(value);setAuthorized(false);setInspection({state:'idle',target:''});setLogs([]);setCode('');setOperation(null);setActivity([]);setAdvice('');}
@@ -85,7 +87,6 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
   const r=await fetch('/api/locale',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locale:value})});
   if(!r.ok){setCode('SWITCH_ERROR');return;}setLocale(value);setAdvice('');
  }catch{setCode('NETWORK_ERROR');}finally{setSwitching(false);}}
- const roleLabel=data?(['admin','analyst','viewer'].includes(data.user.role)?t[data.user.role as 'admin'|'analyst'|'viewer']:t.viewer):'';
  const languageControl=<FormControl size="small" sx={{minWidth:{xs:112,sm:150}}} disabled={busy||switching}>
   <InputLabel id="language-label">{t.language}</InputLabel>
   <Select labelId="language-label" id="language-select" label={t.language} value={locale} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: changeLanguage. */ e=>void changeLanguage(e.target.value)}>
@@ -93,12 +94,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
   </Select>
  </FormControl>;
  return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:data?3:1.5,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
-  {data&&<><Stack component="header" direction="row" flexWrap="wrap" gap={2} justifyContent="space-between" alignItems="center">
-   <Typography variant="h6" color="primary">◈ WEBGUARD</Typography>
-   <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
-    <Button component={Link} href="/help">{locale==='ko'?'사용 가이드':'User guide'}</Button><Button component={Link} href="/workbench/web" variant="outlined">{locale==='ko'?'PC·모바일 응답 비교':'Desktop/mobile response comparison'}</Button><Button component={Link} href="/workbench" variant="outlined">{locale==='ko'?'검사 선택':'Choose a check'}</Button><Chip label={t.local} variant="outlined"/>{languageControl}
-   </Stack>
-  </Stack>
+  {data&&<><PlatformHeader locale={locale} current="web" user={data.user} busy={busy} localeOptions={locales} onLocaleChange={value=>{setLocale(value);setAdvice('');}} onSwitchingChange={setSwitching} onLogout={async()=>{if(await post('/api/logout',{}))resetAccountView();}}/>
   <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
   {data&&<InspectionProblem locale={locale==='ko'?'ko':'en'} message={message}/>}
   {bootLoading?<PageLoading message={ops.refresh}/>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
@@ -120,10 +116,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
    </Paper>
    <Box data-login-illustration="true" sx={{display:{xs:'none',md:'block'},minWidth:0,textAlign:'center',px:{md:0}}}><Box sx={{maxWidth:580,mx:'auto'}}><LoginIllustration/></Box><Typography color="primary" variant="overline" sx={{letterSpacing:3}}>WEBGUARD</Typography><Typography color="text.secondary" sx={{mt:1,mx:'auto',maxWidth:400,lineHeight:1.8}}>{t.intro}</Typography></Box>
   </Box>:<>
-   <Stack direction="row" gap={2} mb={3} alignItems="center" flexWrap="wrap">
-    <Chip label={roleLabel}/><Typography sx={{overflowWrap:'anywhere'}}>{data.user.email}</Typography>
-    <Button disabled={busy} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: post·resetAccountView. */ async()=>{if(await post('/api/logout',{}))resetAccountView();}}>{t.logout}</Button><Button disabled={busy||operation?.state==='running'} onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: load. */ ()=>void load()}>{t.refresh}</Button>
-   </Stack>
+   <Box sx={{display:'flex',justifyContent:'flex-end',mb:2}}><Button size="small" disabled={busy||operation?.state==='running'} onClick={()=>void load()}>{t.refresh}</Button></Box>
    {!canAssess(data.user.role)&&<Alert severity="info" sx={{mb:3}}>{t.viewerHelp}</Alert>}
    <Box>
     <Paper sx={{p:3}}><Typography variant="h6">{assessmentText(locale,'title')}</Typography><Typography color="text.secondary" my={2}>{assessmentText(locale,'scope')}</Typography>
@@ -145,7 +138,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
     </Paper>
     {data.user.role==='admin'&&data.ipBlocks&&<DefensePanel locale={locale} blocks={data.ipBlocks} accounts={data.accountBlocks??[]} onReleased={/** onReleased 콜백: onReleased 이벤트의 입력·상태 처리를 실행합니다 주요 호출: load. */ ()=>void load(false)}/>}
    </Box>
-   <Paper sx={{p:3,mt:3}}><Typography variant="h6" mb={2}>{t.history}</Typography>
+   <Paper id="web-results" sx={{p:3,mt:3,scrollMarginTop:24}}><Typography variant="h6" mb={2}>{t.history}</Typography>
     {data.scans.length===0&&<Typography color="text.secondary">{t.noScans}</Typography>}
     {data.scans.map(/** map 콜백: 각 항목을 필요한 값으로 변환합니다 주요 호출: toLocaleString·map·canAssess. */ s=><Box key={s.id} sx={{borderTop:'1px solid #29384b',py:3}}>
      <Typography fontWeight={700} sx={{overflowWrap:'anywhere'}}>{s.hostname} · HTTP {s.result.status}</Typography>

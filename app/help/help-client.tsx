@@ -2,14 +2,15 @@
 import {useState} from 'react';
 import {ThemeProvider,CssBaseline,Container,Stack,Typography,Button,Box,Alert} from '@mui/material';
 import {platformTheme} from '../platform-theme';
-import Link from '../navigation-link';
+import PlatformHeader from '../platform-header';
+import type {PublicUser} from '../../lib/public-identity';
 import ModuleGuide from '../workbench/module-guide';
 import {moduleGuides} from '../../lib/assessment/module-guides';
 import type {ModuleId} from '../../lib/assessment/types';
-/** Help: 사용 언어에 맞는 지원 자료·사용 순서를 표시합니다 주요 호출: useState·t·map. */ export default function Help({initialLocale}:{initialLocale:'ko'|'en'}){
+/** Help: 사용 언어에 맞는 지원 자료·사용 순서를 표시합니다 주요 호출: useState·t·map. */ export default function Help({initialLocale,user}:{initialLocale:'ko'|'en';user?:PublicUser}){
  const [locale,setLocale]=useState(initialLocale),index=locale==='ko'?0:1,t=/** t: 현재 화면 언어에 맞는 문구를 고릅니다 */ (ko:string,en:string)=>locale==='ko'?ko:en;
  return <ThemeProvider theme={platformTheme}><CssBaseline/><Container component="main" maxWidth="md" sx={{py:3,pb:6}}>
-  <Stack component="header" direction="row" justifyContent="space-between" gap={1} flexWrap="wrap"><Button component={Link} href="/workbench">{t('검사 화면으로','Go to assessments')}</Button><Button onClick={/** onClick 콜백: onClick 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setLocale. */ ()=>setLocale(locale==='ko'?'en':'ko')}>{locale==='ko'?'English':'한국어'}</Button></Stack>
+  <PlatformHeader locale={locale} current="help" user={user} onLocaleChange={value=>setLocale(value==='ko'?'ko':'en')}/>
   <Typography variant="h4" component="h1" sx={{my:2}}>{t('사용 가이드','User guide')}</Typography>
   <Typography sx={{mb:2}}>{t('지원 자료를 확인하고 하나를 선택하세요. 선택 → 읽기 허용 → 검사 → 결과 확인 → 저장 순서로 진행합니다.','Check supported input and choose one item: select → allow reading → inspect → review → save.')}</Typography>
   <Alert severity="info">{t('기준 충족은 전체 안전 보증이 아닙니다. 미검사는 안전·취약 어느 쪽도 확정하지 못한 상태입니다. 비밀번호·개인키는 올리지 마세요.','Meeting a criterion is not overall safety. Unassessed means no conclusion, not safe or vulnerable. Do not submit passwords or private keys.')}</Alert>

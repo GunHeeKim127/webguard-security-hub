@@ -1,13 +1,15 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,CssBaseline,Container,Stack,Typography,Paper,Alert,TextField,MenuItem,Button,Checkbox,FormControlLabel,Box,LinearProgress,Chip} from '@mui/material';
-import Link from '../../navigation-link';
+import PlatformHeader from '../../platform-header';
+import type {PublicUser} from '../../../lib/public-identity';
 import {platformTheme} from '../../platform-theme';
 import {protectedRequest} from '../../../lib/protected-request';
 import type {JavaRuntimeInput,JavaRuntimeReport} from '../../../lib/java-runtime-review';
 const initial:JavaRuntimeInput={version:'',vendor:'unknown',architecture:'unknown',cpuFeatures:'unknown',intrinsic:'unknown',untrustedBase64:'unknown',performancePack:'unknown'};
 /** Endpoint JVM observations, with explicit consent and no target execution. */
-export default function JavaReview({locale}:{locale:'ko'|'en'}){
+export default function JavaReview({locale:initialLocale,user}:{locale:'ko'|'en';user?:PublicUser}){
+ const [locale,setLocale]=useState(initialLocale);
  const t=(ko:string,en:string)=>locale==='ko'?ko:en;
  const [input,setInput]=useState(initial),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[report,setReport]=useState<JavaRuntimeReport|null>(null),[error,setError]=useState('');
  const epoch=useRef(0),request=useRef<AbortController|null>(null);
@@ -23,7 +25,7 @@ export default function JavaReview({locale}:{locale:'ko'|'en'}){
  const select=(key:Exclude<keyof JavaRuntimeInput,'version'>,label:string,options:[string,string][],help?:string)=><TextField select label={label} value={input[key]} disabled={busy} onChange={e=>change(key,e.target.value)} helperText={help}>{options.map(([value,title])=><MenuItem key={value} value={value}>{title}</MenuItem>)}</TextField>;
  const unknown=t('확인하지 못함','Unknown');
  return <ThemeProvider theme={platformTheme}><CssBaseline/><Container maxWidth="md" sx={{py:4}}><Stack gap={3}>
-  <Stack direction="row" gap={1} flexWrap="wrap"><Button component={Link} href="/workbench/endpoint">← {t('Endpoint 진단','Endpoint operations')}</Button><Button component={Link} href="/?view=web">{t('웹 진단','Web operations')}</Button></Stack>
+  <PlatformHeader locale={locale} current="java" user={user} busy={busy} onLocaleChange={value=>setLocale(value==='ko'?'ko':'en')}/>
   <Box><Typography variant="overline">ENDPOINT · JAVA / JVM</Typography><Typography component="h1" variant="h4">{t('Java4Shell 적용 여부 점검','Java4Shell applicability review')}</Typography><Typography mt={1}>CVE-2026-114938 · {t('공식 권고 확인일: 2026-11-19','Advisories reviewed: 2026-11-19')}</Typography></Box>
   <Alert severity="info">{t('Java/JVM 실행 환경 점검입니다. 웹 서버·서버 앱·PC 프로그램·번들 런타임 모두 대상이 될 수 있습니다. URL·HTTP 헤더·JAR 이름만으로는 판정할 수 없습니다. Log4Shell과는 다른 JVM Base64 처리 취약점입니다.','Review the Java/JVM runtime used by web servers, server apps, desktop apps or bundled software. URLs, HTTP headers and JAR names cannot establish applicability. This JVM Base64 issue is distinct from Log4Shell.')}</Alert>
   <Paper variant="outlined" sx={{p:3}}><Stack gap={2}>

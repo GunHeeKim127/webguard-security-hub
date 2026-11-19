@@ -1,12 +1,14 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,CssBaseline,Container,Stack,Typography,Button,Paper,TextField,Checkbox,FormControlLabel,Alert,LinearProgress,Box} from '@mui/material';
-import Link from '../../navigation-link';
+import PlatformHeader from '../../platform-header';
+import type {PublicUser} from '../../../lib/public-identity';
 import {platformTheme} from '../../platform-theme';
 import {protectedRequest} from '../../../lib/protected-request';
 import {repositoryLimits,repositoryFileLimit,reviewablePath} from '../../../lib/repository-review';
 import RepositoryResults,{type RepositoryResult} from './repository-results';
-export default function RepositoryReview({locale}:{locale:'ko'|'en'}){
+export default function RepositoryReview({locale:initialLocale,user}:{locale:'ko'|'en';user?:PublicUser}){
+ const [locale,setLocale]=useState(initialLocale);
  const t=(ko:string,en:string)=>locale==='ko'?ko:en;
  const [url,setUrl]=useState(''),[files,setFiles]=useState<File[]>([]),[consent,setConsent]=useState(false),[advisoryConsent,setAdvisoryConsent]=useState(false),[busy,setBusy]=useState(false),[result,setResult]=useState<RepositoryResult|null>(null),[error,setError]=useState('');
  const epoch=useRef(0),controller=useRef<AbortController|null>(null);
@@ -24,7 +26,7 @@ export default function RepositoryReview({locale}:{locale:'ko'|'en'}){
  }
  function download(){if(!result)return;const link=document.createElement('a'),object=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));link.href=object;link.download='repository-review.json';link.click();setTimeout(()=>URL.revokeObjectURL(object),1000);}
  return <ThemeProvider theme={platformTheme}><CssBaseline/><Container maxWidth="md" sx={{py:4}}><Stack gap={3}>
-  <Button component={Link} href="/workbench" sx={{alignSelf:'start'}}>← {t('검사 선택','Assessment modules')}</Button>
+  <PlatformHeader locale={locale} current="repository" user={user} busy={busy} onLocaleChange={value=>setLocale(value==='ko'?'ko':'en')}/>
   <Typography variant="h4" component="h1">{t('GitHub·소스 공급망 진단 작전실','GitHub / source supply-chain review')}</Typography>
   <Alert severity="warning">{t('저장소 코드를 실행하지 않고 위험 단서를 찾습니다. 탐지 없음은 안전 판정이 아니며, 이 화면은 PC 감염·GitHub 계정·Desktop 앱을 검사하지 않습니다.','Find risk signals without executing repository code. No findings does not mean safe. This page does not inspect PC infections, GitHub accounts or the Desktop app.')}</Alert>
   <Paper variant="outlined" sx={{p:3}}><Stack gap={2}>
