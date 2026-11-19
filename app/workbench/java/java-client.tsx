@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,CssBaseline,Container,Stack,Typography,Paper,Alert,TextField,MenuItem,Button,Checkbox,FormControlLabel,Box,LinearProgress,Chip} from '@mui/material';
 import PlatformHeader from '../../platform-header';
+import ContextLinks from '../../context-links';
 import type {PublicUser} from '../../../lib/public-identity';
 import {platformTheme} from '../../platform-theme';
 import {protectedRequest} from '../../../lib/protected-request';
@@ -26,7 +27,7 @@ export default function JavaReview({locale:initialLocale,user}:{locale:'ko'|'en'
  const unknown=t('확인하지 못함','Unknown');
  return <ThemeProvider theme={platformTheme}><CssBaseline/><Container maxWidth="md" sx={{py:4}}><Stack gap={3}>
   <PlatformHeader locale={locale} current="java" user={user} busy={busy} onLocaleChange={value=>setLocale(value==='ko'?'ko':'en')}/>
-  <Box><Typography variant="overline">ENDPOINT · JAVA / JVM</Typography><Typography component="h1" variant="h4">{t('Java4Shell 적용 여부 점검','Java4Shell applicability review')}</Typography><Typography mt={1}>CVE-2026-114938 · {t('공식 권고 확인일: 2026-11-19','Advisories reviewed: 2026-11-19')}</Typography></Box>
+  <Box><Typography variant="overline">ENDPOINT · JAVA / JVM</Typography><Typography component="h1" variant="h4">{t('Java4Shell 적용 여부 점검','Java4Shell applicability review')}</Typography><Typography mt={1}>CVE-2026-114938 · {t('공식 권고 확인일: 2026-11-19','Advisories reviewed: 2026-11-19')}</Typography><ContextLinks locale={locale} current="java"/></Box>
   <Alert severity="info">{t('Java/JVM 실행 환경 점검입니다. 웹 서버·서버 앱·PC 프로그램·번들 런타임 모두 대상이 될 수 있습니다. URL·HTTP 헤더·JAR 이름만으로는 판정할 수 없습니다. Log4Shell과는 다른 JVM Base64 처리 취약점입니다.','Review the Java/JVM runtime used by web servers, server apps, desktop apps or bundled software. URLs, HTTP headers and JAR names cannot establish applicability. This JVM Base64 issue is distinct from Log4Shell.')}</Alert>
   <Paper variant="outlined" sx={{p:3}}><Stack gap={2}>
    <Typography variant="h6">{t('대상 JVM의 확인 자료','Evidence from the target JVM')}</Typography>

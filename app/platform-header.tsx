@@ -6,7 +6,6 @@ import Link from './navigation-link';
 import {localeNames,type Locale} from '../lib/locale';
 import type {PublicUser} from '../lib/public-identity';
 import {protectedRequest} from '../lib/protected-request';
-import {assessmentCategories} from '../lib/assessment/module-catalog';
 
 export type PlatformLocation='modules'|'web'|'comparison'|'results'|'help'|'endpoint'|'java'|'repository'|'mobile'|'network'|'virtualization';
 const labels:Record<Locale,readonly string[]>={
@@ -18,15 +17,12 @@ const labels:Record<Locale,readonly string[]>={
  fr:['Évaluation de sécurité','Choisir un contrôle','Contrôle web','Mes résultats','Guide','Navigation principale','Contrôles associés','Langue','Déconnexion','Administrateur','Analyste','Membre','Échec de la modification. Réessayez.'],
 };
 
-const webLabels:Record<Locale,readonly [string,string]>={ko:['웹사이트 기본 보안 점검','PC·모바일 접속 환경 비교'],en:['Website security check','Desktop / mobile connection comparison'],ja:['Webサイトの基本セキュリティ確認','PC・モバイル接続環境の比較'],zh:['网站基础安全检查','桌面与移动连接环境比较'],es:['Seguridad básica del sitio web','Comparación de conexión PC / móvil'],fr:['Sécurité de base du site web','Comparaison des connexions PC / mobile']};
-
 /** Shared navigation keeps global destinations separate from checks within one module. */
 export default function PlatformHeader({locale,current,user,busy=false,onLogout,onLocaleChange,onSwitchingChange,localeOptions=['ko','en']}:{locale:Locale;current:PlatformLocation;user?:PublicUser;busy?:boolean;onLogout?:()=>void|Promise<void>;onLocaleChange:(locale:Locale)=>void;onSwitchingChange?:(switching:boolean)=>void;localeOptions?:readonly Locale[]}){
  const [switching,setSwitching]=useState(false),[error,setError]=useState(false);
- const l=labels[locale],ko=locale==='ko',web=current==='web'||current==='comparison',endpoint=current==='endpoint'||current==='java';
+ const l=labels[locale];
  const active=current==='results'||current==='help'?current:'modules';
  const items=[{id:'modules',href:'/workbench',label:l[1]},{id:'results',href:'/workbench/results',label:l[3]},{id:'help',href:'/help',label:l[4]}];
- const related=web?[{id:'web',href:'/?view=web',label:webLabels[locale][0]},{id:'comparison',href:'/workbench/web',label:webLabels[locale][1]}]:endpoint?[{id:'endpoint',href:'/workbench/endpoint',label:ko?'프로그램·컴퓨터 보안 점검':'Program / computer security check'},{id:'java',href:'/workbench/java',label:ko?'Java 실행 환경 보안 점검':'Java runtime security check'}]:current==='results'?[{id:'results',href:'/workbench/results',label:ko?'모듈 진단 기록':'Module assessment history'},{id:'web-history',href:'/?view=web#web-results',label:ko?'웹사이트 점검 기록':'Website assessment history'}]:[];
  async function changeLanguage(value:Locale){setSwitching(true);onSwitchingChange?.(true);setError(false);try{const r=await fetch('/api/locale',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locale:value})});if(!r.ok)throw new Error();onLocaleChange(value);}catch{setError(true);}finally{setSwitching(false);onSwitchingChange?.(false);}}
  async function logout(){if(onLogout){await onLogout();return;}setSwitching(true);setError(false);try{const r=await protectedRequest('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!r.ok)throw new Error();try{const channel=new BroadcastChannel('webguard-session');channel.postMessage('changed');channel.close();}catch{/* Session invalidation remains enforced by the server. */}window.location.replace('/');}catch{setError(true);setSwitching(false);}}
  return <Box component="header" sx={{borderBottom:1,borderColor:'divider',pb:2,mb:3}}>
@@ -38,13 +34,6 @@ export default function PlatformHeader({locale,current,user,busy=false,onLogout,
    </Stack>
   </Stack>
   <Stack component="nav" aria-label={l[5]} direction="row" flexWrap="wrap" gap={.5} sx={{mt:2}}>{items.map(item=><Button component={Link} href={item.href} key={item.id} aria-current={active===item.id?(current===item.id?'page':'location'):undefined} variant={active===item.id?'contained':'text'} size="small" sx={{px:1.75,minHeight:36}}>{item.label}</Button>)}</Stack>
-  {active==='modules'&&<Box component="nav" aria-label={ko?'검사 모듈':'Assessment modules'} sx={{display:'grid',gridTemplateColumns:{xs:'repeat(3,minmax(0,1fr))',md:'repeat(9,minmax(0,1fr))'},gap:.75,mt:2,pt:2,borderTop:1,borderColor:'divider'}}>{assessmentCategories.map(category=>{
-   const selected=category.id===(web?'web':endpoint?'endpoint':current);
-   const style={px:.75,py:1,minWidth:0,minHeight:56,display:'flex',flexDirection:'column',gap:.25,textTransform:'none',border:1,borderRadius:2,borderColor:selected?'primary.main':'divider',color:selected?'primary.main':'text.secondary',bgcolor:selected?'action.selected':'transparent','&:hover':{borderColor:'primary.main',bgcolor:'action.hover'},'&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:2},'&.Mui-disabled':{color:'text.secondary',borderStyle:'dashed'}};
-   const content=<><Typography component="span" sx={{fontSize:{xs:12,sm:12.5},fontWeight:selected?700:500,lineHeight:1.4}}>{category.title}</Typography><Typography component="span" sx={{fontSize:10,lineHeight:1.3,minHeight:13,color:'text.secondary'}}>{category.href?'':ko?'준비 중':'Planned'}</Typography></>;
-   return category.href?<Button component={Link} key={category.id} href={category.href} size="small" aria-current={selected?(current===category.id?'page':'location'):undefined} sx={style}>{content}</Button>:<Button key={category.id} size="small" disabled sx={style}>{content}</Button>;
-  })}</Box>}
-  {related.length>0&&<Box component="nav" aria-label={l[6]} sx={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:.5,mt:1.5,p:.5,borderRadius:2,bgcolor:'action.hover'}}>{related.map(item=><Button component={Link} key={item.id} href={item.href} size="small" aria-current={current===item.id?'page':undefined} sx={{color:current===item.id?'primary.main':'text.secondary',bgcolor:current===item.id?'action.selected':undefined,px:1,py:1,minHeight:44,fontSize:{xs:12,sm:13},lineHeight:1.5,textTransform:'none',borderRadius:1.5}}>{item.label}</Button>)}</Box>}
   {error&&<Alert severity="warning" sx={{mt:2}}>{l[12]}</Alert>}
  </Box>;
 }

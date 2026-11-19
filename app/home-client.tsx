@@ -1,6 +1,7 @@
 'use client';
 import Link from './navigation-link';
 import PlatformHeader from './platform-header';
+import ContextLinks from './context-links';
 import {useEffect,useRef,useState} from 'react';
 import {ThemeProvider,createTheme,CssBaseline,Container,Box,Typography,Paper,TextField,Button,Alert,Chip,Stack,Checkbox,FormControlLabel,FormControl,InputLabel,Select,MenuItem,IconButton,InputAdornment} from '@mui/material';
 import {isLocale,locales,localeNames,type Locale} from '../lib/locale';
@@ -95,7 +96,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
  </FormControl>;
  return <ThemeProvider theme={theme}><CssBaseline/><Container maxWidth="lg" sx={{py:{xs:data?3:1.5,md:5},...(!data?{minHeight:'100svh',display:'flex',flexDirection:'column',justifyContent:'center'}:{})}}>
   {data&&<><PlatformHeader locale={locale} current="web" user={data.user} busy={busy} localeOptions={locales} onLocaleChange={value=>{setLocale(value);setAdvice('');}} onSwitchingChange={setSwitching} onLogout={async()=>{if(await post('/api/logout',{}))resetAccountView();}}/>
-  <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
+  <Box sx={{my:3}}><Typography variant="overline" color="primary">{t.operations}</Typography><Typography variant="h3" fontWeight={800}>{t.title}</Typography><Typography color="text.secondary" sx={{mt:2}}>{t.intro}</Typography><ContextLinks locale={locale} current="web"/>{inspection.state!=='idle'&&<Button href="#inspection-console" variant="outlined" size="small" sx={{mt:2}}>{ops.title} ↓</Button>}</Box></>}
   {data&&<InspectionProblem locale={locale==='ko'?'ko':'en'} message={message}/>}
   {bootLoading?<PageLoading message={ops.refresh}/>:!data?<Box component="main" sx={{display:'grid',gridTemplateColumns:{xs:'1fr',md:'minmax(0,1fr) minmax(0,1.1fr)'},gap:{xs:3,md:6},alignItems:'center'}}>
    <Paper component="section" elevation={0} sx={{p:{xs:3,sm:4,md:5},border:'1px solid #26394b',background:'linear-gradient(145deg,#142537,#101d2d)'}}>
