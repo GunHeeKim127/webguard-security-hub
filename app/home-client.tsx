@@ -128,6 +128,7 @@ const headerKeys:Record<string,MessageKey>={'content-security-policy':'csp','str
     <Paper sx={{p:3}}><Typography variant="h6">{assessmentText(locale,'title')}</Typography><Typography color="text.secondary" my={2}>{assessmentText(locale,'scope')}</Typography>
      <Box component="form" noValidate onSubmit={/** onSubmit 콜백: onSubmit 이벤트의 입력·상태 처리를 실행합니다 주요 호출: preventDefault·runScan. */ e=>{e.preventDefault();if(blockReason||busy||switching)return;void runScan();}}><Stack spacing={2}>
       <WebTargetField locale={locale} value={targetValue} disabled={busy&&!scanRequest.current} onChange={changeTarget}/>
+      <Alert severity="info">{locale==='ko'?'Java4Shell은 URL만으로 판정하지 않습니다. Endpoint에서 실제 JVM 버전·CPU·실행 설정을 점검하세요.':'Java4Shell cannot be determined from a URL. Review the actual JVM release, CPU and settings under Endpoint.'}<Button href="/workbench/java">{locale==='ko'?'Java/JVM 점검 열기 →':'Open Java/JVM review →'}</Button></Alert>
       <FormControlLabel control={<Checkbox checked={authorized} onChange={/** onChange 콜백: onChange 이벤트의 입력·상태 처리를 실행합니다 주요 호출: setAuthorized. */ e=>setAuthorized(e.target.checked)}/>} label={assessmentText(locale,'ownership')}/>
       {publicTargets&&<Alert severity="info">{assessmentText(locale,'publicNotice')}</Alert>}
       <Button type="submit" variant="contained" disabled={busy||switching||!!blockReason} aria-describedby={blockReason?'scan-block-reason':undefined}>{busy?t.loading:assessmentText(locale,'title')}</Button>

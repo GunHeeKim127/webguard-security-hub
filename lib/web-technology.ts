@@ -1,7 +1,7 @@
 import type {Finding} from './assessment/types';
 type Headers=Record<string,string|string[]|undefined>;
 type Product='PHP'|'Next.js'|'React RSC'|'Django'|'Spring'|'Java servlet'|'ASP.NET'|'Ruby on Rails'|'Node.js'|'Go';
-export const technologyCatalogVersion='2026-10-28.1' as const;
+export const technologyCatalogVersion='2026-11-19.1' as const;
 export type TechnologyObservation={catalogVersion:string,responseEligible:boolean,products:{product:Product,language:string,version:string|null}[]};
 const header=/** header: 관찰 대상 헤더의 제한된 값을 읽습니다 주요 호출: slice·isArray·join. */ (headers:Headers,key:string)=>{const v=headers[key];return (Array.isArray(v)?v.join(','):v??'').slice(0,16384);};
 // Hints only. Never retain cookie identities/values or arbitrary server banners.
@@ -70,6 +70,7 @@ const nodeRules:JavascriptRule[]=[
  for(const item of observation.products){
   const base={severity:'info' as const,evidence:[`product=${item.product}`,`languageHint=${item.language}`,`declaredVersion=${item.version??'unknown'}`,'runtimeVerified=false'],remediation:t('기술 흔적이며 실제 사용 언어·버전의 증명이 아닙니다. 서버 배포 목록과 해당 제품의 최신 공식 보안 권고를 확인하세요.','A technology hint, not proof of deployed language/version. Check deployment inventory and current official product advisories.')};
   findings.push({...base,id:'technology:'+item.product,title:t('기술 흔적: ','Technology hint: ')+item.product,status:'info'});
+  if(item.product==='Spring'||item.product==='Java servlet')findings.push({...base,id:'technology:'+item.product+':CVE-2026-114938',title:'Java4Shell · CVE-2026-114938',status:'not_assessed',reference:'https://www.oracle.com/security-alerts/cspunov2026.html',evidence:[...base.evidence,'jvmVersionVerified=false','cpuFeaturesVerified=false','exploitTested=false'],remediation:t('HTTP 헤더·Spring/Tomcat 버전은 JVM 버전이 아닙니다. Endpoint의 Java/JVM 점검에서 실제 런타임 버전·공급자·x86-64 CPU 기능·Base64 intrinsic·입력 경로를 확인하세요. URL만으로 이 취약점 유무를 판정하지 않습니다.','Spring/Tomcat banners are not JVM versions. Use Endpoint Java/JVM review for actual runtime/vendor, x86-64 features, Base64 intrinsic and input paths. A URL alone cannot determine this vulnerability.')});
   for(const rule of item.product==='Node.js'?nodeRules:item.product==='React RSC'||item.product==='Next.js'?reactRules:[]){
    // An RSC/Next.js banner never establishes an installed react-server-dom package version.
    const affected=item.product==='Node.js'?nodeOlder(item.version,rule.fixes??{}):null;
