@@ -6,6 +6,7 @@ import Link from './navigation-link';
 import {localeNames,type Locale} from '../lib/locale';
 import type {PublicUser} from '../lib/public-identity';
 import {protectedRequest} from '../lib/protected-request';
+import {assessmentCategories} from '../lib/assessment/module-catalog';
 
 export type PlatformLocation='modules'|'web'|'comparison'|'results'|'help'|'endpoint'|'java'|'repository'|'mobile'|'network'|'virtualization';
 const labels:Record<Locale,readonly string[]>={
@@ -37,6 +38,11 @@ export default function PlatformHeader({locale,current,user,busy=false,onLogout,
    </Stack>
   </Stack>
   <Stack component="nav" aria-label={l[5]} direction="row" flexWrap="wrap" gap={.5} sx={{mt:2}}>{items.map(item=><Button component={Link} href={item.href} key={item.id} aria-current={active===item.id?(current===item.id?'page':'location'):undefined} variant={active===item.id?'contained':'text'} size="small" sx={{px:1.75,minHeight:36}}>{item.label}</Button>)}</Stack>
+  {active==='modules'&&<Stack component="nav" aria-label={ko?'검사 모듈':'Assessment modules'} direction="row" flexWrap="wrap" gap={.5} sx={{mt:1.5,pt:1.5,borderTop:1,borderColor:'divider'}}>{assessmentCategories.map(category=>{
+   const selected=category.id===(web?'web':endpoint?'endpoint':current);
+   const style={fontSize:12.5,px:1.25,minWidth:0,minHeight:36,textTransform:'none',color:selected?'primary.main':'text.secondary',bgcolor:selected?'action.selected':undefined};
+   return category.href?<Button component={Link} key={category.id} href={category.href} size="small" aria-current={selected?(current===category.id?'page':'location'):undefined} sx={style}>{category.title}</Button>:<Button key={category.id} size="small" disabled sx={style}>{category.title} · {ko?'준비 중':'Planned'}</Button>;
+  })}</Stack>}
   {related.length>0&&<Stack component="nav" aria-label={l[6]} direction="row" flexWrap="wrap" gap={.5} sx={{mt:1.5,pt:1.5,borderTop:1,borderColor:'divider'}}>{related.map(item=><Button component={Link} key={item.id} href={item.href} size="small" aria-current={current===item.id?'page':undefined} sx={{color:current===item.id?'primary.main':'text.secondary',bgcolor:current===item.id?'action.selected':undefined,px:1.5}}>{item.label}</Button>)}</Stack>}
   {error&&<Alert severity="warning" sx={{mt:2}}>{l[12]}</Alert>}
  </Box>;
